@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}สมัครเรียนแล้ว | BRI School of Fivefold{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'school/css/registration.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="success-page">
+    <section class="success-shell already-registered-shell" aria-labelledby="already-title">
+        <a class="mobile-brand success-brand" href="{% url 'school:registration' %}" aria-label="BRI School of Fivefold">
+            <strong>BRI</strong>
+            <span>School of Fivefold</span>
+        </a>
+
+        <div class="success-mark" aria-hidden="true">
+            <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#check"></use></svg>
+        </div>
+        <span class="eyebrow">Registration found</span>
+        <h1 id="already-title">คุณสมัครเรียนแล้ว</h1>
+        <p class="success-lead">ระบบพบใบสมัครของคุณ {{ person.full_name }} ที่ผูกกับ LINE account นี้แล้ว</p>
+
+        <div class="receipt-block">
+            <span>สถานะใบสมัคร</span>
+            <strong>{{ person.get_status_display }}</strong>
+            {% if student %}
+            <small>รหัสนักศึกษา {{ student.student_id }}</small>
+            {% else %}
+            <small>รหัสข้อมูล #{{ person.pk }}</small>
+            {% endif %}
+        </div>
+
+        <div class="result-actions">
+            <a class="button button--primary success-action" href="{{ line_return_url }}" data-liff-close>
+                <span>กลับไปยัง LINE</span>
+                <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
+            </a>
+            <a class="button button--secondary success-action" href="{% url 'school:announcement_result' %}">
+                <span>ดูประกาศผล</span>
+            </a>
+        </div>
+
+        <p class="success-security">
+            <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#shield-check"></use></svg>
+            ระบบใช้ LINE account นี้ตรวจสอบใบสมัครของคุณ
+        </p>
+    </section>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+{% include "school/includes/liff_bridge.html" %}
+{% endblock %}

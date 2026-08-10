@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}ส่งใบสมัครสำเร็จ | BRI School of Fivefold{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'school/css/registration.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="success-page">
+    <section class="success-shell" aria-labelledby="success-title">
+        <a class="mobile-brand success-brand" href="{% url 'school:registration' %}" aria-label="BRI School of Fivefold">
+            <strong>BRI</strong>
+            <span>School of Fivefold</span>
+        </a>
+
+        <div class="success-mark" aria-hidden="true">
+            <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#check"></use></svg>
+        </div>
+        <span class="eyebrow">Person saved</span>
+        <h1 id="success-title">ส่งใบสมัครเรียบร้อยแล้ว</h1>
+        <p class="success-lead">ขอบคุณคุณ {{ receipt.applicant_name }} เราได้รับข้อมูลของคุณครบถ้วนแล้ว</p>
+
+        <div class="receipt-block">
+            <span>สถานะ</span>
+            <strong>{{ receipt.status }}</strong>
+            <small>รหัสข้อมูล #{{ receipt.person_id }}</small>
+        </div>
+
+        <div class="next-steps">
+            <h2>ขั้นตอนต่อไป</h2>
+            <ol>
+                {% for item in next_steps %}
+                <li><span>{{ forloop.counter }}</span><p>{{ item }}</p></li>
+                {% empty %}
+                <li class="empty-inline">ยังไม่มีขั้นตอนเพิ่มเติม</li>
+                {% endfor %}
+            </ol>
+        </div>
+
+        <a class="button button--primary success-action" href="{{ line_return_url }}" data-liff-close>
+            <span>กลับไปยัง LINE</span>
+            <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
+        </a>
+
+        <p class="success-security">
+            <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#shield-check"></use></svg>
+            ข้อมูลของคุณถูกจัดเก็บอย่างปลอดภัย
+        </p>
+    </section>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+{% include "school/includes/liff_bridge.html" %}
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}เข้าสู่ระบบผู้สอน | BRI School of Fivefold{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'school/css/registration.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="success-page auth-page">
+    <section class="success-shell auth-shell" aria-labelledby="login-title">
+        <a class="mobile-brand success-brand" href="{% url 'school:registration' %}" aria-label="BRI School of Fivefold">
+            <strong>BRI</strong>
+            <span>School of Fivefold</span>
+        </a>
+
+        <span class="eyebrow">Teacher sign in</span>
+        <h1 id="login-title">เข้าสู่ระบบผู้สอน</h1>
+
+        {% if form.errors %}
+        <div class="form-alert" role="alert">
+            <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#info"></use></svg>
+            <div>
+                <strong>เข้าสู่ระบบไม่สำเร็จ</strong>
+                <p>ตรวจสอบชื่อผู้ใช้และรหัสผ่านอีกครั้ง</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <form class="stack-form" method="post" novalidate>
+            {% csrf_token %}
+            <div class="field-group">
+                <label class="field-label" for="{{ form.username.id_for_label }}">ชื่อผู้ใช้</label>
+                {{ form.username }}
+            </div>
+            <div class="field-group">
+                <label class="field-label" for="{{ form.password.id_for_label }}">รหัสผ่าน</label>
+                {{ form.password }}
+            </div>
+            <button class="button button--primary button--submit" type="submit">
+                <span>เข้าสู่ระบบ</span>
+                <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
+            </button>
+        </form>
+
+        <a class="button button--secondary success-action" href="{% url 'school:teacher_register' %}">
+            <span>สมัครผู้สอนใหม่</span>
+        </a>
+    </section>
+</main>
+{% endblock %}

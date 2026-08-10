@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Dashboard ผู้สอน | BRI School of Fivefold{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'school/css/registration.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="dashboard-page">
+    <header class="dashboard-topbar">
+        <a class="mobile-brand" href="{% url 'school:teacher_dashboard' %}" aria-label="BRI School of Fivefold">
+            <strong>BRI</strong>
+            <span>Teacher</span>
+        </a>
+        <form method="post" action="{% url 'school:logout' %}">
+            {% csrf_token %}
+            <button class="button button--secondary" type="submit">ออกจากระบบ</button>
+        </form>
+    </header>
+
+    <section class="dashboard-shell" aria-labelledby="teacher-dashboard-title">
+        <div class="page-heading">
+            <div>
+                <span class="eyebrow">Teacher dashboard</span>
+                <h1 id="teacher-dashboard-title">นักเรียนในกลุ่มของคุณ</h1>
+                <p>{{ request.user.get_full_name|default:request.user.username }}</p>
+            </div>
+        </div>
+
+        <div class="summary-strip">
+            <div>
+                <span>กลุ่มที่ดูแล</span>
+                <strong>{{ groups|length }}</strong>
+            </div>
+            <div>
+                <span>นักเรียน</span>
+                <strong>{{ students|length }}</strong>
+            </div>
+        </div>
+
+        <div class="table-shell">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>รหัส</th>
+                        <th>ชื่อ</th>
+                        <th>กลุ่ม</th>
+                        <th>สถานะชำระเงิน</th>
+                        <th>เกรด</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                    <tr>
+                        <td>{{ student.student_id }}</td>
+                        <td>{{ student.person.full_name }}</td>
+                        <td>{{ student.group.group_name }}</td>
+                        <td>{% if student.is_paid %}จ่ายแล้ว{% else %}รอตรวจสอบ{% endif %}</td>
+                        <td>{{ student.grade|default:"-" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5">ยังไม่มีนักเรียนในกลุ่มของคุณ</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+{% endblock %}

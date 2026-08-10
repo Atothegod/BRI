@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}อัปโหลดสลิป | BRI School of Fivefold{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'school/css/registration.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="success-page auth-page" data-registration-app>
+    <section class="success-shell auth-shell" aria-labelledby="payment-title">
+        <a class="mobile-brand success-brand" href="{% url 'school:registration' %}" aria-label="BRI School of Fivefold">
+            <strong>BRI</strong>
+            <span>School of Fivefold</span>
+        </a>
+
+        <span class="eyebrow">Payment slip</span>
+        <h1 id="payment-title">อัปโหลดสลิปการโอนเงิน</h1>
+
+        {% if messages %}
+        {% for message in messages %}
+        <div class="form-alert" role="status">
+            <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#check-circle"></use></svg>
+            <div><strong>{{ message }}</strong></div>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <form class="stack-form" method="post" enctype="multipart/form-data" novalidate data-registration-form>
+            {% csrf_token %}
+            {{ form.line_user_id }}
+            {{ form.non_field_errors }}
+
+            <div class="field-group{% if form.payment_slip.errors %} has-error{% endif %}">
+                <label class="field-label" for="{{ form.payment_slip.id_for_label }}">รูปสลิปการโอนเงิน</label>
+                <label class="upload-control" for="{{ form.payment_slip.id_for_label }}">
+                    <span class="upload-icon"><svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#upload-cloud"></use></svg></span>
+                    <span><strong data-file-label>เลือกรูปสลิป</strong><small>JPG, PNG หรือ WEBP</small></span>
+                </label>
+                {{ form.payment_slip }}
+                {{ form.payment_slip.errors }}
+            </div>
+
+            <button class="button button--primary button--submit" type="submit">
+                <span>ส่งสลิปให้ตรวจสอบ</span>
+                <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#check-circle"></use></svg>
+            </button>
+        </form>
+    </section>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+{% include "school/includes/liff_bridge.html" %}
+<script src="{% static 'school/js/registration.js' %}" defer></script>
+{% endblock %}

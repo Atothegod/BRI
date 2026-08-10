@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}ประกาศผลสัมภาษณ์ | BRI School of Fivefold{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'school/css/registration.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="success-page result-page">
+    <section class="success-shell result-shell result-shell--{{ result_state }}" aria-labelledby="result-title">
+        <a class="mobile-brand success-brand" href="{% url 'school:registration' %}" aria-label="BRI School of Fivefold">
+            <strong>BRI</strong>
+            <span>School of Fivefold</span>
+        </a>
+
+        <div class="success-mark result-mark" aria-hidden="true">
+            {% if result_state == "passed" %}
+            <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#check"></use></svg>
+            {% elif result_state == "failed" %}
+            <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#x"></use></svg>
+            {% else %}
+            <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#user"></use></svg>
+            {% endif %}
+        </div>
+
+        <span class="eyebrow">Interview result</span>
+
+        {% if result_state == "passed" %}
+        <h1 id="result-title">ผ่านการสัมภาษณ์</h1>
+        <p class="success-lead">ยินดีด้วยคุณ {{ person.full_name }} ได้รับการยืนยันเป็นนักศึกษา BRI แล้ว</p>
+        <div class="receipt-block result-card">
+            <span>รหัสนักศึกษา</span>
+            <strong>{{ student.student_id|default:person.student_code }}</strong>
+            {% if student.group %}
+            <small>{{ student.group }}{% if student.grade %} · {{ student.grade }}{% endif %}</small>
+            {% else %}
+            <small>ทีมงานจะอัปเดตกลุ่มเรียนให้ในระบบ</small>
+            {% endif %}
+        </div>
+        {% elif result_state == "failed" %}
+        <h1 id="result-title">ไม่ผ่านการสัมภาษณ์</h1>
+        <p class="success-lead">ขอบคุณคุณ {{ person.full_name }} ที่สนใจสมัครเรียนกับ BRI</p>
+        <div class="receipt-block result-card">
+            <span>สถานะ</span>
+            <strong>ไม่ผ่าน</strong>
+            <small>สามารถติดต่อทีมงานผ่าน LINE เพื่อสอบถามข้อมูลเพิ่มเติม</small>
+        </div>
+        {% elif result_state == "pending" %}
+        <h1 id="result-title">ยังไม่พบผลประกาศ</h1>
+        <p class="success-lead">คุณ {{ person.full_name }} อยู่ระหว่างดำเนินการ ทีมงานจะอัปเดตผลเมื่อพร้อม</p>
+        <div class="receipt-block result-card">
+            <span>สถานะ</span>
+            <strong>{{ person.get_status_display }}</strong>
+            <small>กรุณากลับมาตรวจสอบอีกครั้งภายหลัง</small>
+        </div>
+        {% else %}
+        <h1 id="result-title">ไม่พบข้อมูล LINE นี้</h1>
+        <p class="success-lead">กรุณาเปิดหน้านี้จาก LINE rich menu หรือสมัครเรียนก่อนตรวจสอบผล</p>
+        <div class="receipt-block result-card">
+            <span>LINE account</span>
+            <strong>{% if line_user_id %}ไม่พบข้อมูล{% else %}ยังไม่ได้เชื่อมต่อ{% endif %}</strong>
+            <small>ระบบใช้ LINE user id เพื่อค้นหาผลประกาศ</small>
+        </div>
+        {% endif %}
+
+        <div class="result-actions">
+            <a class="button button--primary success-action" href="{{ line_return_url }}" data-liff-close>
+                <span>กลับไปยัง LINE</span>
+                <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
+            </a>
+            <a class="button button--secondary success-action" href="{% url 'school:registration' %}">
+                <span>หน้าสมัครเรียน</span>
+            </a>
+        </div>
+    </section>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+{% include "school/includes/liff_bridge.html" %}
+{% endblock %}

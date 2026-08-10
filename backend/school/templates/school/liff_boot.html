@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}กำลังเปิดหน้า | BRI School of Fivefold{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'school/css/registration.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="success-page liff-boot-page">
+    <section class="success-shell liff-boot-shell" aria-labelledby="liff-boot-title">
+        <a class="mobile-brand success-brand" href="{% url 'school:registration' %}" aria-label="BRI School of Fivefold">
+            <strong>BRI</strong>
+            <span>School of Fivefold</span>
+        </a>
+
+        <div class="success-mark liff-boot-mark" aria-hidden="true">
+            <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
+        </div>
+        <span class="eyebrow">LINE LIFF</span>
+        <h1 id="liff-boot-title">กำลังเปิดหน้าที่เลือก</h1>
+        <p class="success-lead">กรุณารอสักครู่ ระบบกำลังเชื่อมต่อกับ LINE</p>
+    </section>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+{% include "school/includes/liff_bridge.html" %}
+{% endblock %}

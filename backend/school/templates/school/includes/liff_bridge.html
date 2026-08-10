@@ -1,0 +1,13 @@
+{% load static %}
+{% if line_liff_id %}
+<div
+    hidden
+    data-liff-config
+    data-liff-id="{{ line_liff_id }}"
+    data-profile-sync-url="{% url 'school:liff_profile_sync' %}"
+    data-reload-on-sync="{% if liff_reload_on_sync %}true{% else %}false{% endif %}"
+    data-line-known="{% if line_profile.line_user_id %}true{% else %}false{% endif %}"
+></div>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js" defer></script>
+<script src="{% static 'school/js/liff_bridge.js' %}?v=20260813-liff-boot" defer></script>
+{% endif %}

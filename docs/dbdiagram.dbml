@@ -1,0 +1,144 @@
+Project line_br {
+  database_type: 'PostgreSQL'
+  Note: 'Generated from current Django models in accounts/models.py and school/models.py.'
+}
+
+Enum user_role {
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+Enum person_status {
+  in_progress
+  passed
+  failed
+}
+
+Enum admin_validation_status {
+  pending
+  approved
+  needs_fix
+}
+
+Enum attendance_status {
+  present
+  absent
+  late
+}
+
+Enum homework_submission_status {
+  pending
+  submitted
+  late
+}
+
+Table accounts_user {
+  id bigint [pk, increment]
+  password varchar(128) [not null]
+  last_login timestamp
+  is_superuser boolean [not null, default: false]
+  username varchar(150) [not null, unique]
+  first_name varchar(150) [not null]
+  last_name varchar(150) [not null]
+  email varchar(254) [not null]
+  is_staff boolean [not null, default: false]
+  is_active boolean [not null, default: true]
+  date_joined timestamp [not null]
+  role user_role [not null, default: 'STUDENT']
+}
+
+Table school_person {
+  id bigint [pk, increment]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  user_id bigint [unique, ref: - accounts_user.id]
+  first_name varchar(150) [not null]
+  last_name varchar(150) [not null]
+  nickname varchar(100) [not null]
+  date_of_birth date
+  occupation varchar(150) [not null]
+  photo varchar(100)
+  phone varchar(30) [not null]
+  email varchar(254) [not null]
+  line_id varchar(120) [not null]
+  status person_status [not null, default: 'in_progress']
+  extra_data jsonb [not null]
+
+  indexes {
+    line_id [unique, name: 'uniq_person_line_id_when_present']
+  }
+
+  Note: "line_id unique constraint is conditional in Django: unique only when line_id != ''."
+}
+
+Table school_teachergroup {
+  id bigint [pk, increment]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  teacher_id bigint [not null, ref: > accounts_user.id]
+  group_name varchar(255) [not null]
+  grade_level varchar(100) [not null]
+  is_active boolean [not null, default: true]
+}
+
+Table school_student {
+  id bigint [pk, increment]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  student_id varchar(20) [not null, unique]
+  person_id bigint [not null, unique, ref: - school_person.id]
+  group_id bigint [ref: > school_teachergroup.id]
+  grade varchar(100) [not null]
+  admin_validation_status admin_validation_status [not null, default: 'pending']
+  is_active boolean [not null, default: true]
+}
+
+Table school_attendancesession {
+  id bigint [pk, increment]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  group_id bigint [not null, ref: > school_teachergroup.id]
+  date date [not null]
+
+  indexes {
+    (group_id, date) [unique, name: 'uniq_attendance_session_group_date']
+  }
+}
+
+Table school_attendancerecord {
+  id bigint [pk, increment]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  attendance_session_id bigint [not null, ref: > school_attendancesession.id]
+  student_id bigint [not null, ref: > school_student.id]
+  status attendance_status [not null]
+
+  indexes {
+    (attendance_session_id, student_id) [unique, name: 'uniq_attendance_record_session_student']
+  }
+}
+
+Table school_homeworkassignment {
+  id bigint [pk, increment]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  group_id bigint [not null, ref: > school_teachergroup.id]
+  title varchar(255) [not null]
+  due_date date [not null]
+}
+
+Table school_homeworksubmission {
+  id bigint [pk, increment]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  homework_assignment_id bigint [not null, ref: > school_homeworkassignment.id]
+  student_id bigint [not null, ref: > school_student.id]
+  status homework_submission_status [not null, default: 'pending']
+  score decimal(5,2)
+  submitted_at timestamp
+
+  indexes {
+    (homework_assignment_id, student_id) [unique, name: 'uniq_homework_submission_assignment_student']
+  }
+}

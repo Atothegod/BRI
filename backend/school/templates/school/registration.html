@@ -4,9 +4,6 @@
 {% block title %}สมัครเรียน | BRI School of Fivefold{% endblock %}
 
 {% block extra_css %}
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'school/css/registration.css' %}">
 {% endblock %}
 
@@ -61,8 +58,7 @@
     <main class="app-main" data-app-main>
         <header class="mobile-app-bar">
             <a class="mobile-brand" href="{% url 'school:registration' %}" aria-label="BRI School of Fivefold">
-                <strong>BRI</strong>
-                <span>School of Fivefold</span>
+                <img src="{% static 'school/images/logo_white.png' %}" alt="BRI School of Fivefold" width="1080" height="1080">
             </a>
             <button class="icon-button" type="button" aria-label="เปิดเมนูขั้นตอน" aria-controls="app-navigation" aria-expanded="false" data-menu-open>
                 <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#menu"></use></svg>

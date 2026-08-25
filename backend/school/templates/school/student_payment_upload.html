@@ -11,11 +11,10 @@
 <main class="success-page auth-page" data-registration-app>
     <section class="success-shell auth-shell" aria-labelledby="payment-title">
         <a class="mobile-brand success-brand" href="{% url 'school:registration' %}" aria-label="BRI School of Fivefold">
-            <strong>BRI</strong>
-            <span>School of Fivefold</span>
+            {% include "school/includes/brand_logo.html" with variant="success" %}
         </a>
 
-        <span class="eyebrow">Payment slip</span>
+        <span class="eyebrow">แจ้งชำระเงิน</span>
         <h1 id="payment-title">อัปโหลดสลิปการโอนเงิน</h1>
 
         {% if messages %}

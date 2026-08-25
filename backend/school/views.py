@@ -9,7 +9,7 @@ from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from .forms import PaymentSlipUploadForm, PersonForm, REGION_OPTIONS, TeacherSignupForm
 from .line import LineProfileError, normalize_line_profile, verify_line_id_token
@@ -110,6 +110,33 @@ def liff_profile_sync(request):
             "ok": True,
             "profile": line_profile,
             "has_person": bool(person),
+        }
+    )
+
+
+@never_cache
+@require_GET
+def agent_notifications(request, user_key):
+    return JsonResponse(
+        {
+            "ok": True,
+            "user_key": user_key,
+            "ca_number": request.GET.get("ca_number", "").strip(),
+            "notifications": [],
+        }
+    )
+
+
+@never_cache
+@require_GET
+def latest_closed_loop_notification(request, user_key):
+    return JsonResponse(
+        {
+            "ok": True,
+            "user_key": user_key,
+            "ca_number": request.GET.get("ca_number", "").strip(),
+            "latest_closed_loop": None,
+            "notifications": [],
         }
     )
 

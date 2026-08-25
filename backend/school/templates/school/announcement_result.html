@@ -11,8 +11,7 @@
 <main class="success-page result-page">
     <section class="success-shell result-shell result-shell--{{ result_state }}" aria-labelledby="result-title">
         <a class="mobile-brand success-brand" href="{% url 'school:registration' %}" aria-label="BRI School of Fivefold">
-            <strong>BRI</strong>
-            <span>School of Fivefold</span>
+            {% include "school/includes/brand_logo.html" with variant="success" %}
         </a>
 
         <div class="success-mark result-mark" aria-hidden="true">
@@ -25,7 +24,7 @@
             {% endif %}
         </div>
 
-        <span class="eyebrow">Interview result</span>
+        <span class="eyebrow">ผลสัมภาษณ์</span>
 
         {% if result_state == "passed" %}
         <h1 id="result-title">ผ่านการสัมภาษณ์</h1>

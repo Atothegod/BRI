@@ -110,6 +110,38 @@ class PersonViewTests(TestCase):
         self.assertRedirects(response, reverse("school:registration"))
 
 
+class AgentNotificationEndpointTests(TestCase):
+    def test_notifications_endpoint_returns_empty_payload(self):
+        response = self.client.get(
+            reverse("school:agent_notifications", kwargs={"user_key": "user_scnhpmzh3"}),
+            {"ca_number": "020000928740"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                "ok": True,
+                "user_key": "user_scnhpmzh3",
+                "ca_number": "020000928740",
+                "notifications": [],
+            },
+        )
+
+    def test_latest_closed_loop_endpoint_returns_empty_payload(self):
+        response = self.client.get(
+            reverse(
+                "school:latest_closed_loop_notification",
+                kwargs={"user_key": "user_scnhpmzh3"},
+            ),
+            {"ca_number": "020000928740"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["latest_closed_loop"], None)
+        self.assertEqual(response.json()["notifications"], [])
+
+
 class TeacherFlowTests(TestCase):
     def test_teacher_signup_creates_teacher_user_and_group(self):
         response = self.client.post(

@@ -14,9 +14,7 @@
     <aside class="app-sidebar" id="app-navigation" aria-label="ขั้นตอนการสมัคร" data-app-sidebar>
         <div class="sidebar-head">
             <a class="brand-lockup brand-lockup--sidebar" href="{% url 'school:registration' %}" aria-label="BRI School of Fivefold หน้าสมัครเรียน">
-                <span class="brand-image-crop" aria-hidden="true">
-                    <img src="{% static 'school/images/ci-bri.png' %}" alt="" width="1080" height="1080">
-                </span>
+                {% include "school/includes/brand_logo.html" with variant="sidebar" %}
             </a>
             <button class="icon-button sidebar-close" type="button" aria-label="ปิดเมนู" data-menu-close>
                 <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#x"></use></svg>
@@ -58,7 +56,7 @@
     <main class="app-main" data-app-main>
         <header class="mobile-app-bar">
             <a class="mobile-brand" href="{% url 'school:registration' %}" aria-label="BRI School of Fivefold">
-                <img src="{% static 'school/images/logo_white.png' %}" alt="BRI School of Fivefold" width="1080" height="1080">
+                {% include "school/includes/brand_logo.html" with variant="nav" %}
             </a>
             <button class="icon-button" type="button" aria-label="เปิดเมนูขั้นตอน" aria-controls="app-navigation" aria-expanded="false" data-menu-open>
                 <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#menu"></use></svg>
@@ -70,7 +68,9 @@
                 <div class="hero-copy">
                     <span class="eyebrow">ระบบรับสมัครนักเรียน</span>
                     <h2>ใบสมัครเรียน</h2>
-                    <p>BRI School of Fivefold</p>
+                    <span class="brand-logo-frame brand-logo-frame--hero" role="img" aria-label="BRI School of Fivefold">
+                        <img src="{% static 'school/images/logo_white.png' %}" alt="" width="1080" height="1080">
+                    </span>
                 </div>
             </div>
 

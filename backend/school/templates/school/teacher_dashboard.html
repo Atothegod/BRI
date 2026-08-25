@@ -11,8 +11,7 @@
 <main class="dashboard-page">
     <header class="dashboard-topbar">
         <a class="mobile-brand" href="{% url 'school:teacher_dashboard' %}" aria-label="BRI School of Fivefold">
-            <strong>BRI</strong>
-            <span>Teacher</span>
+            {% include "school/includes/brand_logo.html" with variant="nav" %}
         </a>
         <form method="post" action="{% url 'school:logout' %}">
             {% csrf_token %}

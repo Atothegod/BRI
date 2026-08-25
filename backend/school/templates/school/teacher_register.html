@@ -11,11 +11,10 @@
 <main class="success-page auth-page">
     <section class="success-shell auth-shell" aria-labelledby="teacher-register-title">
         <a class="mobile-brand success-brand" href="{% url 'school:registration' %}" aria-label="BRI School of Fivefold">
-            <strong>BRI</strong>
-            <span>School of Fivefold</span>
+            {% include "school/includes/brand_logo.html" with variant="success" %}
         </a>
 
-        <span class="eyebrow">Teacher registration</span>
+        <span class="eyebrow">สมัครผู้สอน</span>
         <h1 id="teacher-register-title">ลงทะเบียนผู้สอน</h1>
 
         {% if form.errors %}

@@ -11,14 +11,13 @@
 <main class="success-page">
     <section class="success-shell" aria-labelledby="success-title">
         <a class="mobile-brand success-brand" href="{% url 'school:registration' %}" aria-label="BRI School of Fivefold">
-            <strong>BRI</strong>
-            <span>School of Fivefold</span>
+            {% include "school/includes/brand_logo.html" with variant="success" %}
         </a>
 
         <div class="success-mark" aria-hidden="true">
             <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#check"></use></svg>
         </div>
-        <span class="eyebrow">Person saved</span>
+        <span class="eyebrow">บันทึกใบสมัครสำเร็จ</span>
         <h1 id="success-title">ส่งใบสมัครเรียบร้อยแล้ว</h1>
         <p class="success-lead">ขอบคุณคุณ {{ receipt.applicant_name }} เราได้รับข้อมูลของคุณครบถ้วนแล้ว</p>
 

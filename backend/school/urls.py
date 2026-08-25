@@ -9,6 +9,16 @@ app_name = "school"
 urlpatterns = [
     path("", views.registration, name="registration"),
     path("liff/profile/", views.liff_profile_sync, name="liff_profile_sync"),
+    path(
+        "agent/notifications/<str:user_key>/",
+        views.agent_notifications,
+        name="agent_notifications",
+    ),
+    path(
+        "agent/notifications/<str:user_key>/latest-closed-loop/",
+        views.latest_closed_loop_notification,
+        name="latest_closed_loop_notification",
+    ),
     path("registration/success/", views.registration_success, name="registration_success"),
     path("results/", views.announcement_result, name="announcement_result"),
     path(

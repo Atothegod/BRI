@@ -11,14 +11,13 @@
 <main class="success-page liff-boot-page">
     <section class="success-shell liff-boot-shell" aria-labelledby="liff-boot-title">
         <a class="mobile-brand success-brand" href="{% url 'school:registration' %}" aria-label="BRI School of Fivefold">
-            <strong>BRI</strong>
-            <span>School of Fivefold</span>
+            {% include "school/includes/brand_logo.html" with variant="success" %}
         </a>
 
         <div class="success-mark liff-boot-mark" aria-hidden="true">
             <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
         </div>
-        <span class="eyebrow">LINE LIFF</span>
+        <span class="eyebrow">LINE</span>
         <h1 id="liff-boot-title">กำลังเปิดหน้าที่เลือก</h1>
         <p class="success-lead">กรุณารอสักครู่ ระบบกำลังเชื่อมต่อกับ LINE</p>
     </section>

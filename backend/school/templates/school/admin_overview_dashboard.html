@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Admin overview | BRI School of Fivefold{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'school/css/registration.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="dashboard-page">
+    <header class="dashboard-topbar">
+        <a class="mobile-brand" href="{% url 'school:admin_overview_dashboard' %}" aria-label="BRI School of Fivefold">
+            {% include "school/includes/brand_logo.html" with variant="nav" %}
+        </a>
+        <div class="dashboard-actions">
+            {% if request.user.is_staff or request.user.is_superuser %}
+            <a class="button button--secondary" href="{% url 'admin:index' %}">
+                <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#shield-check"></use></svg>
+                <span>Django admin</span>
+            </a>
+            {% endif %}
+            <form method="post" action="{% url 'school:logout' %}">
+                {% csrf_token %}
+                <button class="button button--secondary" type="submit">ออกจากระบบ</button>
+            </form>
+        </div>
+    </header>
+
+    <section class="dashboard-shell" aria-labelledby="admin-dashboard-title">
+        <div class="page-heading">
+            <div>
+                <span class="eyebrow">Admin overview</span>
+                <h1 id="admin-dashboard-title">ภาพรวมโรงเรียน</h1>
+                <p>{{ request.user.get_full_name|default:request.user.username }}</p>
+            </div>
+        </div>
+
+        <div class="summary-strip summary-strip--four">
+            <div>
+                <span>ผู้สมัครทั้งหมด</span>
+                <strong>{{ stats.applicants_total }}</strong>
+            </div>
+            <div>
+                <span>นักเรียน active</span>
+                <strong>{{ stats.students_active }}</strong>
+            </div>
+            <div>
+                <span>ผู้สอนรออนุมัติ</span>
+                <strong>{{ stats.teachers_pending }}</strong>
+            </div>
+            <div>
+                <span>กลุ่ม active</span>
+                <strong>{{ stats.groups_active }}</strong>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <section class="dashboard-panel" aria-labelledby="admissions-title">
+                <div class="dashboard-panel-heading">
+                    <div>
+                        <span class="eyebrow">Admissions</span>
+                        <h2 id="admissions-title">สถานะผู้สมัคร</h2>
+                    </div>
+                </div>
+                <div class="metric-list">
+                    <div>
+                        <span>รอตรวจสอบ</span>
+                        <strong>{{ stats.applicants_pending }}</strong>
+                    </div>
+                    <div>
+                        <span>ผ่านแล้ว</span>
+                        <strong>{{ stats.applicants_passed }}</strong>
+                    </div>
+                    <div>
+                        <span>นักเรียนทั้งหมด</span>
+                        <strong>{{ stats.students_total }}</strong>
+                    </div>
+                </div>
+            </section>
+
+            <section class="dashboard-panel" aria-labelledby="payments-title">
+                <div class="dashboard-panel-heading">
+                    <div>
+                        <span class="eyebrow">Payments</span>
+                        <h2 id="payments-title">การชำระเงิน</h2>
+                    </div>
+                </div>
+                <div class="metric-list">
+                    <div>
+                        <span>ชำระแล้ว</span>
+                        <strong>{{ stats.students_paid }}</strong>
+                    </div>
+                    <div>
+                        <span>รอตรวจสลิป</span>
+                        <strong>{{ stats.students_payment_pending }}</strong>
+                    </div>
+                    <div>
+                        <span>ข้อมูลรอตรวจ</span>
+                        <strong>{{ stats.students_validation_pending }}</strong>
+                    </div>
+                </div>
+            </section>
+
+            <section class="dashboard-panel" aria-labelledby="teachers-title">
+                <div class="dashboard-panel-heading">
+                    <div>
+                        <span class="eyebrow">Teachers</span>
+                        <h2 id="teachers-title">สิทธิ์ผู้สอน</h2>
+                    </div>
+                    {% if request.user.is_staff or request.user.is_superuser %}
+                    <a class="button button--secondary button--small" href="{% url 'admin:accounts_user_changelist' %}">
+                        <span>จัดการ</span>
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="metric-list">
+                    <div>
+                        <span>ผู้สอนทั้งหมด</span>
+                        <strong>{{ stats.teachers_total }}</strong>
+                    </div>
+                    <div>
+                        <span>อนุมัติแล้ว</span>
+                        <strong>{{ stats.teachers_approved }}</strong>
+                    </div>
+                    <div>
+                        <span>รออนุมัติ</span>
+                        <strong>{{ stats.teachers_pending }}</strong>
+                    </div>
+                </div>
+                <div class="queue-list">
+                    {% for teacher in pending_teachers %}
+                    <article class="queue-row">
+                        <div>
+                            <strong>{{ teacher.get_full_name|default:teacher.username }}</strong>
+                            <span>{{ teacher.email|default:teacher.username }}</span>
+                        </div>
+                        <span class="status-badge status-badge--warning">รออนุมัติ</span>
+                    </article>
+                    {% empty %}
+                    <div class="empty-state empty-state--compact">
+                        <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#check-circle"></use></svg>
+                        <div>
+                            <strong>ไม่มีผู้สอนรออนุมัติ</strong>
+                            <span>คิวอนุมัติว่าง</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="dashboard-panel" aria-labelledby="groups-title">
+                <div class="dashboard-panel-heading">
+                    <div>
+                        <span class="eyebrow">Groups</span>
+                        <h2 id="groups-title">โหลดกลุ่มเรียน</h2>
+                    </div>
+                </div>
+                <div class="group-list">
+                    {% for group in group_summaries %}
+                    <article class="group-row">
+                        <div>
+                            <strong>{{ group.group_name }}</strong>
+                            <span>{{ group.teacher.get_full_name|default:group.teacher.username }}</span>
+                        </div>
+                        <div class="group-row-stats">
+                            <span>{{ group.active_student_count }} คน</span>
+                            <span>{{ group.paid_student_count }} ชำระแล้ว</span>
+                        </div>
+                    </article>
+                    {% empty %}
+                    <div class="empty-state empty-state--compact">
+                        <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#info"></use></svg>
+                        <div>
+                            <strong>ยังไม่มีกลุ่มเรียน</strong>
+                            <span>กลุ่มที่สร้างแล้วจะแสดงที่นี่</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="dashboard-panel dashboard-panel--wide" aria-labelledby="recent-students-title">
+                <div class="dashboard-panel-heading">
+                    <div>
+                        <span class="eyebrow">Recent records</span>
+                        <h2 id="recent-students-title">นักเรียนล่าสุด</h2>
+                    </div>
+                </div>
+                <div class="table-shell">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>รหัส</th>
+                                <th>ชื่อ</th>
+                                <th>กลุ่ม</th>
+                                <th>ชำระเงิน</th>
+                                <th>ตรวจข้อมูล</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student in recent_students %}
+                            <tr>
+                                <td>{{ student.student_id }}</td>
+                                <td>{{ student.person.full_name }}</td>
+                                <td>{{ student.group.group_name|default:"-" }}</td>
+                                <td>
+                                    {% if student.is_paid %}
+                                    <span class="status-badge status-badge--success">จ่ายแล้ว</span>
+                                    {% else %}
+                                    <span class="status-badge status-badge--warning">รอตรวจสอบ</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ student.get_admin_validation_status_display }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5">ยังไม่มีข้อมูลนักเรียน</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </section>
+</main>
+{% endblock %}

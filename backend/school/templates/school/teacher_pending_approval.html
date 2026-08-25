@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}รออนุมัติผู้สอน | BRI School of Fivefold{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'school/css/registration.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="success-page auth-page">
+    <section class="success-shell auth-shell pending-shell" aria-labelledby="pending-title">
+        <a class="mobile-brand success-brand" href="{% url 'school:registration' %}" aria-label="BRI School of Fivefold">
+            {% include "school/includes/brand_logo.html" with variant="success" %}
+        </a>
+
+        <div class="success-mark pending-mark">
+            <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#clock"></use></svg>
+        </div>
+
+        <span class="eyebrow">Teacher access pending</span>
+        <h1 id="pending-title">รอการอนุมัติจากผู้ดูแลระบบ</h1>
+        <p class="success-lead">
+            บัญชี {{ request.user.get_full_name|default:request.user.username }} ลงทะเบียนเรียบร้อยแล้ว
+            เมื่อได้รับอนุมัติ คุณจะเข้าสู่แดชบอร์ดผู้สอนได้ทันที
+        </p>
+
+        <div class="receipt-block">
+            <span>สถานะบัญชีผู้สอน</span>
+            <strong>ยังไม่อนุมัติ</strong>
+            <small>ส่งคำขอเมื่อ {{ request.user.date_joined|date:"d M Y H:i" }}</small>
+        </div>
+
+        <form class="pending-actions" method="post" action="{% url 'school:logout' %}">
+            {% csrf_token %}
+            <button class="button button--secondary success-action" type="submit">
+                <span>ออกจากระบบ</span>
+            </button>
+        </form>
+    </section>
+</main>
+{% endblock %}

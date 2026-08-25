@@ -159,20 +159,42 @@ class TeacherFlowTests(TestCase):
             },
         )
 
-        self.assertRedirects(response, reverse("school:teacher_dashboard"))
+        self.assertRedirects(response, reverse("school:teacher_pending_approval"))
         user = get_user_model().objects.get(username="teacher1")
         self.assertEqual(user.role, user.Role.TEACHER)
         self.assertEqual(user.google_email, "teacher@gmail.com")
         self.assertIsNone(user.google_connected_at)
+        self.assertFalse(user.is_teacher_approved)
+        self.assertIsNone(user.teacher_approved_at)
         self.assertTrue(TeacherGroup.objects.filter(teacher=user, group_name="กลุ่ม A").exists())
+
+    def test_teacher_dashboard_requires_admin_approval(self):
+        User = get_user_model()
+        teacher = User.objects.create_user(
+            username="teacher1",
+            password="pass",
+            role=User.Role.TEACHER,
+            is_teacher_approved=False,
+        )
+
+        self.client.force_login(teacher)
+        response = self.client.get(reverse("school:teacher_dashboard"))
+
+        self.assertRedirects(response, reverse("school:teacher_pending_approval"))
 
     def test_teacher_dashboard_shows_only_students_in_teacher_groups(self):
         User = get_user_model()
-        teacher = User.objects.create_user(username="teacher1", password="pass", role=User.Role.TEACHER)
+        teacher = User.objects.create_user(
+            username="teacher1",
+            password="pass",
+            role=User.Role.TEACHER,
+            is_teacher_approved=True,
+        )
         other_teacher = User.objects.create_user(
             username="teacher2",
             password="pass",
             role=User.Role.TEACHER,
+            is_teacher_approved=True,
         )
         group = TeacherGroup.objects.create(teacher=teacher, group_name="กลุ่ม A")
         other_group = TeacherGroup.objects.create(teacher=other_teacher, group_name="กลุ่ม B")
@@ -187,6 +209,60 @@ class TeacherFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Visible Student")
         self.assertNotContains(response, "Hidden Student")
+
+    def test_admin_overview_dashboard_shows_school_summary(self):
+        User = get_user_model()
+        admin = User.objects.create_user(
+            username="admin",
+            password="pass",
+            role=User.Role.ADMIN,
+            is_staff=True,
+        )
+        approved_teacher = User.objects.create_user(
+            username="approved-teacher",
+            password="pass",
+            role=User.Role.TEACHER,
+            is_teacher_approved=True,
+        )
+        User.objects.create_user(
+            username="pending-teacher",
+            email="pending@example.com",
+            password="pass",
+            role=User.Role.TEACHER,
+        )
+        group = TeacherGroup.objects.create(teacher=approved_teacher, group_name="กลุ่ม A")
+        person = Person.objects.create(
+            first_name="Recent",
+            last_name="Student",
+            status=Person.Status.PASSED,
+        )
+        student = Student.objects.get(person=person)
+        student.group = group
+        student.is_paid = True
+        student.save(update_fields=["group", "is_paid"])
+
+        self.client.force_login(admin)
+        response = self.client.get(reverse("school:admin_overview_dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "school/admin_overview_dashboard.html")
+        self.assertContains(response, "ภาพรวมโรงเรียน")
+        self.assertContains(response, "pending@example.com")
+        self.assertContains(response, "Recent Student")
+
+    def test_admin_visiting_teacher_dashboard_redirects_to_admin_overview(self):
+        User = get_user_model()
+        admin = User.objects.create_user(
+            username="admin",
+            password="pass",
+            role=User.Role.ADMIN,
+            is_staff=True,
+        )
+
+        self.client.force_login(admin)
+        response = self.client.get(reverse("school:teacher_dashboard"))
+
+        self.assertRedirects(response, reverse("school:admin_overview_dashboard"))
 
     def test_student_payment_upload_page_hides_student_id_field(self):
         response = self.client.get(reverse("school:student_payment_upload"))

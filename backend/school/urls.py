@@ -31,7 +31,9 @@ urlpatterns = [
         auth_views.LogoutView.as_view(next_page="school:login"),
         name="logout",
     ),
+    path("school-admin/dashboard/", views.admin_overview_dashboard, name="admin_overview_dashboard"),
     path("teachers/register/", views.teacher_register, name="teacher_register"),
+    path("teachers/pending/", views.teacher_pending_approval, name="teacher_pending_approval"),
     path("teachers/dashboard/", views.teacher_dashboard, name="teacher_dashboard"),
     path("students/payment/", views.student_payment_upload, name="student_payment_upload"),
 ]

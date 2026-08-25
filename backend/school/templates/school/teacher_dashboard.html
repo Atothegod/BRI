@@ -24,48 +24,105 @@
             <div>
                 <span class="eyebrow">Teacher dashboard</span>
                 <h1 id="teacher-dashboard-title">นักเรียนในกลุ่มของคุณ</h1>
-                <p>{{ request.user.get_full_name|default:request.user.username }}</p>
+                <p>{{ request.user.get_full_name|default:request.user.username }} · บัญชีผู้สอนได้รับอนุมัติแล้ว</p>
             </div>
         </div>
 
-        <div class="summary-strip">
+        <div class="summary-strip summary-strip--four">
             <div>
                 <span>กลุ่มที่ดูแล</span>
                 <strong>{{ groups|length }}</strong>
             </div>
             <div>
                 <span>นักเรียน</span>
-                <strong>{{ students|length }}</strong>
+                <strong>{{ student_count }}</strong>
+            </div>
+            <div>
+                <span>ชำระเงินแล้ว</span>
+                <strong>{{ paid_count }}</strong>
+            </div>
+            <div>
+                <span>รอตรวจสอบ</span>
+                <strong>{{ validation_pending_count }}</strong>
             </div>
         </div>
 
-        <div class="table-shell">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>รหัส</th>
-                        <th>ชื่อ</th>
-                        <th>กลุ่ม</th>
-                        <th>สถานะชำระเงิน</th>
-                        <th>เกรด</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for student in students %}
-                    <tr>
-                        <td>{{ student.student_id }}</td>
-                        <td>{{ student.person.full_name }}</td>
-                        <td>{{ student.group.group_name }}</td>
-                        <td>{% if student.is_paid %}จ่ายแล้ว{% else %}รอตรวจสอบ{% endif %}</td>
-                        <td>{{ student.grade|default:"-" }}</td>
-                    </tr>
+        <div class="dashboard-grid dashboard-grid--teacher">
+            <section class="dashboard-panel" aria-labelledby="teacher-groups-title">
+                <div class="dashboard-panel-heading">
+                    <div>
+                        <span class="eyebrow">Groups</span>
+                        <h2 id="teacher-groups-title">กลุ่มที่รับผิดชอบ</h2>
+                    </div>
+                </div>
+                <div class="group-list">
+                    {% for group in groups %}
+                    <article class="group-row">
+                        <div>
+                            <strong>{{ group.group_name }}</strong>
+                            <span>{{ group.grade_level|default:"ไม่ระบุรุ่น" }}</span>
+                        </div>
+                        <div class="group-row-stats">
+                            <span>{{ group.active_student_count }} คน</span>
+                            <span>{{ group.paid_student_count }} ชำระแล้ว</span>
+                        </div>
+                    </article>
                     {% empty %}
-                    <tr>
-                        <td colspan="5">ยังไม่มีนักเรียนในกลุ่มของคุณ</td>
-                    </tr>
+                    <div class="empty-state empty-state--compact">
+                        <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#info"></use></svg>
+                        <div>
+                            <strong>ยังไม่มีกลุ่มที่เปิดใช้งาน</strong>
+                            <span>รอการจัดกลุ่มจากทีมผู้ดูแลระบบ</span>
+                        </div>
+                    </div>
                     {% endfor %}
-                </tbody>
-            </table>
+                </div>
+            </section>
+
+            <section class="dashboard-panel dashboard-panel--wide" aria-labelledby="teacher-students-title">
+                <div class="dashboard-panel-heading">
+                    <div>
+                        <span class="eyebrow">Roster</span>
+                        <h2 id="teacher-students-title">รายชื่อนักเรียน</h2>
+                    </div>
+                </div>
+                <div class="table-shell">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>รหัส</th>
+                                <th>ชื่อ</th>
+                                <th>กลุ่ม</th>
+                                <th>สถานะชำระเงิน</th>
+                                <th>ตรวจข้อมูล</th>
+                                <th>เกรด</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student in students %}
+                            <tr>
+                                <td>{{ student.student_id }}</td>
+                                <td>{{ student.person.full_name }}</td>
+                                <td>{{ student.group.group_name }}</td>
+                                <td>
+                                    {% if student.is_paid %}
+                                    <span class="status-badge status-badge--success">จ่ายแล้ว</span>
+                                    {% else %}
+                                    <span class="status-badge status-badge--warning">รอตรวจสอบ</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ student.get_admin_validation_status_display }}</td>
+                                <td>{{ student.grade|default:"-" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6">ยังไม่มีนักเรียนในกลุ่มของคุณ</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
         </div>
     </section>
 </main>

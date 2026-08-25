@@ -3,7 +3,10 @@ import json
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
+from django.db.models import Count, Q
 from django.views.decorators.cache import never_cache
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
@@ -22,6 +25,26 @@ REGISTRATION_STEPS = (
     {"number": 3, "label": "คริสตจักร", "icon": "landmark"},
     {"number": 4, "label": "เป้าหมาย", "icon": "target"},
 )
+
+
+def is_school_admin(user):
+    return (
+        user.is_authenticated
+        and user.is_active
+        and (
+            user.is_staff
+            or user.is_superuser
+            or getattr(user, "role", "") == user.Role.ADMIN
+        )
+    )
+
+
+def is_teacher(user):
+    return (
+        user.is_authenticated
+        and user.is_active
+        and getattr(user, "role", "") == user.Role.TEACHER
+    )
 
 
 def get_session_line_profile(request):
@@ -262,26 +285,113 @@ def teacher_register(request):
     if request.method == "POST" and form.is_valid():
         user = form.save()
         login(request, user)
-        return redirect("school:teacher_dashboard")
+        return redirect("school:teacher_pending_approval")
 
     return render(request, "school/teacher_register.html", {"form": form})
 
 
 @login_required
+def teacher_pending_approval(request):
+    if not is_teacher(request.user):
+        if is_school_admin(request.user):
+            return redirect("school:admin_overview_dashboard")
+        raise PermissionDenied
+
+    if request.user.can_access_teacher_dashboard():
+        return redirect("school:teacher_dashboard")
+
+    return render(request, "school/teacher_pending_approval.html")
+
+
+@login_required
 def teacher_dashboard(request):
-    groups = TeacherGroup.objects.filter(teacher=request.user, is_active=True).order_by(
-        "group_name"
+    if not is_teacher(request.user):
+        if is_school_admin(request.user):
+            return redirect("school:admin_overview_dashboard")
+        raise PermissionDenied
+
+    if not request.user.can_access_teacher_dashboard():
+        return redirect("school:teacher_pending_approval")
+
+    groups = (
+        TeacherGroup.objects.filter(teacher=request.user, is_active=True)
+        .annotate(
+            active_student_count=Count("students", filter=Q(students__is_active=True)),
+            paid_student_count=Count(
+                "students",
+                filter=Q(students__is_active=True, students__is_paid=True),
+            ),
+        )
+        .order_by("group_name")
     )
     students = (
         Student.objects.select_related("person", "group")
-        .filter(group__in=groups)
+        .filter(group__in=groups, is_active=True)
         .order_by("group__group_name", "student_id")
     )
+    student_count = students.count()
+    paid_count = students.filter(is_paid=True).count()
+    validation_pending_count = students.filter(
+        admin_validation_status=Student.AdminValidationStatus.PENDING
+    ).count()
     context = {
         "groups": groups,
         "students": students,
+        "student_count": student_count,
+        "paid_count": paid_count,
+        "unpaid_count": student_count - paid_count,
+        "validation_pending_count": validation_pending_count,
     }
     return render(request, "school/teacher_dashboard.html", context)
+
+
+@login_required
+def admin_overview_dashboard(request):
+    if not is_school_admin(request.user):
+        raise PermissionDenied
+
+    User = get_user_model()
+    teacher_queryset = User.objects.filter(role=User.Role.TEACHER)
+    recent_students = (
+        Student.objects.select_related("person", "group")
+        .order_by("-created_at", "-id")[:8]
+    )
+    pending_teachers = teacher_queryset.filter(is_teacher_approved=False).order_by(
+        "date_joined"
+    )[:8]
+    group_summaries = (
+        TeacherGroup.objects.select_related("teacher")
+        .annotate(
+            active_student_count=Count("students", filter=Q(students__is_active=True)),
+            paid_student_count=Count(
+                "students",
+                filter=Q(students__is_active=True, students__is_paid=True),
+            ),
+        )
+        .order_by("group_name")[:8]
+    )
+    context = {
+        "stats": {
+            "applicants_total": Person.objects.count(),
+            "applicants_pending": Person.objects.filter(status=Person.Status.IN_PROGRESS).count(),
+            "applicants_passed": Person.objects.filter(status=Person.Status.PASSED).count(),
+            "students_total": Student.objects.count(),
+            "students_active": Student.objects.filter(is_active=True).count(),
+            "students_paid": Student.objects.filter(is_paid=True).count(),
+            "students_payment_pending": Student.objects.filter(is_paid=False).count(),
+            "students_validation_pending": Student.objects.filter(
+                admin_validation_status=Student.AdminValidationStatus.PENDING
+            ).count(),
+            "teachers_total": teacher_queryset.count(),
+            "teachers_approved": teacher_queryset.filter(is_teacher_approved=True).count(),
+            "teachers_pending": teacher_queryset.filter(is_teacher_approved=False).count(),
+            "groups_active": TeacherGroup.objects.filter(is_active=True).count(),
+        },
+        "recent_students": recent_students,
+        "pending_teachers": pending_teachers,
+        "group_summaries": group_summaries,
+    }
+    return render(request, "school/admin_overview_dashboard.html", context)
 
 
 @never_cache

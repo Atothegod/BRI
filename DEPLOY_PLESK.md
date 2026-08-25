@@ -1,5 +1,7 @@
 # Plesk Production Deploy
 
+For the Cloud VPS flow that does not use Plesk as the public web server, use `DEPLOY_VPS_NGINX.md`.
+
 ## 1. Clone and configure
 
 ```bash

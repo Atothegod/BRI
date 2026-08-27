@@ -144,6 +144,7 @@ SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
 SOCIALACCOUNT_QUERY_EMAIL = True
 SOCIALACCOUNT_ADAPTER = "accounts.adapters.TeacherGoogleSocialAccountAdapter"
+ACCOUNT_LOGIN_METHODS = {"username", "email"}
 
 GOOGLE_PROVIDER_SETTINGS = {
     "SCOPE": ["profile", "email"],

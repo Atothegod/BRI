@@ -15,7 +15,13 @@ from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
-from .forms import PaymentSlipUploadForm, PersonForm, REGION_OPTIONS, TeacherSignupForm
+from .forms import (
+    PaymentSlipUploadForm,
+    PersonForm,
+    REGION_OPTIONS,
+    TeacherLoginForm,
+    TeacherSignupForm,
+)
 from .line import LineProfileError, normalize_line_profile, verify_line_id_token
 from .models import Person, Student, TeacherGroup
 
@@ -56,6 +62,7 @@ def get_auth_context():
 
 
 class TeacherLoginView(LoginView):
+    form_class = TeacherLoginForm
     template_name = "school/login.html"
     redirect_authenticated_user = True
 

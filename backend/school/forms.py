@@ -1,10 +1,10 @@
 from django import forms
 from django.contrib.auth import get_user_model
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.db import transaction
 from django.utils import timezone
 
-from .models import Person, Student, TeacherGroup
+from .models import Person, Student
 
 
 CONTROL_CLASS = "form-control"
@@ -315,6 +315,19 @@ class PersonForm(forms.Form):
         return Person.objects.create(**person_values)
 
 
+class TeacherLoginForm(AuthenticationForm):
+    username = forms.CharField(
+        label="ชื่อผู้ใช้หรืออีเมล",
+        widget=forms.TextInput(
+            attrs={
+                "class": CONTROL_CLASS,
+                "autocomplete": "username",
+                "placeholder": "teacher@example.com",
+            }
+        ),
+    )
+
+
 class TeacherSignupForm(UserCreationForm):
     email = forms.EmailField(
         widget=forms.EmailInput(
@@ -325,90 +338,35 @@ class TeacherSignupForm(UserCreationForm):
             }
         )
     )
-    first_name = forms.CharField(
-        max_length=150,
-        widget=forms.TextInput(
-            attrs={
-                "class": CONTROL_CLASS,
-                "autocomplete": "given-name",
-                "placeholder": "ชื่อจริง",
-            }
-        ),
-    )
-    last_name = forms.CharField(
-        max_length=150,
-        widget=forms.TextInput(
-            attrs={
-                "class": CONTROL_CLASS,
-                "autocomplete": "family-name",
-                "placeholder": "นามสกุล",
-            }
-        ),
-    )
-    google_email = forms.EmailField(
-        required=False,
-        widget=forms.EmailInput(
-            attrs={
-                "class": CONTROL_CLASS,
-                "autocomplete": "email",
-                "placeholder": "google.account@gmail.com",
-            }
-        ),
-    )
-    group_name = forms.CharField(
-        max_length=255,
-        required=False,
-        widget=forms.TextInput(
-            attrs={
-                "class": CONTROL_CLASS,
-                "placeholder": "ชื่อกลุ่มผู้เรียน",
-            }
-        ),
-    )
-    grade_level = forms.CharField(
-        max_length=100,
-        required=False,
-        widget=forms.TextInput(
-            attrs={
-                "class": CONTROL_CLASS,
-                "placeholder": "ระดับ/รุ่น",
-            }
-        ),
-    )
 
     class Meta(UserCreationForm.Meta):
         model = get_user_model()
-        fields = ("username", "email", "first_name", "last_name")
+        fields = ("username", "email")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field_name in ("username", "password1", "password2"):
             self.fields[field_name].widget.attrs.setdefault("class", CONTROL_CLASS)
         self.fields["username"].widget.attrs.setdefault("autocomplete", "username")
+        self.fields["username"].widget.attrs.setdefault("placeholder", "teacher")
         self.fields["password1"].widget.attrs.setdefault("autocomplete", "new-password")
         self.fields["password2"].widget.attrs.setdefault("autocomplete", "new-password")
+
+    def clean_email(self):
+        email = self.cleaned_data["email"].strip().lower()
+        User = get_user_model()
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError("มีบัญชีที่ใช้อีเมลนี้แล้ว")
+        return email
 
     @transaction.atomic
     def save(self, commit=True):
         user = super().save(commit=False)
         user.role = user.Role.TEACHER
         user.email = self.cleaned_data["email"]
-        user.first_name = self.cleaned_data["first_name"]
-        user.last_name = self.cleaned_data["last_name"]
-
-        google_email = self.cleaned_data.get("google_email")
-        if google_email:
-            user.google_email = google_email
 
         if commit:
             user.save()
-            group_name = self.cleaned_data.get("group_name")
-            if group_name:
-                TeacherGroup.objects.create(
-                    teacher=user,
-                    group_name=group_name,
-                    grade_level=self.cleaned_data.get("grade_level", ""),
-                )
         return user
 
 

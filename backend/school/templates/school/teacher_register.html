@@ -32,13 +32,13 @@
             <form method="post" action="{% url 'google_login' %}">
                 {% csrf_token %}
                 <button class="button button--google success-action" type="submit">
-                    <span class="google-mark" aria-hidden="true">G</span>
+                    {% include "school/includes/google_g_logo.html" %}
                     <span>Continue with Google</span>
                 </button>
             </form>
             {% else %}
             <button class="button button--google success-action" type="button" disabled>
-                <span class="google-mark" aria-hidden="true">G</span>
+                {% include "school/includes/google_g_logo.html" %}
                 <span>Continue with Google</span>
             </button>
             {% endif %}
@@ -48,29 +48,10 @@
 
         <form class="stack-form" method="post" novalidate>
             {% csrf_token %}
-            <div class="field-grid field-grid--two">
-                <div class="field-group{% if form.first_name.errors %} has-error{% endif %}">
-                    <label class="field-label" for="{{ form.first_name.id_for_label }}">ชื่อจริง</label>
-                    {{ form.first_name }}
-                    {{ form.first_name.errors }}
-                </div>
-                <div class="field-group{% if form.last_name.errors %} has-error{% endif %}">
-                    <label class="field-label" for="{{ form.last_name.id_for_label }}">นามสกุล</label>
-                    {{ form.last_name }}
-                    {{ form.last_name.errors }}
-                </div>
-            </div>
-
             <div class="field-group{% if form.email.errors %} has-error{% endif %}">
                 <label class="field-label" for="{{ form.email.id_for_label }}">อีเมล</label>
                 {{ form.email }}
                 {{ form.email.errors }}
-            </div>
-
-            <div class="field-group{% if form.google_email.errors %} has-error{% endif %}">
-                <label class="field-label" for="{{ form.google_email.id_for_label }}">Google email <span class="optional-label">ไม่บังคับ</span></label>
-                {{ form.google_email }}
-                {{ form.google_email.errors }}
             </div>
 
             <div class="field-group{% if form.username.errors %} has-error{% endif %}">
@@ -89,19 +70,6 @@
                     <label class="field-label" for="{{ form.password2.id_for_label }}">ยืนยันรหัสผ่าน</label>
                     {{ form.password2 }}
                     {{ form.password2.errors }}
-                </div>
-            </div>
-
-            <div class="field-grid field-grid--two">
-                <div class="field-group{% if form.group_name.errors %} has-error{% endif %}">
-                    <label class="field-label" for="{{ form.group_name.id_for_label }}">กลุ่มผู้เรียน <span class="optional-label">ไม่บังคับ</span></label>
-                    {{ form.group_name }}
-                    {{ form.group_name.errors }}
-                </div>
-                <div class="field-group{% if form.grade_level.errors %} has-error{% endif %}">
-                    <label class="field-label" for="{{ form.grade_level.id_for_label }}">ระดับ/รุ่น <span class="optional-label">ไม่บังคับ</span></label>
-                    {{ form.grade_level }}
-                    {{ form.grade_level.errors }}
                 </div>
             </div>
 

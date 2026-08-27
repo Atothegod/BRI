@@ -163,6 +163,13 @@ class TeacherFlowTests(TestCase):
         self.assertContains(response, "Continue with Google")
         self.assertContains(response, reverse("google_login"))
 
+    def test_allauth_login_and_signup_redirect_to_teacher_pages(self):
+        login_response = self.client.get("/accounts/login/")
+        signup_response = self.client.get("/accounts/signup/")
+
+        self.assertRedirects(login_response, reverse("school:login"))
+        self.assertRedirects(signup_response, reverse("school:teacher_register"))
+
     def test_google_social_signup_populates_pending_teacher(self):
         request = RequestFactory().get(reverse("school:login"))
         User = get_user_model()
@@ -219,17 +226,12 @@ class TeacherFlowTests(TestCase):
         self.assertIsNotNone(teacher.google_connected_at)
         self.assertTrue(teacher.is_teacher_approved)
 
-    def test_teacher_signup_creates_teacher_user_and_group(self):
+    def test_teacher_signup_creates_pending_teacher_user(self):
         response = self.client.post(
             reverse("school:teacher_register"),
             {
                 "username": "teacher1",
                 "email": "teacher@example.com",
-                "first_name": "Teacher",
-                "last_name": "One",
-                "google_email": "teacher@gmail.com",
-                "group_name": "กลุ่ม A",
-                "grade_level": "รุ่น 1",
                 "password1": "StrongPass12345",
                 "password2": "StrongPass12345",
             },
@@ -238,11 +240,37 @@ class TeacherFlowTests(TestCase):
         self.assertRedirects(response, reverse("school:teacher_pending_approval"))
         user = get_user_model().objects.get(username="teacher1")
         self.assertEqual(user.role, user.Role.TEACHER)
-        self.assertEqual(user.google_email, "teacher@gmail.com")
+        self.assertEqual(user.email, "teacher@example.com")
+        self.assertEqual(user.google_email, "")
         self.assertIsNone(user.google_connected_at)
         self.assertFalse(user.is_teacher_approved)
         self.assertIsNone(user.teacher_approved_at)
-        self.assertTrue(TeacherGroup.objects.filter(teacher=user, group_name="กลุ่ม A").exists())
+        self.assertFalse(TeacherGroup.objects.filter(teacher=user).exists())
+
+    def test_teacher_can_login_with_email_and_password(self):
+        User = get_user_model()
+        teacher = User.objects.create_user(
+            username="teacher1",
+            email="teacher@example.com",
+            password="StrongPass12345",
+            role=User.Role.TEACHER,
+            is_teacher_approved=False,
+        )
+
+        response = self.client.post(
+            reverse("school:login"),
+            {
+                "username": "teacher@example.com",
+                "password": "StrongPass12345",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("school:post_login_redirect"),
+            fetch_redirect_response=False,
+        )
+        self.assertEqual(int(self.client.session["_auth_user_id"]), teacher.pk)
 
     def test_teacher_dashboard_requires_admin_approval(self):
         User = get_user_model()

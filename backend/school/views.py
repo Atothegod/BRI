@@ -35,15 +35,7 @@ REGISTRATION_STEPS = (
 
 
 def is_school_admin(user):
-    return (
-        user.is_authenticated
-        and user.is_active
-        and (
-            user.is_staff
-            or user.is_superuser
-            or getattr(user, "role", "") == user.Role.ADMIN
-        )
-    )
+    return user.is_authenticated and user.is_active and user.is_superuser
 
 
 def is_teacher(user):
@@ -324,12 +316,12 @@ def teacher_register(request):
 
 @login_required
 def post_login_redirect(request):
-    if is_school_admin(request.user):
-        return redirect("school:admin_overview_dashboard")
     if is_teacher(request.user):
         if request.user.can_access_teacher_dashboard():
             return redirect("school:teacher_dashboard")
         return redirect("school:teacher_pending_approval")
+    if is_school_admin(request.user):
+        return redirect("school:admin_overview_dashboard")
     return redirect("school:registration")
 
 

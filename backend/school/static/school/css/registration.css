@@ -1970,6 +1970,11 @@ textarea.form-control {
     margin-left: auto;
 }
 
+.auth-shell .field-group,
+.auth-shell .errorlist {
+    text-align: left;
+}
+
 .success-brand {
     width: fit-content;
     max-width: 100%;

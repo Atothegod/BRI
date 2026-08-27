@@ -272,6 +272,50 @@ class TeacherFlowTests(TestCase):
         )
         self.assertEqual(int(self.client.session["_auth_user_id"]), teacher.pk)
 
+    def test_approved_teacher_post_login_redirects_to_teacher_dashboard(self):
+        User = get_user_model()
+        teacher = User.objects.create_user(
+            username="teacher1",
+            password="pass",
+            role=User.Role.TEACHER,
+            is_staff=True,
+            is_teacher_approved=True,
+        )
+
+        self.client.force_login(teacher)
+        response = self.client.get(reverse("school:post_login_redirect"))
+
+        self.assertRedirects(response, reverse("school:teacher_dashboard"))
+
+    def test_approved_teacher_login_flow_reaches_teacher_dashboard(self):
+        User = get_user_model()
+        User.objects.create_user(
+            username="teacher1",
+            email="teacher@example.com",
+            password="StrongPass12345",
+            role=User.Role.TEACHER,
+            is_teacher_approved=True,
+        )
+
+        response = self.client.post(
+            reverse("school:login"),
+            {
+                "username": "teacher@example.com",
+                "password": "StrongPass12345",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.redirect_chain,
+            [
+                (reverse("school:post_login_redirect"), 302),
+                (reverse("school:teacher_dashboard"), 302),
+            ],
+        )
+        self.assertContains(response, "นักเรียนในกลุ่มของคุณ")
+
     def test_teacher_dashboard_requires_admin_approval(self):
         User = get_user_model()
         teacher = User.objects.create_user(
@@ -316,11 +360,10 @@ class TeacherFlowTests(TestCase):
 
     def test_admin_overview_dashboard_shows_school_summary(self):
         User = get_user_model()
-        admin = User.objects.create_user(
+        admin = User.objects.create_superuser(
             username="admin",
+            email="admin@example.com",
             password="pass",
-            role=User.Role.ADMIN,
-            is_staff=True,
         )
         approved_teacher = User.objects.create_user(
             username="approved-teacher",
@@ -354,13 +397,26 @@ class TeacherFlowTests(TestCase):
         self.assertContains(response, "pending@example.com")
         self.assertContains(response, "Recent Student")
 
+    def test_legacy_admin_role_without_superuser_cannot_access_admin_overview(self):
+        User = get_user_model()
+        legacy_admin = User.objects.create_user(
+            username="legacy-admin",
+            password="pass",
+            role="ADMIN",
+            is_staff=True,
+        )
+
+        self.client.force_login(legacy_admin)
+        response = self.client.get(reverse("school:admin_overview_dashboard"))
+
+        self.assertEqual(response.status_code, 403)
+
     def test_admin_visiting_teacher_dashboard_redirects_to_admin_overview(self):
         User = get_user_model()
-        admin = User.objects.create_user(
+        admin = User.objects.create_superuser(
             username="admin",
+            email="admin@example.com",
             password="pass",
-            role=User.Role.ADMIN,
-            is_staff=True,
         )
 
         self.client.force_login(admin)

@@ -1315,6 +1315,69 @@ textarea.form-control {
     border-color: #b8c2bc;
 }
 
+.button:disabled {
+    cursor: not-allowed;
+    opacity: 0.58;
+    transform: none;
+}
+
+.button--google {
+    width: 100%;
+    color: #1f2937;
+    background: #ffffff;
+    border: 1px solid #d5dbd7;
+    box-shadow: 0 8px 22px rgba(5, 46, 26, 0.08);
+}
+
+.button--google:hover:not(:disabled) {
+    background: #f8faf9;
+    border-color: #b8c2bc;
+}
+
+.google-mark {
+    display: inline-grid;
+    width: 24px;
+    height: 24px;
+    color: #ffffff;
+    background: #1f6feb;
+    border-radius: 50%;
+    font-size: 0.78rem;
+    font-weight: 850;
+    place-items: center;
+}
+
+.oauth-stack {
+    width: 100%;
+    margin: 18px 0 0;
+}
+
+.oauth-stack form {
+    width: 100%;
+}
+
+.auth-divider {
+    display: flex;
+    width: 100%;
+    margin: 18px 0;
+    color: var(--color-muted);
+    align-items: center;
+    gap: 12px;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    height: 1px;
+    content: "";
+    background: var(--color-border);
+    flex: 1;
+}
+
+.auth-divider span {
+    font-size: 0.72rem;
+    font-weight: 720;
+    white-space: nowrap;
+}
+
 .button--back {
     width: 52px;
     padding-inline: 0;

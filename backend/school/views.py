@@ -5,11 +5,12 @@ from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import LoginView
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Q
 from django.views.decorators.cache import never_cache
 from django.http import JsonResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, resolve_url
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
@@ -45,6 +46,26 @@ def is_teacher(user):
         and user.is_active
         and getattr(user, "role", "") == user.Role.TEACHER
     )
+
+
+def get_auth_context():
+    return {
+        "google_oauth_enabled": settings.GOOGLE_OAUTH_ENABLED,
+        "google_oauth_login_url": "google_login",
+    }
+
+
+class TeacherLoginView(LoginView):
+    template_name = "school/login.html"
+    redirect_authenticated_user = True
+
+    def get_success_url(self):
+        return resolve_url("school:post_login_redirect")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(get_auth_context())
+        return context
 
 
 def get_session_line_profile(request):
@@ -284,10 +305,25 @@ def teacher_register(request):
 
     if request.method == "POST" and form.is_valid():
         user = form.save()
-        login(request, user)
+        login(request, user, backend="django.contrib.auth.backends.ModelBackend")
         return redirect("school:teacher_pending_approval")
 
-    return render(request, "school/teacher_register.html", {"form": form})
+    return render(
+        request,
+        "school/teacher_register.html",
+        {"form": form, **get_auth_context()},
+    )
+
+
+@login_required
+def post_login_redirect(request):
+    if is_school_admin(request.user):
+        return redirect("school:admin_overview_dashboard")
+    if is_teacher(request.user):
+        if request.user.can_access_teacher_dashboard():
+            return redirect("school:teacher_dashboard")
+        return redirect("school:teacher_pending_approval")
+    return redirect("school:registration")
 
 
 @login_required

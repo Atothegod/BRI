@@ -2,8 +2,12 @@ import json
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase, override_settings
+from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
+
+from allauth.socialaccount.models import SocialAccount, SocialLogin
+
+from accounts.adapters import TeacherGoogleSocialAccountAdapter
 
 from .models import Person, Student, TeacherGroup
 
@@ -143,6 +147,78 @@ class AgentNotificationEndpointTests(TestCase):
 
 
 class TeacherFlowTests(TestCase):
+    @override_settings(GOOGLE_OAUTH_ENABLED=True)
+    def test_teacher_login_shows_google_oauth_button(self):
+        response = self.client.get(reverse("school:login"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Continue with Google")
+        self.assertContains(response, reverse("google_login"))
+
+    @override_settings(GOOGLE_OAUTH_ENABLED=True)
+    def test_teacher_register_shows_google_oauth_button(self):
+        response = self.client.get(reverse("school:teacher_register"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Continue with Google")
+        self.assertContains(response, reverse("google_login"))
+
+    def test_google_social_signup_populates_pending_teacher(self):
+        request = RequestFactory().get(reverse("school:login"))
+        User = get_user_model()
+        sociallogin = SocialLogin(
+            user=User(),
+            account=SocialAccount(
+                provider="google",
+                uid="google-123",
+                extra_data={"email": "teacher.google@example.com"},
+            ),
+        )
+
+        user = TeacherGoogleSocialAccountAdapter().populate_user(
+            request,
+            sociallogin,
+            {
+                "email": "teacher.google@example.com",
+                "first_name": "Google",
+                "last_name": "Teacher",
+            },
+        )
+
+        self.assertEqual(user.role, user.Role.TEACHER)
+        self.assertFalse(user.is_teacher_approved)
+        self.assertEqual(user.email, "teacher.google@example.com")
+        self.assertEqual(user.google_email, "teacher.google@example.com")
+        self.assertIsNotNone(user.google_connected_at)
+
+    def test_google_social_login_matches_existing_teacher_google_email(self):
+        request = RequestFactory().get(reverse("school:login"))
+        User = get_user_model()
+        teacher = User.objects.create_user(
+            username="teacher-google",
+            email="teacher@example.com",
+            password="pass",
+            role=User.Role.TEACHER,
+            google_email="teacher.google@example.com",
+            is_teacher_approved=True,
+        )
+        sociallogin = SocialLogin(
+            user=User(),
+            account=SocialAccount(
+                provider="google",
+                uid="google-123",
+                extra_data={"email": "TEACHER.GOOGLE@example.com"},
+            ),
+        )
+
+        TeacherGoogleSocialAccountAdapter().pre_social_login(request, sociallogin)
+
+        self.assertEqual(sociallogin.user, teacher)
+        teacher.refresh_from_db()
+        self.assertEqual(teacher.google_email, "teacher.google@example.com")
+        self.assertIsNotNone(teacher.google_connected_at)
+        self.assertTrue(teacher.is_teacher_approved)
+
     def test_teacher_signup_creates_teacher_user_and_group(self):
         response = self.client.post(
             reverse("school:teacher_register"),

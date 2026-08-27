@@ -27,6 +27,25 @@
         </div>
         {% endif %}
 
+        <div class="oauth-stack">
+            {% if google_oauth_enabled %}
+            <form method="post" action="{% url 'google_login' %}">
+                {% csrf_token %}
+                <button class="button button--google success-action" type="submit">
+                    <span class="google-mark" aria-hidden="true">G</span>
+                    <span>Continue with Google</span>
+                </button>
+            </form>
+            {% else %}
+            <button class="button button--google success-action" type="button" disabled>
+                <span class="google-mark" aria-hidden="true">G</span>
+                <span>Continue with Google</span>
+            </button>
+            {% endif %}
+        </div>
+
+        <div class="auth-divider"><span>หรือเข้าสู่ระบบด้วยรหัสผ่าน</span></div>
+
         <form class="stack-form" method="post" novalidate>
             {% csrf_token %}
             <div class="field-group">

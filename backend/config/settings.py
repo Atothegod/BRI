@@ -50,6 +50,11 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.sites",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
     "accounts",
     "school",
 ]
@@ -60,6 +65,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -122,7 +128,39 @@ MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "accounts.User"
 LOGIN_URL = "school:login"
-LOGIN_REDIRECT_URL = "school:teacher_dashboard"
+LOGIN_REDIRECT_URL = "school:post_login_redirect"
+SITE_ID = 1
+
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
+]
+
+GOOGLE_OAUTH_CLIENT_ID = os.environ.get("GOOGLE_OAUTH_CLIENT_ID", "").strip()
+GOOGLE_OAUTH_CLIENT_SECRET = os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET", "").strip()
+GOOGLE_OAUTH_ENABLED = bool(GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET)
+
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
+SOCIALACCOUNT_QUERY_EMAIL = True
+SOCIALACCOUNT_ADAPTER = "accounts.adapters.TeacherGoogleSocialAccountAdapter"
+
+GOOGLE_PROVIDER_SETTINGS = {
+    "SCOPE": ["profile", "email"],
+    "AUTH_PARAMS": {"access_type": "online"},
+    "OAUTH_PKCE_ENABLED": True,
+    "VERIFIED_EMAIL": True,
+}
+if GOOGLE_OAUTH_ENABLED:
+    GOOGLE_PROVIDER_SETTINGS["APPS"] = [
+        {
+            "client_id": GOOGLE_OAUTH_CLIENT_ID,
+            "secret": GOOGLE_OAUTH_CLIENT_SECRET,
+            "key": "",
+        }
+    ]
+SOCIALACCOUNT_PROVIDERS = {"google": GOOGLE_PROVIDER_SETTINGS}
+
 LINE_RETURN_URL = os.environ.get("LINE_RETURN_URL", "https://line.me/R/")
 LINE_LIFF_ID = os.environ.get("LINE_LIFF_ID", "")
 LINE_LOGIN_CHANNEL_ID = os.environ.get("LINE_LOGIN_CHANNEL_ID", "")

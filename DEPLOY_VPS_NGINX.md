@@ -43,10 +43,20 @@ DJANGO_SESSION_COOKIE_SECURE=1
 DJANGO_CSRF_COOKIE_SECURE=1
 WEB_BIND=127.0.0.1
 WEB_PORT=8080
+GOOGLE_OAUTH_CLIENT_ID=
+GOOGLE_OAUTH_CLIENT_SECRET=
 LINE_LIFF_ALLOW_UNVERIFIED_PROFILE=0
 ```
 
 Keep `.env` only on the server. Do not commit it.
+
+Google OAuth authorized redirect URIs:
+
+```text
+https://bri.brightromancechurch.org/accounts/google/login/callback/
+http://localhost:8000/accounts/google/login/callback/
+http://127.0.0.1:8000/accounts/google/login/callback/
+```
 
 ## 3. Start Docker
 

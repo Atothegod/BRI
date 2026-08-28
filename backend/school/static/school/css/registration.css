@@ -16,7 +16,7 @@
     --color-border-soft: #f3f4f6;
     --color-danger: #b42318;
     --color-danger-soft: #fff4f2;
-    --app-background-image: url("../images/app-background.jpg?v=20260828-sharp-1");
+    --app-background-image: url("../images/app-background.jpg?v=20260828-gold-silk-1");
     --shadow-card: 0 1px 2px rgba(5, 46, 26, 0.04), 0 12px 34px rgba(5, 46, 26, 0.08), 0 28px 70px rgba(5, 46, 26, 0.04);
     --shadow-float: 0 -1px 0 rgba(5, 46, 26, 0.06), 0 -14px 38px rgba(5, 46, 26, 0.1);
     --radius-card: 8px;
@@ -122,7 +122,7 @@ svg {
     background-image: var(--app-background-image);
     background-position: center;
     background-size: cover;
-    filter: blur(2px) saturate(0.82) contrast(1.06) brightness(1.06);
+    filter: blur(1px) saturate(0.88) contrast(1.04) brightness(1.05);
     transform: scale(1.015);
 }
 
@@ -134,8 +134,13 @@ svg {
     z-index: -1;
     content: "";
     background:
-        linear-gradient(120deg, rgba(3, 24, 14, 0.72), rgba(3, 24, 14, 0.26) 48%, rgba(255, 255, 255, 0.45)),
-        rgba(255, 255, 255, 0.18);
+        linear-gradient(104deg, rgba(255, 255, 255, 0) 22%, rgba(255, 226, 148, 0.26) 42%, rgba(255, 255, 255, 0.42) 50%, rgba(255, 226, 148, 0.2) 58%, rgba(255, 255, 255, 0) 78%),
+        linear-gradient(120deg, rgba(3, 24, 14, 0.32), rgba(255, 255, 255, 0.08) 48%, rgba(255, 255, 255, 0.5)),
+        rgba(255, 255, 255, 0.12);
+    background-position: 130% 0, 0 0, 0 0;
+    background-size: 240% 100%, auto, auto;
+    animation: goldSilkSheen 16s ease-in-out infinite alternate;
+    pointer-events: none;
 }
 
 .app-sidebar {
@@ -2273,6 +2278,11 @@ select.form-control {
     to { opacity: 1; }
 }
 
+@keyframes goldSilkSheen {
+    from { background-position: 130% 0, 0 0, 0 0; }
+    to { background-position: -30% 0, 0 0, 0 0; }
+}
+
 @media (max-width: 1023px) {
     .registration-app .app-main {
         background: transparent;
@@ -2315,9 +2325,14 @@ select.form-control {
     }
 
     .registration-app .mobile-progress {
+        position: sticky;
+        top: calc(64px + env(safe-area-inset-top) + 8px);
+        z-index: 35;
         background: #ffffff;
         border-color: rgba(5, 46, 26, 0.1);
-        box-shadow: 0 12px 28px rgba(5, 46, 26, 0.08);
+        box-shadow: 0 12px 28px rgba(5, 46, 26, 0.08), 0 1px 0 rgba(255, 255, 255, 0.72);
+        -webkit-backdrop-filter: blur(14px);
+        backdrop-filter: blur(14px);
     }
 
     .registration-app .mobile-step-summary {

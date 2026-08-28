@@ -6,7 +6,7 @@
     --auth-border: #d8ded9;
     --auth-background: #ffffff;
     --auth-danger: #b42318;
-    --auth-background-image: url("../images/app-background.jpg?v=20260828-sharp-1");
+    --auth-background-image: url("../images/app-background.jpg?v=20260828-gold-silk-1");
 }
 
 *,
@@ -63,7 +63,7 @@ a {
     background-image: var(--auth-background-image);
     background-position: center;
     background-size: cover;
-    filter: blur(2px) saturate(0.82) contrast(1.06) brightness(1.06);
+    filter: blur(1px) saturate(0.88) contrast(1.04) brightness(1.05);
     transform: scale(1.015);
 }
 
@@ -73,8 +73,18 @@ a {
     z-index: -1;
     content: "";
     background:
-        linear-gradient(120deg, rgba(3, 24, 14, 0.76), rgba(3, 24, 14, 0.34) 48%, rgba(255, 255, 255, 0.38)),
+        linear-gradient(104deg, rgba(255, 255, 255, 0) 22%, rgba(255, 226, 148, 0.26) 42%, rgba(255, 255, 255, 0.42) 50%, rgba(255, 226, 148, 0.2) 58%, rgba(255, 255, 255, 0) 78%),
+        linear-gradient(120deg, rgba(3, 24, 14, 0.36), rgba(255, 255, 255, 0.06) 48%, rgba(255, 255, 255, 0.48)),
         rgba(255, 255, 255, 0.12);
+    background-position: 130% 0, 0 0, 0 0;
+    background-size: 240% 100%, auto, auto;
+    animation: goldSilkSheen 16s ease-in-out infinite alternate;
+    pointer-events: none;
+}
+
+@keyframes goldSilkSheen {
+    from { background-position: 130% 0, 0 0, 0 0; }
+    to { background-position: -30% 0, 0 0, 0 0; }
 }
 
 .teacher-auth-shell {
@@ -391,5 +401,16 @@ a {
 
     .teacher-auth-heading h1 {
         font-size: 1.55rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        transition-delay: 0ms !important;
     }
 }

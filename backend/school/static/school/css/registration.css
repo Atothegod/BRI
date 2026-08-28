@@ -16,7 +16,7 @@
     --color-border-soft: #f3f4f6;
     --color-danger: #b42318;
     --color-danger-soft: #fff4f2;
-    --app-background-image: url("../images/app-background.jpg?v=20260828-light-1");
+    --app-background-image: url("../images/app-background.jpg?v=20260828-sharp-1");
     --shadow-card: 0 1px 2px rgba(5, 46, 26, 0.04), 0 12px 34px rgba(5, 46, 26, 0.08), 0 28px 70px rgba(5, 46, 26, 0.04);
     --shadow-float: 0 -1px 0 rgba(5, 46, 26, 0.06), 0 -14px 38px rgba(5, 46, 26, 0.1);
     --radius-card: 8px;
@@ -116,14 +116,14 @@ svg {
 .success-page::before,
 .dashboard-page::before {
     position: fixed;
-    inset: -18px;
+    inset: -6px;
     z-index: -2;
     content: "";
     background-image: var(--app-background-image);
     background-position: center;
     background-size: cover;
-    filter: blur(10px) saturate(1.05);
-    transform: scale(1.04);
+    filter: blur(2px) saturate(0.82) contrast(1.06) brightness(1.06);
+    transform: scale(1.015);
 }
 
 .registration-app::after,

@@ -162,7 +162,10 @@ if GOOGLE_OAUTH_ENABLED:
     ]
 SOCIALACCOUNT_PROVIDERS = {"google": GOOGLE_PROVIDER_SETTINGS}
 
-LINE_RETURN_URL = os.environ.get("LINE_RETURN_URL", "https://line.me/R/")
+LINE_RETURN_URL = os.environ.get(
+    "LINE_RETURN_URL",
+    "https://line.me/R/oaMessage/%40522lxoja",
+)
 LINE_LIFF_ID = os.environ.get("LINE_LIFF_ID", "")
 LINE_LOGIN_CHANNEL_ID = os.environ.get("LINE_LOGIN_CHANNEL_ID", "")
 LINE_LIFF_ALLOW_UNVERIFIED_PROFILE = os.environ.get(

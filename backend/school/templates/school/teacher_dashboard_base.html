@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% block dashboard_title %}Dashboard ผู้สอน{% endblock %} | BRI School of Fivefold{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'school/css/teacher_dashboard.css' %}?v=20260828-1">
+{% endblock %}
+
+{% block content %}
+<div class="teacher-layout">
+    <aside class="teacher-sidebar">
+        <a class="teacher-sidebar-brand" href="{% url 'school:teacher_dashboard' %}" aria-label="BRI School of Fivefold">
+            {% include "school/includes/brand_logo.html" with variant="nav" %}
+        </a>
+
+        <div class="teacher-sidebar-label">Teacher workspace</div>
+        <nav class="teacher-navigation" aria-label="เมนูผู้สอน">
+            <a class="is-active" href="#overview">
+                <svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#landmark"></use></svg>
+                <span>ภาพรวม</span>
+            </a>
+            <a href="#students">
+                <svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#user"></use></svg>
+                <span>นักเรียน</span>
+            </a>
+            <a href="#learning">
+                <svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#calendar-days"></use></svg>
+                <span>การเรียน</span>
+            </a>
+        </nav>
+
+        <div class="teacher-sidebar-account">
+            <span class="teacher-avatar">{{ request.user.first_name|default:request.user.username|slice:":1"|upper }}</span>
+            <div>
+                <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
+                <span>บัญชีผู้สอน</span>
+            </div>
+        </div>
+        <form class="teacher-logout" method="post" action="{% url 'school:logout' %}">
+            {% csrf_token %}
+            <button type="submit">ออกจากระบบ</button>
+        </form>
+    </aside>
+
+    <main class="teacher-main">
+        <header class="teacher-mobile-header">
+            <a class="teacher-mobile-brand" href="{% url 'school:teacher_dashboard' %}" aria-label="BRI School of Fivefold">
+                {% include "school/includes/brand_logo.html" with variant="nav" %}
+            </a>
+            <form method="post" action="{% url 'school:logout' %}">
+                {% csrf_token %}
+                <button type="submit">ออกจากระบบ</button>
+            </form>
+        </header>
+        <nav class="teacher-mobile-nav" aria-label="เมนูผู้สอนบนมือถือ">
+            <a href="#overview">ภาพรวม</a>
+            <a href="#students">นักเรียน</a>
+            <a href="#learning">การเรียน</a>
+        </nav>
+
+        {% block dashboard_content %}{% endblock %}
+    </main>
+</div>
+{% endblock %}

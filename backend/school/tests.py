@@ -1,15 +1,25 @@
 import json
+from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from allauth.socialaccount.models import SocialAccount, SocialLogin
 
 from accounts.adapters import TeacherGoogleSocialAccountAdapter
 
-from .models import Person, Student, TeacherGroup
+from .models import (
+    AttendanceRecord,
+    AttendanceSession,
+    HomeworkAssignment,
+    HomeworkSubmission,
+    Person,
+    Student,
+    TeacherGroup,
+)
 
 
 class PersonViewTests(TestCase):
@@ -154,6 +164,8 @@ class TeacherFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Continue with Google")
         self.assertContains(response, reverse("google_login"))
+        self.assertContains(response, 'width="18" height="18"')
+        self.assertContains(response, "school/css/teacher_auth.css")
 
     @override_settings(GOOGLE_OAUTH_ENABLED=True)
     def test_teacher_register_shows_google_oauth_button(self):
@@ -355,8 +367,98 @@ class TeacherFlowTests(TestCase):
         response = self.client.get(reverse("school:teacher_dashboard"))
 
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "school/teacher_dashboard_base.html")
         self.assertContains(response, "Visible Student")
         self.assertNotContains(response, "Hidden Student")
+
+    def test_teacher_dashboard_calculates_attendance_and_homework_percentages(self):
+        User = get_user_model()
+        teacher = User.objects.create_user(
+            username="metrics-teacher",
+            password="pass",
+            role=User.Role.TEACHER,
+            is_teacher_approved=True,
+        )
+        group = TeacherGroup.objects.create(teacher=teacher, group_name="Metrics Group")
+        person = Person.objects.create(first_name="Metric", last_name="Student")
+        student = Student.objects.create(person=person, group=group)
+
+        first_session = AttendanceSession.objects.create(group=group, date=timezone.localdate())
+        second_session = AttendanceSession.objects.create(
+            group=group,
+            date=timezone.localdate() - timedelta(days=7),
+        )
+        AttendanceRecord.objects.create(
+            attendance_session=first_session,
+            student=student,
+            status=AttendanceRecord.Status.PRESENT,
+        )
+        AttendanceRecord.objects.create(
+            attendance_session=second_session,
+            student=student,
+            status=AttendanceRecord.Status.ABSENT,
+        )
+
+        first_assignment = HomeworkAssignment.objects.create(
+            group=group,
+            title="First assignment",
+            due_date=timezone.localdate() + timedelta(days=3),
+        )
+        HomeworkAssignment.objects.create(
+            group=group,
+            title="Second assignment",
+            due_date=timezone.localdate() + timedelta(days=5),
+        )
+        HomeworkSubmission.objects.create(
+            homework_assignment=first_assignment,
+            student=student,
+            status=HomeworkSubmission.Status.SUBMITTED,
+        )
+
+        self.client.force_login(teacher)
+        response = self.client.get(reverse("school:teacher_dashboard"))
+
+        dashboard_student = response.context["students"][0]
+        self.assertEqual(dashboard_student.attendance_percent, 50)
+        self.assertEqual(dashboard_student.homework_percent, 50)
+        self.assertTrue(dashboard_student.needs_attention)
+        self.assertEqual(response.context["average_attendance"], 50)
+        self.assertEqual(response.context["average_homework"], 50)
+
+    def test_teacher_group_filter_cannot_select_another_teachers_group(self):
+        User = get_user_model()
+        teacher = User.objects.create_user(
+            username="owner-teacher",
+            password="pass",
+            role=User.Role.TEACHER,
+            is_teacher_approved=True,
+        )
+        other_teacher = User.objects.create_user(
+            username="other-owner",
+            password="pass",
+            role=User.Role.TEACHER,
+            is_teacher_approved=True,
+        )
+        own_group = TeacherGroup.objects.create(teacher=teacher, group_name="Own Group")
+        other_group = TeacherGroup.objects.create(teacher=other_teacher, group_name="Private Group")
+        Student.objects.create(
+            person=Person.objects.create(first_name="Own", last_name="Student"),
+            group=own_group,
+        )
+        Student.objects.create(
+            person=Person.objects.create(first_name="Private", last_name="Student"),
+            group=other_group,
+        )
+
+        self.client.force_login(teacher)
+        response = self.client.get(
+            reverse("school:teacher_dashboard"),
+            {"group": other_group.pk},
+        )
+
+        self.assertIsNone(response.context["selected_group"])
+        self.assertContains(response, "Own Student")
+        self.assertNotContains(response, "Private Student")
 
     def test_admin_overview_dashboard_shows_school_summary(self):
         User = get_user_model()
@@ -590,6 +692,21 @@ class LiffFlowTests(TestCase):
         session = self.client.session
         self.assertEqual(session["line_profile"]["line_user_id"], "Uliffuser")
         self.assertEqual(session["line_profile"]["line_display_name"], "LIFF User")
+
+    def test_rich_menu_launch_urls_redirect_through_liff(self):
+        result_response = self.client.get(reverse("school:liff_results_launch"))
+        payment_response = self.client.get(reverse("school:liff_payment_launch"))
+
+        self.assertRedirects(
+            result_response,
+            "https://liff.line.me/1234567890-AbCdEf/results/",
+            fetch_redirect_response=False,
+        )
+        self.assertRedirects(
+            payment_response,
+            "https://liff.line.me/1234567890-AbCdEf/students/payment/",
+            fetch_redirect_response=False,
+        )
 
     def test_registration_uses_liff_session_profile_over_hidden_fields(self):
         self.sync_line_profile(user_id="Usession", display_name="Session LINE")

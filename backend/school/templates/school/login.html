@@ -4,18 +4,21 @@
 {% block title %}เข้าสู่ระบบผู้สอน | BRI School of Fivefold{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/registration.css' %}">
+<link rel="stylesheet" href="{% static 'school/css/teacher_auth.css' %}?v=20260828-1">
 {% endblock %}
 
 {% block content %}
-<main class="success-page auth-page">
-    <section class="success-shell auth-shell" aria-labelledby="login-title">
-        <a class="mobile-brand success-brand" href="{% url 'school:registration' %}" aria-label="BRI School of Fivefold">
+<main class="teacher-auth-page">
+    <section class="teacher-auth-shell" aria-labelledby="login-title">
+        <a class="teacher-auth-brand" href="{% url 'school:registration' %}" aria-label="BRI School of Fivefold">
             {% include "school/includes/brand_logo.html" with variant="success" %}
         </a>
 
-        <span class="eyebrow">ระบบผู้สอน</span>
-        <h1 id="login-title">เข้าสู่ระบบผู้สอน</h1>
+        <header class="teacher-auth-heading">
+            <span>ระบบผู้สอน</span>
+            <h1 id="login-title">เข้าสู่ระบบผู้สอน</h1>
+            <p>เข้าสู่ระบบเพื่อดูข้อมูลนักเรียนในกลุ่มของคุณ</p>
+        </header>
 
         {% if form.errors %}
         <div class="form-alert" role="alert">
@@ -27,26 +30,26 @@
         </div>
         {% endif %}
 
-        <div class="oauth-stack">
+        <div class="teacher-oauth">
             {% if google_oauth_enabled %}
             <form method="post" action="{% url 'google_login' %}">
                 {% csrf_token %}
-                <button class="button button--google success-action" type="submit">
+                <button class="google-auth-button" type="submit">
                     {% include "school/includes/google_g_logo.html" %}
                     <span>Continue with Google</span>
                 </button>
             </form>
             {% else %}
-            <button class="button button--google success-action" type="button" disabled>
+            <button class="google-auth-button" type="button" disabled>
                 {% include "school/includes/google_g_logo.html" %}
                 <span>Continue with Google</span>
             </button>
             {% endif %}
         </div>
 
-        <div class="auth-divider"><span>หรือเข้าสู่ระบบด้วยรหัสผ่าน</span></div>
+        <div class="teacher-auth-divider"><span>หรือเข้าสู่ระบบด้วยรหัสผ่าน</span></div>
 
-        <form class="stack-form" method="post" novalidate>
+        <form class="teacher-auth-form" method="post" novalidate>
             {% csrf_token %}
             <div class="field-group">
                 <label class="field-label" for="{{ form.username.id_for_label }}">ชื่อผู้ใช้หรืออีเมล</label>
@@ -56,15 +59,16 @@
                 <label class="field-label" for="{{ form.password.id_for_label }}">รหัสผ่าน</label>
                 {{ form.password }}
             </div>
-            <button class="button button--primary button--submit" type="submit">
+            <button class="teacher-auth-submit" type="submit">
                 <span>เข้าสู่ระบบ</span>
-                <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
+                <svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
             </button>
         </form>
 
-        <a class="button button--secondary success-action" href="{% url 'school:teacher_register' %}">
-            <span>สมัครผู้สอนใหม่</span>
-        </a>
+        <p class="teacher-auth-switch">
+            ยังไม่มีบัญชี?
+            <a href="{% url 'school:teacher_register' %}">สมัครผู้สอนใหม่</a>
+        </p>
     </section>
 </main>
 {% endblock %}

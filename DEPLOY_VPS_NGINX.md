@@ -45,7 +45,10 @@ WEB_BIND=127.0.0.1
 WEB_PORT=8080
 GOOGLE_OAUTH_CLIENT_ID=
 GOOGLE_OAUTH_CLIENT_SECRET=
+LINE_LIFF_ID=
+LINE_LOGIN_CHANNEL_ID=
 LINE_LIFF_ALLOW_UNVERIFIED_PROFILE=0
+LINE_RETURN_URL=https://line.me/R/oaMessage/%40522lxoja
 ```
 
 Keep `.env` only on the server. Do not commit it.
@@ -57,6 +60,26 @@ https://bri.brightromancechurch.org/accounts/google/login/callback/
 http://localhost:8000/accounts/google/login/callback/
 http://127.0.0.1:8000/accounts/google/login/callback/
 ```
+
+LINE Developers LIFF settings:
+
+```text
+Endpoint URL: https://bri.brightromancechurch.org/
+Scopes: openid, profile
+```
+
+`LINE_LOGIN_CHANNEL_ID` is the numeric Channel ID of the LINE Login channel that owns
+the LIFF app. It is not the Official Account ID `@522lxoja`.
+
+Use these stable URI actions in LINE Official Account Manager Rich Menu:
+
+```text
+Result:  https://bri.brightromancechurch.org/line/results/
+Payment: https://bri.brightromancechurch.org/line/payment/
+```
+
+The server redirects those URLs to `https://liff.line.me/{LINE_LIFF_ID}/...`, initializes
+LIFF, stores the verified LINE profile in the Django session, and then opens the selected page.
 
 ## 3. Start Docker
 

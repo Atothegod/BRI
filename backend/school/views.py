@@ -23,7 +23,15 @@ from .forms import (
     TeacherSignupForm,
 )
 from .line import LineProfileError, normalize_line_profile, verify_line_id_token
-from .models import Person, Student, TeacherGroup
+from .models import (
+    AttendanceRecord,
+    AttendanceSession,
+    HomeworkAssignment,
+    HomeworkSubmission,
+    Person,
+    Student,
+    TeacherGroup,
+)
 
 
 REGISTRATION_STEPS = (
@@ -86,6 +94,22 @@ def get_liff_context(request, reload_on_sync=False):
         "line_profile": get_session_line_profile(request),
         "liff_reload_on_sync": reload_on_sync,
     }
+
+
+def redirect_to_liff_path(path):
+    if not settings.LINE_LIFF_ID:
+        return redirect(path)
+    return redirect(f"https://liff.line.me/{settings.LINE_LIFF_ID}{path}")
+
+
+@require_GET
+def liff_results_launch(request):
+    return redirect_to_liff_path("/results/")
+
+
+@require_GET
+def liff_payment_launch(request):
+    return redirect_to_liff_path("/students/payment/")
 
 
 def store_line_profile(request, profile, verified=False):
@@ -348,34 +372,164 @@ def teacher_dashboard(request):
     if not request.user.can_access_teacher_dashboard():
         return redirect("school:teacher_pending_approval")
 
-    groups = (
+    groups = list(
         TeacherGroup.objects.filter(teacher=request.user, is_active=True)
         .annotate(
-            active_student_count=Count("students", filter=Q(students__is_active=True)),
+            active_student_count=Count(
+                "students",
+                filter=Q(students__is_active=True),
+                distinct=True,
+            ),
             paid_student_count=Count(
                 "students",
                 filter=Q(students__is_active=True, students__is_paid=True),
+                distinct=True,
             ),
+            attendance_session_count=Count("attendance_sessions", distinct=True),
+            homework_assignment_count=Count("homework_assignments", distinct=True),
         )
         .order_by("group_name")
     )
-    students = (
+
+    selected_group = None
+    selected_group_id = request.GET.get("group", "").strip()
+    if selected_group_id.isdigit():
+        selected_group = next(
+            (group for group in groups if group.pk == int(selected_group_id)),
+            None,
+        )
+
+    scope_groups = [selected_group] if selected_group else groups
+    students = list(
         Student.objects.select_related("person", "group")
-        .filter(group__in=groups, is_active=True)
+        .filter(group__in=scope_groups, is_active=True)
+        .annotate(
+            attendance_total=Count("group__attendance_sessions", distinct=True),
+            attendance_attended=Count(
+                "attendance_records",
+                filter=Q(
+                    attendance_records__attendance_session__group__in=scope_groups,
+                    attendance_records__status__in=(
+                        AttendanceRecord.Status.PRESENT,
+                        AttendanceRecord.Status.LATE,
+                    ),
+                ),
+                distinct=True,
+            ),
+            homework_total=Count("group__homework_assignments", distinct=True),
+            homework_submitted=Count(
+                "homework_submissions",
+                filter=Q(
+                    homework_submissions__homework_assignment__group__in=scope_groups,
+                    homework_submissions__status__in=(
+                        HomeworkSubmission.Status.SUBMITTED,
+                        HomeworkSubmission.Status.LATE,
+                    ),
+                ),
+                distinct=True,
+            ),
+        )
         .order_by("group__group_name", "student_id")
     )
-    student_count = students.count()
-    paid_count = students.filter(is_paid=True).count()
-    validation_pending_count = students.filter(
-        admin_validation_status=Student.AdminValidationStatus.PENDING
-    ).count()
+
+    attendance_percentages = []
+    homework_percentages = []
+    needs_attention_count = 0
+    for student in students:
+        student.attendance_percent = None
+        student.homework_percent = None
+        student.needs_attention = False
+
+        if student.attendance_total:
+            student.attendance_percent = round(
+                student.attendance_attended * 100 / student.attendance_total
+            )
+            attendance_percentages.append(student.attendance_percent)
+            if student.attendance_percent < 75:
+                student.needs_attention = True
+
+        if student.homework_total:
+            student.homework_percent = round(
+                student.homework_submitted * 100 / student.homework_total
+            )
+            homework_percentages.append(student.homework_percent)
+            if student.homework_percent < 70:
+                student.needs_attention = True
+
+        if student.needs_attention:
+            needs_attention_count += 1
+
+    student_count = len(students)
+    paid_count = sum(student.is_paid for student in students)
+    validation_pending_count = sum(
+        student.admin_validation_status == Student.AdminValidationStatus.PENDING
+        for student in students
+    )
+    average_attendance = (
+        round(sum(attendance_percentages) / len(attendance_percentages))
+        if attendance_percentages
+        else None
+    )
+    average_homework = (
+        round(sum(homework_percentages) / len(homework_percentages))
+        if homework_percentages
+        else None
+    )
+
+    upcoming_assignments = (
+        HomeworkAssignment.objects.select_related("group")
+        .filter(group__in=scope_groups, due_date__gte=timezone.localdate())
+        .annotate(
+            submitted_count=Count(
+                "homework_submissions",
+                filter=Q(
+                    homework_submissions__status__in=(
+                        HomeworkSubmission.Status.SUBMITTED,
+                        HomeworkSubmission.Status.LATE,
+                    )
+                ),
+                distinct=True,
+            ),
+            target_student_count=Count(
+                "group__students",
+                filter=Q(group__students__is_active=True),
+                distinct=True,
+            ),
+        )
+        .order_by("due_date", "title")[:5]
+    )
+    recent_attendance_sessions = (
+        AttendanceSession.objects.select_related("group")
+        .filter(group__in=scope_groups)
+        .annotate(
+            present_count=Count(
+                "attendance_records",
+                filter=Q(attendance_records__status=AttendanceRecord.Status.PRESENT),
+            ),
+            late_count=Count(
+                "attendance_records",
+                filter=Q(attendance_records__status=AttendanceRecord.Status.LATE),
+            ),
+            absent_count=Count(
+                "attendance_records",
+                filter=Q(attendance_records__status=AttendanceRecord.Status.ABSENT),
+            ),
+        )
+        .order_by("-date", "group__group_name")[:5]
+    )
     context = {
         "groups": groups,
         "students": students,
+        "selected_group": selected_group,
         "student_count": student_count,
         "paid_count": paid_count,
         "unpaid_count": student_count - paid_count,
         "validation_pending_count": validation_pending_count,
+        "average_attendance": average_attendance,
+        "average_homework": average_homework,
+        "needs_attention_count": needs_attention_count,
+        "upcoming_assignments": upcoming_assignments,
+        "recent_attendance_sessions": recent_attendance_sessions,
     }
     return render(request, "school/teacher_dashboard.html", context)
 

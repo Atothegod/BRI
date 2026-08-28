@@ -35,7 +35,6 @@ REGION_CHOICES = tuple((item["value"], item["label"]) for item in REGION_OPTIONS
 GENDER_CHOICES = (
     ("male", "ชาย"),
     ("female", "หญิง"),
-    ("unspecified", "ไม่ระบุ"),
 )
 
 
@@ -87,13 +86,15 @@ class PersonForm(forms.Form):
     )
     gender = forms.ChoiceField(choices=GENDER_CHOICES)
     date_of_birth = forms.DateField(
-        input_formats=["%Y-%m-%d"],
+        input_formats=["%d/%m/%Y", "%d-%m-%Y", "%Y-%m-%d"],
         widget=forms.DateInput(
-            format="%Y-%m-%d",
+            format="%d/%m/%Y",
             attrs={
                 "class": CONTROL_CLASS,
-                "type": "date",
+                "type": "text",
+                "inputmode": "numeric",
                 "autocomplete": "bday",
+                "placeholder": "เช่น 15/01/2533",
             },
         ),
     )
@@ -118,17 +119,6 @@ class PersonForm(forms.Form):
             }
         ),
     )
-    line_id = forms.CharField(
-        max_length=120,
-        required=False,
-        widget=forms.TextInput(
-            attrs={
-                "class": CONTROL_CLASS,
-                "autocomplete": "off",
-                "placeholder": "LINE ID",
-            }
-        ),
-    )
     occupation = forms.CharField(
         max_length=150,
         widget=forms.TextInput(
@@ -142,31 +132,34 @@ class PersonForm(forms.Form):
     region = forms.ChoiceField(choices=REGION_CHOICES)
     province = forms.CharField(
         max_length=100,
-        widget=forms.TextInput(
+        widget=forms.Select(
+            choices=(("", "เลือกจังหวัด"),),
             attrs={
                 "class": CONTROL_CLASS,
                 "autocomplete": "address-level1",
-                "placeholder": "จังหวัด",
+                "data-address-province": "",
             }
         ),
     )
     district = forms.CharField(
         max_length=100,
-        widget=forms.TextInput(
+        widget=forms.Select(
+            choices=(("", "เลือกอำเภอ / เขต"),),
             attrs={
                 "class": CONTROL_CLASS,
                 "autocomplete": "address-level2",
-                "placeholder": "อำเภอ / เขต",
+                "data-address-district": "",
             }
         ),
     )
     sub_district = forms.CharField(
         max_length=100,
-        widget=forms.TextInput(
+        widget=forms.Select(
+            choices=(("", "เลือกตำบล / แขวง"),),
             attrs={
                 "class": CONTROL_CLASS,
                 "autocomplete": "address-level3",
-                "placeholder": "ตำบล / แขวง",
+                "data-address-subdistrict": "",
             }
         ),
     )
@@ -219,6 +212,7 @@ class PersonForm(forms.Form):
     )
     mentor_name = forms.CharField(
         max_length=255,
+        required=False,
         widget=forms.TextInput(
             attrs={
                 "class": CONTROL_CLASS,
@@ -260,9 +254,23 @@ class PersonForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["date_of_birth"].widget.attrs["max"] = timezone.localdate().isoformat()
+        address_placeholders = {
+            "province": "เลือกจังหวัด",
+            "district": "เลือกอำเภอ / เขต",
+            "sub_district": "เลือกตำบล / แขวง",
+        }
+        for field_name, placeholder in address_placeholders.items():
+            selected = self.data.get(self.add_prefix(field_name)) or self.initial.get(field_name)
+            choices = [("", placeholder)]
+            if selected:
+                choices.append((selected, selected))
+                self.fields[field_name].widget.attrs["data-selected-value"] = selected
+            self.fields[field_name].widget.choices = choices
 
     def clean_date_of_birth(self):
         date_of_birth = self.cleaned_data["date_of_birth"]
+        if date_of_birth.year > 2400:
+            date_of_birth = date_of_birth.replace(year=date_of_birth.year - 543)
         if date_of_birth > timezone.localdate():
             raise forms.ValidationError("วันเกิดต้องไม่เป็นวันที่ในอนาคต")
         return date_of_birth
@@ -283,7 +291,7 @@ class PersonForm(forms.Form):
             "occupation": data["occupation"],
             "phone": data["phone"],
             "email": data["email"],
-            "line_id": data["line_id"],
+            "line_id": "",
             "line_display_name": line_display_name,
             "line_picture_url": line_picture_url,
             "line_connected_at": timezone.now() if line_user_id else None,

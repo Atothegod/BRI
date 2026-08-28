@@ -4,7 +4,7 @@
 {% block title %}ประกาศผลสัมภาษณ์ | BRI School of Fivefold{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20260828-3">
+<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20260828-6">
 {% endblock %}
 
 {% block content %}
@@ -65,6 +65,15 @@
         {% endif %}
 
         <div class="result-actions">
+            {% if result_state == "passed" %}
+            <a class="button button--primary success-action" href="{% url 'school:student_payment_upload' %}">
+                <span>ไปหน้าแจ้งชำระเงิน</span>
+                <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
+            </a>
+            <a class="button button--secondary success-action" href="{{ line_return_url }}" data-liff-close>
+                <span>กลับไปยัง LINE</span>
+            </a>
+            {% else %}
             <a class="button button--primary success-action" href="{{ line_return_url }}" data-liff-close>
                 <span>กลับไปยัง LINE</span>
                 <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
@@ -72,6 +81,7 @@
             <a class="button button--secondary success-action" href="{% url 'school:registration' %}">
                 <span>หน้าสมัครเรียน</span>
             </a>
+            {% endif %}
         </div>
     </section>
 </main>

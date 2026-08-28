@@ -4,7 +4,7 @@
 {% block title %}สมัครเรียน | BRI School of Fivefold{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20260828-3">
+<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20260828-6">
 {% endblock %}
 
 {% block content %}
@@ -104,7 +104,7 @@
             </div>
             {% endif %}
 
-            <form class="registration-form" method="post" enctype="multipart/form-data" novalidate data-registration-form>
+            <form class="registration-form" method="post" enctype="multipart/form-data" novalidate data-registration-form data-address-data-url="{% static 'school/data/thai_addresses.min.json' %}?v=20260828-1">
                 {% csrf_token %}
                 {{ form.line_user_id }}
                 {{ form.line_display_name }}
@@ -140,14 +140,14 @@
                         <div class="field-group{% if form.date_of_birth.errors %} has-error{% endif %}">
                             <label class="field-label" for="{{ form.date_of_birth.id_for_label }}">วันเดือนปีเกิด <span aria-hidden="true">*</span></label>
                             {{ form.date_of_birth }}
-                            <p class="field-hint">ระบบจะคำนวณอายุจากวันเกิด</p>
+                            <p class="field-hint">ใส่แบบ วัน/เดือน/ปี พ.ศ. เช่น 15/01/2533</p>
                             {{ form.date_of_birth.errors }}
                         </div>
                     </div>
 
                     <fieldset class="field-group{% if form.gender.errors %} has-error{% endif %}">
                         <legend class="field-label">เพศ <span aria-hidden="true">*</span></legend>
-                        <div class="choice-grid choice-grid--three">
+                        <div class="choice-grid choice-grid--two">
                             {% for value, label in form.gender.field.choices %}
                             <label class="choice-control">
                                 <input type="radio" name="gender" value="{{ value }}" {% if form.gender.value == value %}checked{% endif %} required>
@@ -169,12 +169,6 @@
                             {{ form.email }}
                             {{ form.email.errors }}
                         </div>
-                    </div>
-
-                    <div class="field-group{% if form.line_id.errors %} has-error{% endif %}">
-                        <label class="field-label" for="{{ form.line_id.id_for_label }}">LINE ID <span class="optional-label">ไม่บังคับ</span></label>
-                        {{ form.line_id }}
-                        {{ form.line_id.errors }}
                     </div>
 
                     <div class="field-group{% if form.occupation.errors %} has-error{% endif %}">
@@ -291,7 +285,7 @@
 
                     <div class="field-grid field-grid--two">
                         <div class="field-group{% if form.mentor_name.errors %} has-error{% endif %}">
-                            <label class="field-label" for="{{ form.mentor_name.id_for_label }}">ชื่อพี่เลี้ยง <span aria-hidden="true">*</span></label>
+                            <label class="field-label" for="{{ form.mentor_name.id_for_label }}">ชื่อพี่เลี้ยง <span class="optional-label">ไม่บังคับ</span></label>
                             {{ form.mentor_name }}
                             {{ form.mentor_name.errors }}
                         </div>
@@ -372,5 +366,5 @@
 
 {% block extra_js %}
 {% include "school/includes/liff_bridge.html" %}
-<script src="{% static 'school/js/registration.js' %}" defer></script>
+<script src="{% static 'school/js/registration.js' %}?v=20260828-2" defer></script>
 {% endblock %}

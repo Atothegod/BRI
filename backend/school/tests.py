@@ -32,14 +32,13 @@ class PersonViewTests(TestCase):
             "date_of_birth": "1990-01-15",
             "phone": "0812345678",
             "email": "somchai@example.com",
-            "line_id": "somchai.line",
             "line_user_id": "U1234567890",
             "line_display_name": "Somchai LINE",
             "line_picture_url": "https://example.com/line-picture.jpg",
             "occupation": "นักออกแบบ",
             "region": "central",
             "province": "กรุงเทพมหานคร",
-            "district": "บางรัก",
+            "district": "เขตบางรัก",
             "sub_district": "สีลม",
             "address": "123 ถนนตัวอย่าง",
             "is_pastor": "false",
@@ -61,6 +60,12 @@ class PersonViewTests(TestCase):
         self.assertTemplateUsed(response, "school/registration.html")
         self.assertContains(response, "ใบสมัครเรียน")
         self.assertContains(response, "เพศ")
+        self.assertContains(response, "data-address-data-url")
+        self.assertContains(response, "data-address-province")
+        self.assertContains(response, "data-address-district")
+        self.assertContains(response, "data-address-subdistrict")
+        self.assertNotContains(response, "LINE ID")
+        self.assertNotContains(response, 'value="unspecified"')
         self.assertNotContains(response, "รูปโปรไฟล์")
 
     def test_valid_registration_creates_person(self):
@@ -73,17 +78,45 @@ class PersonViewTests(TestCase):
         self.assertEqual(person.full_name, "สมชาย ใจดี")
         self.assertEqual(person.nickname, "ชาย")
         self.assertEqual(person.gender, "male")
-        self.assertEqual(person.line_id, "somchai.line")
+        self.assertEqual(person.line_id, "")
         self.assertEqual(person.line_user_id, "U1234567890")
         self.assertEqual(person.line_display_name, "Somchai LINE")
         self.assertIsNotNone(person.line_connected_at)
         self.assertEqual(person.status, Person.Status.IN_PROGRESS)
         self.assertFalse(person.extra_data["is_pastor"])
         self.assertTrue(person.extra_data["has_studied_bri"])
+        self.assertEqual(person.extra_data["district"], "เขตบางรัก")
 
         success_response = self.client.get(reverse("school:registration_success"))
         self.assertContains(success_response, person.get_status_display())
         self.assertContains(success_response, f"#{person.pk}")
+
+    def test_registration_ignores_submitted_line_id(self):
+        form_data = self.valid_form_data()
+        form_data["line_id"] = "legacy.line.id"
+
+        self.client.post(reverse("school:registration"), form_data)
+
+        person = Person.objects.get()
+        self.assertEqual(person.line_id, "")
+
+    def test_registration_accepts_buddhist_birth_year(self):
+        form_data = self.valid_form_data()
+        form_data["date_of_birth"] = "15/01/2533"
+
+        self.client.post(reverse("school:registration"), form_data)
+
+        person = Person.objects.get()
+        self.assertEqual(person.date_of_birth.isoformat(), "1990-01-15")
+
+    def test_registration_allows_blank_mentor_name(self):
+        form_data = self.valid_form_data()
+        form_data["mentor_name"] = ""
+
+        response = self.client.post(reverse("school:registration"), form_data)
+
+        self.assertRedirects(response, reverse("school:registration_success"))
+        self.assertEqual(Person.objects.get().extra_data["mentor_name"], "")
 
     def test_registration_can_receive_line_profile_from_query_string(self):
         response = self.client.get(
@@ -703,6 +736,9 @@ class AnnouncementResultTests(TestCase):
         self.assertTemplateUsed(response, "school/announcement_result.html")
         self.assertContains(response, "ผ่านการสัมภาษณ์")
         self.assertContains(response, student.student_id)
+        self.assertContains(response, reverse("school:student_payment_upload"))
+        self.assertContains(response, "ไปหน้าแจ้งชำระเงิน")
+        self.assertNotContains(response, "หน้าสมัครเรียน")
         self.assertContains(response, 'href="https://line.me/R/"')
 
     def test_existing_student_is_treated_as_passed_result(self):
@@ -743,6 +779,8 @@ class AnnouncementResultTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "ไม่พบข้อมูล LINE นี้")
+        self.assertContains(response, "กลับไปยัง LINE")
+        self.assertContains(response, "หน้าสมัครเรียน")
 
 
 @override_settings(

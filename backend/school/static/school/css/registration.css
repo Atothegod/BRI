@@ -16,6 +16,7 @@
     --color-border-soft: #f3f4f6;
     --color-danger: #b42318;
     --color-danger-soft: #fff4f2;
+    --app-background-image: url("../images/app-background.jpg");
     --shadow-card: 0 1px 2px rgba(5, 46, 26, 0.04), 0 12px 34px rgba(5, 46, 26, 0.08), 0 28px 70px rgba(5, 46, 26, 0.04);
     --shadow-float: 0 -1px 0 rgba(5, 46, 26, 0.06), 0 -14px 38px rgba(5, 46, 26, 0.1);
     --radius-card: 8px;
@@ -100,13 +101,41 @@ svg {
 }
 
 .registration-app {
+    position: relative;
     max-width: 100%;
     min-height: 100vh;
     min-height: 100dvh;
     color: var(--color-ink);
-    background: #ffffff;
+    background: #061b11;
     font-family: var(--font-primary);
+    isolation: isolate;
     overflow-x: clip;
+}
+
+.registration-app::before,
+.success-page::before,
+.dashboard-page::before {
+    position: fixed;
+    inset: -18px;
+    z-index: -2;
+    content: "";
+    background-image: var(--app-background-image);
+    background-position: center;
+    background-size: cover;
+    filter: blur(10px) saturate(1.05);
+    transform: scale(1.04);
+}
+
+.registration-app::after,
+.success-page::after,
+.dashboard-page::after {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    content: "";
+    background:
+        linear-gradient(120deg, rgba(3, 24, 14, 0.72), rgba(3, 24, 14, 0.26) 48%, rgba(255, 255, 255, 0.45)),
+        rgba(255, 255, 255, 0.18);
 }
 
 .app-sidebar {
@@ -449,6 +478,8 @@ svg {
 }
 
 .app-main {
+    position: relative;
+    z-index: 1;
     min-width: 0;
     max-width: 100%;
     min-height: 100vh;
@@ -518,16 +549,17 @@ svg {
 
 .page-heading h2 {
     margin: 0;
-    color: var(--color-ink);
+    color: #ffffff;
     font-size: 1.7rem;
     font-weight: 780;
     line-height: 1.2;
     letter-spacing: 0;
+    text-shadow: 0 2px 14px rgba(3, 24, 14, 0.32);
 }
 
 .page-heading p {
     margin: 4px 0 0;
-    color: var(--color-muted);
+    color: rgba(255, 255, 255, 0.78);
     font-size: 0.9rem;
 }
 
@@ -544,6 +576,7 @@ svg {
 
 .hero-copy .eyebrow {
     margin-bottom: 6px;
+    color: #f2d98e;
 }
 
 .mobile-progress {
@@ -717,11 +750,13 @@ svg {
     min-width: 0;
     max-width: 100%;
     padding: 20px 16px 108px;
-    background: #ffffff;
-    border: 1px solid rgba(5, 46, 26, 0.1);
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.52);
     border-top: 3px solid var(--color-gold);
     border-radius: var(--radius-card);
-    box-shadow: 0 18px 46px rgba(5, 46, 26, 0.11), 0 2px 5px rgba(5, 46, 26, 0.04);
+    box-shadow: 0 24px 70px rgba(3, 24, 14, 0.22), 0 2px 8px rgba(5, 46, 26, 0.08);
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
     animation: panelIn 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -823,6 +858,16 @@ textarea.form-control {
 .form-control::placeholder {
     color: #9ca3af;
     opacity: 1;
+}
+
+select.form-control {
+    cursor: pointer;
+}
+
+.form-control:disabled {
+    color: #9ca3af;
+    background: #f3f5f4;
+    cursor: not-allowed;
 }
 
 .form-control:hover {
@@ -1427,9 +1472,11 @@ textarea.form-control {
 }
 
 .dashboard-page {
+    position: relative;
     min-height: 100vh;
     padding: 20px;
-    background: var(--color-bg);
+    background: #061b11;
+    isolation: isolate;
 }
 
 .dashboard-topbar {
@@ -1478,11 +1525,12 @@ textarea.form-control {
 
 .dashboard-shell .page-heading h1 {
     margin: 0;
-    color: var(--color-ink);
+    color: #ffffff;
     font-size: 1.72rem;
     font-weight: 800;
     line-height: 1.2;
     letter-spacing: 0;
+    text-shadow: 0 2px 14px rgba(3, 24, 14, 0.32);
 }
 
 .summary-strip {
@@ -1498,9 +1546,11 @@ textarea.form-control {
 
 .summary-strip > div {
     padding: 16px;
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.52);
     border-radius: 8px;
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
 }
 
 .summary-strip span,
@@ -1532,9 +1582,12 @@ textarea.form-control {
 .dashboard-panel {
     min-width: 0;
     padding: 18px;
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.52);
     border-radius: 8px;
+    box-shadow: 0 18px 42px rgba(3, 24, 14, 0.14);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
 }
 
 .dashboard-panel--wide {
@@ -1929,11 +1982,13 @@ textarea.form-control {
 }
 
 .success-page {
+    position: relative;
     display: grid;
     min-height: 100vh;
     min-height: 100dvh;
     padding: max(24px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
-    background: var(--color-bg);
+    background: #061b11;
+    isolation: isolate;
     place-items: center;
 }
 
@@ -1941,11 +1996,13 @@ textarea.form-control {
     width: min(100%, 520px);
     padding: 28px 20px;
     text-align: center;
-    background: #ffffff;
-    border: 1px solid var(--color-border);
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.52);
     border-top: 3px solid var(--color-gold);
     border-radius: 8px;
-    box-shadow: var(--shadow-card);
+    box-shadow: 0 24px 72px rgba(3, 24, 14, 0.24), 0 2px 8px rgba(5, 46, 26, 0.08);
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
     animation: panelIn 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -2175,7 +2232,7 @@ textarea.form-control {
 
 @media (max-width: 1023px) {
     .registration-app .app-main {
-        background: #ffffff;
+        background: transparent;
     }
 
     .registration-app .mobile-app-bar {
@@ -2199,19 +2256,19 @@ textarea.form-control {
         min-height: 68px;
         margin-bottom: 8px;
         padding: 5px 0 8px;
-        color: var(--color-ink);
+        color: #ffffff;
     }
 
     .registration-app .app-hero .eyebrow {
-        color: var(--color-brand-700);
+        color: #f2d98e;
     }
 
     .registration-app .page-heading h2 {
-        color: var(--color-ink);
+        color: #ffffff;
     }
 
     .registration-app .page-heading p {
-        color: var(--color-muted);
+        color: rgba(255, 255, 255, 0.78);
     }
 
     .registration-app .mobile-progress {

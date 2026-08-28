@@ -11,6 +11,7 @@
     --teacher-warning: #a65f00;
     --teacher-warning-soft: #fff5df;
     --teacher-danger: #b42318;
+    --teacher-background-image: url("../images/app-background.jpg");
 }
 
 *,
@@ -22,7 +23,7 @@
 html {
     min-width: 320px;
     scroll-behavior: smooth;
-    background: var(--teacher-bg);
+    background: #061b11;
 }
 
 body {
@@ -30,7 +31,7 @@ body {
     min-height: 100vh;
     margin: 0;
     color: var(--teacher-ink);
-    background: var(--teacher-bg);
+    background: #061b11;
 }
 
 a {
@@ -44,7 +45,33 @@ button {
 }
 
 .teacher-layout {
+    position: relative;
     min-height: 100vh;
+    background: #061b11;
+    isolation: isolate;
+    overflow-x: clip;
+}
+
+.teacher-layout::before {
+    position: fixed;
+    inset: -18px;
+    z-index: -2;
+    content: "";
+    background-image: var(--teacher-background-image);
+    background-position: center;
+    background-size: cover;
+    filter: blur(10px) saturate(1.02);
+    transform: scale(1.04);
+}
+
+.teacher-layout::after {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    content: "";
+    background:
+        linear-gradient(115deg, rgba(3, 24, 14, 0.78), rgba(3, 24, 14, 0.34) 42%, rgba(255, 255, 255, 0.58)),
+        rgba(255, 255, 255, 0.1);
 }
 
 .teacher-sidebar {
@@ -198,6 +225,8 @@ button {
 }
 
 .teacher-main {
+    position: relative;
+    z-index: 1;
     min-width: 0;
     min-height: 100vh;
     margin-left: 248px;
@@ -225,22 +254,25 @@ button {
 .teacher-eyebrow {
     display: block;
     margin-bottom: 4px;
-    color: #26724c;
+    color: #f2d98e;
     font-size: 0.68rem;
     font-weight: 800;
     text-transform: uppercase;
+    text-shadow: 0 2px 12px rgba(3, 24, 14, 0.28);
 }
 
 .teacher-page-heading h1 {
     margin: 0;
+    color: #ffffff;
     font-size: 1.72rem;
     font-weight: 800;
     line-height: 1.22;
+    text-shadow: 0 2px 14px rgba(3, 24, 14, 0.32);
 }
 
 .teacher-page-heading p {
     margin: 5px 0 0;
-    color: var(--teacher-muted);
+    color: rgba(255, 255, 255, 0.78);
     font-size: 0.84rem;
 }
 
@@ -249,11 +281,13 @@ button {
     min-height: 36px;
     padding: 7px 11px;
     color: #17663d;
-    background: var(--teacher-brand-soft);
-    border: 1px solid #cfe2d5;
+    background: rgba(232, 242, 235, 0.86);
+    border: 1px solid rgba(255, 255, 255, 0.56);
     border-radius: 6px;
     font-size: 0.72rem;
     font-weight: 700;
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
     align-items: center;
     gap: 7px;
 }
@@ -270,9 +304,12 @@ button {
     display: grid;
     margin-top: 16px;
     overflow: hidden;
-    background: var(--teacher-surface);
-    border: 1px solid var(--teacher-border);
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.54);
     border-radius: 8px;
+    box-shadow: 0 18px 48px rgba(3, 24, 14, 0.16);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
     grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
@@ -368,9 +405,12 @@ button {
 
 .teacher-section {
     min-width: 0;
-    background: var(--teacher-surface);
-    border: 1px solid var(--teacher-border);
+    background: rgba(255, 255, 255, 0.91);
+    border: 1px solid rgba(255, 255, 255, 0.54);
     border-radius: 8px;
+    box-shadow: 0 18px 48px rgba(3, 24, 14, 0.14);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
 }
 
 .teacher-section-heading {

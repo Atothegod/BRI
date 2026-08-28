@@ -22,6 +22,10 @@
     const menuOpenButton = app.querySelector("[data-menu-open]");
     const uploadInput = form.querySelector("[data-upload-input]");
     const fileLabel = form.querySelector("[data-file-label]");
+    const provinceSelect = form.querySelector("[data-address-province]");
+    const districtSelect = form.querySelector("[data-address-district]");
+    const subdistrictSelect = form.querySelector("[data-address-subdistrict]");
+    const addressDataUrl = form.dataset.addressDataUrl;
     const totalSteps = panels.length;
     const hasSteps = totalSteps > 0;
     let currentStep = 1;
@@ -189,6 +193,106 @@
             menuOpenButton.focus({ preventScroll: true });
         }
     };
+
+    const resetSelect = (select, placeholder) => {
+        if (!select) {
+            return;
+        }
+        select.replaceChildren(new Option(placeholder, ""));
+    };
+
+    const selectValue = (select, value) => {
+        if (!select || !value) {
+            return;
+        }
+        const hasOption = Array.from(select.options).some((option) => option.value === value);
+        if (!hasOption) {
+            select.appendChild(new Option(value, value));
+        }
+        select.value = value;
+    };
+
+    const populateSelect = (select, values, placeholder) => {
+        resetSelect(select, placeholder);
+        values.forEach((value) => {
+            if (value) {
+                select.appendChild(new Option(value, value));
+            }
+        });
+        select.disabled = values.length === 0;
+    };
+
+    const setupAddressDropdowns = (addressData) => {
+        if (!provinceSelect || !districtSelect || !subdistrictSelect || !Array.isArray(addressData)) {
+            return;
+        }
+
+        const provinceMap = new Map(addressData.map((province) => [province.province, province]));
+        const initialProvince = provinceSelect.dataset.selectedValue || provinceSelect.value;
+        const initialDistrict = districtSelect.dataset.selectedValue || districtSelect.value;
+        const initialSubdistrict = subdistrictSelect.dataset.selectedValue || subdistrictSelect.value;
+
+        const populateDistricts = (selectedDistrict = "") => {
+            const province = provinceMap.get(provinceSelect.value);
+            const districts = province ? province.districts.map((item) => item.district) : [];
+            populateSelect(districtSelect, districts, "เลือกอำเภอ / เขต");
+            resetSelect(subdistrictSelect, "เลือกตำบล / แขวง");
+            subdistrictSelect.disabled = true;
+            selectValue(districtSelect, selectedDistrict);
+        };
+
+        const populateSubdistricts = (selectedSubdistrict = "") => {
+            const province = provinceMap.get(provinceSelect.value);
+            const district = province
+                ? province.districts.find((item) => item.district === districtSelect.value)
+                : null;
+            const subdistricts = district ? district.subdistricts : [];
+            populateSelect(subdistrictSelect, subdistricts, "เลือกตำบล / แขวง");
+            selectValue(subdistrictSelect, selectedSubdistrict);
+        };
+
+        populateSelect(
+            provinceSelect,
+            addressData.map((province) => province.province),
+            "เลือกจังหวัด"
+        );
+        districtSelect.disabled = true;
+        subdistrictSelect.disabled = true;
+
+        selectValue(provinceSelect, initialProvince);
+        if (provinceSelect.value) {
+            populateDistricts(initialDistrict);
+        }
+        if (districtSelect.value) {
+            populateSubdistricts(initialSubdistrict);
+        }
+
+        provinceSelect.addEventListener("change", () => {
+            populateDistricts();
+            clearClientError(provinceSelect);
+        });
+        districtSelect.addEventListener("change", () => {
+            populateSubdistricts();
+            clearClientError(districtSelect);
+        });
+        subdistrictSelect.addEventListener("change", () => clearClientError(subdistrictSelect));
+    };
+
+    if (addressDataUrl && provinceSelect && districtSelect && subdistrictSelect) {
+        fetch(addressDataUrl, { credentials: "same-origin" })
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error("Unable to load Thai address data");
+                }
+                return response.json();
+            })
+            .then(setupAddressDropdowns)
+            .catch(() => {
+                provinceSelect.disabled = false;
+                districtSelect.disabled = false;
+                subdistrictSelect.disabled = false;
+            });
+    }
 
     if (hasSteps && nextButton) {
         nextButton.addEventListener("click", () => {

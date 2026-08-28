@@ -4,7 +4,7 @@
     --auth-text: #17211b;
     --auth-muted: #66736b;
     --auth-border: #d8ded9;
-    --auth-background: #f3f6f2;
+    --auth-background: #ffffff;
     --auth-danger: #b42318;
 }
 
@@ -261,6 +261,26 @@ a {
 
 .form-alert svg {
     display: none;
+}
+
+.form-alert--notice {
+    display: grid;
+    color: #664d03;
+    background: #fffbeb;
+    border-color: #fde68a;
+    grid-template-columns: 18px minmax(0, 1fr);
+    gap: 10px;
+    align-items: start;
+}
+
+.form-alert--notice svg {
+    display: block;
+    width: 18px;
+    height: 18px;
+    margin-top: 1px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
 }
 
 .form-alert strong,

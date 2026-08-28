@@ -4,7 +4,7 @@
 {% block title %}เข้าสู่ระบบผู้สอน | BRI School of Fivefold{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/teacher_auth.css' %}?v=20260828-1">
+<link rel="stylesheet" href="{% static 'school/css/teacher_auth.css' %}?v=20260828-2">
 {% endblock %}
 
 {% block content %}
@@ -19,6 +19,21 @@
             <h1 id="login-title">เข้าสู่ระบบผู้สอน</h1>
             <p>เข้าสู่ระบบเพื่อดูข้อมูลนักเรียนในกลุ่มของคุณ</p>
         </header>
+
+        {% if teacher_pending_notice %}
+        <div class="form-alert form-alert--notice" role="status">
+            <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#clock"></use></svg>
+            <div>
+                {% if teacher_registered_pending_notice %}
+                <strong>ลงทะเบียนเรียบร้อยแล้ว</strong>
+                <p>บัญชีผู้สอนของคุณกำลังรอผู้ดูแลระบบอนุมัติ เมื่ออนุมัติแล้วให้เข้าสู่ระบบอีกครั้งเพื่อไปยังแดชบอร์ดผู้สอนได้ทันที</p>
+                {% else %}
+                <strong>บัญชีผู้สอนยังไม่อนุมัติ</strong>
+                <p>กรุณารอผู้ดูแลระบบอนุมัติบัญชีนี้ก่อน เมื่ออนุมัติแล้วคุณจะเข้าสู่แดชบอร์ดผู้สอนได้ตามปกติ</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
 
         {% if form.errors %}
         <div class="form-alert" role="alert">

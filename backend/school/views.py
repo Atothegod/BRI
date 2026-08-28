@@ -54,6 +54,12 @@ def is_teacher(user):
     )
 
 
+def can_view_teacher_dashboard(user):
+    return is_school_admin(user) or (
+        is_teacher(user) and user.can_access_teacher_dashboard()
+    )
+
+
 def get_auth_context():
     return {
         "google_oauth_enabled": settings.GOOGLE_OAUTH_ENABLED,
@@ -64,14 +70,29 @@ def get_auth_context():
 class TeacherLoginView(LoginView):
     form_class = TeacherLoginForm
     template_name = "school/login.html"
-    redirect_authenticated_user = True
+    redirect_authenticated_user = False
 
     def get_success_url(self):
         return resolve_url("school:post_login_redirect")
 
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            if can_view_teacher_dashboard(request.user):
+                return redirect("school:teacher_dashboard")
+            if not is_teacher(request.user):
+                return redirect("school:registration")
+        return super().dispatch(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update(get_auth_context())
+        user = self.request.user
+        status = self.request.GET.get("teacher_status")
+        context["teacher_pending_notice"] = (
+            status in {"pending", "registered_pending"}
+            or (is_teacher(user) and not user.can_access_teacher_dashboard())
+        )
+        context["teacher_registered_pending_notice"] = status == "registered_pending"
         return context
 
 
@@ -329,7 +350,7 @@ def teacher_register(request):
     if request.method == "POST" and form.is_valid():
         user = form.save()
         login(request, user, backend="django.contrib.auth.backends.ModelBackend")
-        return redirect("school:teacher_pending_approval")
+        return redirect(f"{resolve_url('school:login')}?teacher_status=registered_pending")
 
     return render(
         request,
@@ -340,12 +361,10 @@ def teacher_register(request):
 
 @login_required
 def post_login_redirect(request):
+    if can_view_teacher_dashboard(request.user):
+        return redirect("school:teacher_dashboard")
     if is_teacher(request.user):
-        if request.user.can_access_teacher_dashboard():
-            return redirect("school:teacher_dashboard")
-        return redirect("school:teacher_pending_approval")
-    if is_school_admin(request.user):
-        return redirect("school:admin_overview_dashboard")
+        return redirect(f"{resolve_url('school:login')}?teacher_status=pending")
     return redirect("school:registration")
 
 
@@ -359,18 +378,15 @@ def teacher_pending_approval(request):
     if request.user.can_access_teacher_dashboard():
         return redirect("school:teacher_dashboard")
 
-    return render(request, "school/teacher_pending_approval.html")
+    return redirect(f"{resolve_url('school:login')}?teacher_status=pending")
 
 
 @login_required
 def teacher_dashboard(request):
-    if not is_teacher(request.user):
-        if is_school_admin(request.user):
-            return redirect("school:admin_overview_dashboard")
-        raise PermissionDenied
-
-    if not request.user.can_access_teacher_dashboard():
-        return redirect("school:teacher_pending_approval")
+    if not can_view_teacher_dashboard(request.user):
+        if not is_teacher(request.user):
+            raise PermissionDenied
+        return redirect(f"{resolve_url('school:login')}?teacher_status=pending")
 
     groups = list(
         TeacherGroup.objects.filter(teacher=request.user, is_active=True)

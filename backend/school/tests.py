@@ -61,9 +61,18 @@ class PersonViewTests(TestCase):
         self.assertContains(response, "ใบสมัครเรียน")
         self.assertContains(response, "เพศ")
         self.assertContains(response, "data-address-data-url")
+        self.assertContains(response, "data-date-mask")
+        self.assertContains(response, 'placeholder="วว/ดด/ปปปป"')
         self.assertContains(response, "data-address-province")
+        self.assertContains(response, "data-address-province-suggestions")
+        self.assertContains(response, 'placeholder="พิมพ์ชื่อจังหวัด"')
+        self.assertContains(response, 'role="combobox"')
         self.assertContains(response, "data-address-district")
+        self.assertContains(response, "data-address-district-suggestions")
+        self.assertContains(response, 'placeholder="พิมพ์ชื่ออำเภอ / เขต"')
         self.assertContains(response, "data-address-subdistrict")
+        self.assertContains(response, "data-address-subdistrict-suggestions")
+        self.assertContains(response, 'placeholder="พิมพ์ชื่อตำบล / แขวง"')
         self.assertNotContains(response, "LINE ID")
         self.assertNotContains(response, 'value="unspecified"')
         self.assertNotContains(response, "รูปโปรไฟล์")
@@ -108,6 +117,37 @@ class PersonViewTests(TestCase):
 
         person = Person.objects.get()
         self.assertEqual(person.date_of_birth.isoformat(), "1990-01-15")
+
+    def test_registration_accepts_compact_buddhist_birth_date(self):
+        form_data = self.valid_form_data()
+        form_data["date_of_birth"] = "15012533"
+
+        self.client.post(reverse("school:registration"), form_data)
+
+        person = Person.objects.get()
+        self.assertEqual(person.date_of_birth.isoformat(), "1990-01-15")
+
+    def test_registration_normalizes_address_prefixes(self):
+        form_data = self.valid_form_data()
+        form_data["district"] = "บางรัก"
+        form_data["sub_district"] = "แขวงสีลม"
+
+        response = self.client.post(reverse("school:registration"), form_data)
+
+        self.assertRedirects(response, reverse("school:registration_success"))
+        person = Person.objects.get()
+        self.assertEqual(person.extra_data["district"], "เขตบางรัก")
+        self.assertEqual(person.extra_data["sub_district"], "สีลม")
+
+    def test_registration_rejects_invalid_address_values(self):
+        form_data = self.valid_form_data()
+        form_data["district"] = "เขตไม่มีจริง"
+
+        response = self.client.post(reverse("school:registration"), form_data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "กรุณาเลือกอำเภอ / เขตจากรายการ")
+        self.assertEqual(Person.objects.count(), 0)
 
     def test_registration_allows_blank_mentor_name(self):
         form_data = self.valid_form_data()

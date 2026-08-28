@@ -22,9 +22,13 @@
     const menuOpenButton = app.querySelector("[data-menu-open]");
     const uploadInput = form.querySelector("[data-upload-input]");
     const fileLabel = form.querySelector("[data-file-label]");
-    const provinceSelect = form.querySelector("[data-address-province]");
-    const districtSelect = form.querySelector("[data-address-district]");
-    const subdistrictSelect = form.querySelector("[data-address-subdistrict]");
+    const provinceInput = form.querySelector("[data-address-province]");
+    const districtInput = form.querySelector("[data-address-district]");
+    const subdistrictInput = form.querySelector("[data-address-subdistrict]");
+    const provinceSuggestions = form.querySelector("[data-address-province-suggestions]");
+    const districtSuggestions = form.querySelector("[data-address-district-suggestions]");
+    const subdistrictSuggestions = form.querySelector("[data-address-subdistrict-suggestions]");
+    const dateInputs = Array.from(form.querySelectorAll("[data-date-mask]"));
     const addressDataUrl = form.dataset.addressDataUrl;
     const totalSteps = panels.length;
     const hasSteps = totalSteps > 0;
@@ -156,7 +160,12 @@
             if (!field.checkValidity()) {
                 field.classList.add("is-invalid");
                 const group = field.closest(".field-group, .consent-control");
-                setClientError(group, field.validity.typeMismatch ? "รูปแบบข้อมูลไม่ถูกต้อง" : "กรุณากรอกข้อมูลส่วนนี้");
+                const message = field.validity.customError
+                    ? field.validationMessage
+                    : field.validity.typeMismatch
+                        ? "รูปแบบข้อมูลไม่ถูกต้อง"
+                        : "กรุณากรอกข้อมูลส่วนนี้";
+                setClientError(group, message);
                 firstInvalid = firstInvalid || field;
             }
         });
@@ -194,91 +203,353 @@
         }
     };
 
-    const resetSelect = (select, placeholder) => {
-        if (!select) {
-            return;
+    const formatDateDigits = (value) => {
+        const digits = value.replace(/\D/g, "").slice(0, 8);
+        if (digits.length <= 2) {
+            return digits;
         }
-        select.replaceChildren(new Option(placeholder, ""));
+        if (digits.length <= 4) {
+            return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+        }
+        return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
     };
 
-    const selectValue = (select, value) => {
-        if (!select || !value) {
-            return;
-        }
-        const hasOption = Array.from(select.options).some((option) => option.value === value);
-        if (!hasOption) {
-            select.appendChild(new Option(value, value));
-        }
-        select.value = value;
-    };
+    dateInputs.forEach((input) => {
+        const syncDateInput = () => {
+            input.value = formatDateDigits(input.value);
+            clearClientError(input);
+        };
+        input.addEventListener("input", syncDateInput);
+        input.addEventListener("paste", () => window.setTimeout(syncDateInput, 0));
+    });
 
-    const populateSelect = (select, values, placeholder) => {
-        resetSelect(select, placeholder);
-        values.forEach((value) => {
-            if (value) {
-                select.appendChild(new Option(value, value));
-            }
-        });
-        select.disabled = values.length === 0;
-    };
-
-    const setupAddressDropdowns = (addressData) => {
-        if (!provinceSelect || !districtSelect || !subdistrictSelect || !Array.isArray(addressData)) {
+    const setupAddressAutocomplete = (addressData) => {
+        if (!provinceInput || !districtInput || !subdistrictInput || !Array.isArray(addressData)) {
             return;
         }
 
         const provinceMap = new Map(addressData.map((province) => [province.province, province]));
-        const initialProvince = provinceSelect.dataset.selectedValue || provinceSelect.value;
-        const initialDistrict = districtSelect.dataset.selectedValue || districtSelect.value;
-        const initialSubdistrict = subdistrictSelect.dataset.selectedValue || subdistrictSelect.value;
+        const provinceNames = addressData.map((province) => province.province);
+        const districtPlaceholder = "พิมพ์ชื่ออำเภอ / เขต";
+        const subdistrictPlaceholder = "พิมพ์ชื่อตำบล / แขวง";
+        const initialProvince = provinceInput.dataset.selectedValue || provinceInput.value;
+        const initialDistrict = districtInput.dataset.selectedValue || districtInput.value;
+        const initialSubdistrict = subdistrictInput.dataset.selectedValue || subdistrictInput.value;
 
-        const populateDistricts = (selectedDistrict = "") => {
-            const province = provinceMap.get(provinceSelect.value);
-            const districts = province ? province.districts.map((item) => item.district) : [];
-            populateSelect(districtSelect, districts, "เลือกอำเภอ / เขต");
-            resetSelect(subdistrictSelect, "เลือกตำบล / แขวง");
-            subdistrictSelect.disabled = true;
-            selectValue(districtSelect, selectedDistrict);
+        const normalizeAddressText = (value) => value.trim().toLocaleLowerCase("th-TH").replace(/\s+/g, "");
+        const addressPrefixes = ["จังหวัด", "จ.", "อำเภอ", "อ.", "เขต", "ตำบล", "ต.", "แขวง"];
+
+        const stripAddressPrefix = (value) => {
+            const normalizedValue = normalizeAddressText(value);
+            const matchedPrefix = addressPrefixes.find((prefix) => (
+                normalizedValue.startsWith(normalizeAddressText(prefix))
+            ));
+            return matchedPrefix
+                ? normalizedValue.slice(normalizeAddressText(matchedPrefix).length)
+                : normalizedValue;
         };
 
-        const populateSubdistricts = (selectedSubdistrict = "") => {
-            const province = provinceMap.get(provinceSelect.value);
-            const district = province
-                ? province.districts.find((item) => item.district === districtSelect.value)
+        const findExactValue = (values, value) => {
+            const normalizedValue = normalizeAddressText(value);
+            const prefixlessValue = stripAddressPrefix(value);
+            return values.find((item) => (
+                normalizeAddressText(item) === normalizedValue
+                || stripAddressPrefix(item) === prefixlessValue
+            )) || "";
+        };
+
+        const getSelectedProvince = () => provinceMap.get(provinceInput.value.trim()) || null;
+
+        const getDistricts = () => {
+            const province = getSelectedProvince();
+            return province ? province.districts : [];
+        };
+
+        const getDistrictNames = () => getDistricts().map((item) => item.district);
+
+        const getSelectedDistrict = () => {
+            const exactDistrict = findExactValue(getDistrictNames(), districtInput.value);
+            return exactDistrict
+                ? getDistricts().find((item) => item.district === exactDistrict) || null
                 : null;
-            const subdistricts = district ? district.subdistricts : [];
-            populateSelect(subdistrictSelect, subdistricts, "เลือกตำบล / แขวง");
-            selectValue(subdistrictSelect, selectedSubdistrict);
         };
 
-        populateSelect(
-            provinceSelect,
-            addressData.map((province) => province.province),
-            "เลือกจังหวัด"
-        );
-        districtSelect.disabled = true;
-        subdistrictSelect.disabled = true;
+        const getSubdistrictNames = () => {
+            const district = getSelectedDistrict();
+            return district ? district.subdistricts : [];
+        };
 
-        selectValue(provinceSelect, initialProvince);
-        if (provinceSelect.value) {
-            populateDistricts(initialDistrict);
-        }
-        if (districtSelect.value) {
-            populateSubdistricts(initialSubdistrict);
-        }
+        let districtAutocomplete = null;
+        let subdistrictAutocomplete = null;
 
-        provinceSelect.addEventListener("change", () => {
-            populateDistricts();
-            clearClientError(provinceSelect);
+        const disableInput = (input, placeholder) => {
+            input.value = "";
+            input.disabled = true;
+            input.placeholder = placeholder;
+            input.setCustomValidity("");
+            input.setAttribute("aria-expanded", "false");
+            input.removeAttribute("aria-activedescendant");
+            clearClientError(input);
+        };
+
+        const enableInput = (input, placeholder) => {
+            input.disabled = false;
+            input.placeholder = placeholder;
+            input.setAttribute("aria-expanded", "false");
+        };
+
+        const disableSubdistrict = () => {
+            if (subdistrictAutocomplete) {
+                subdistrictAutocomplete.hide();
+            }
+            disableInput(subdistrictInput, "เลือกอำเภอ / เขตก่อน");
+        };
+
+        const disableDistrict = () => {
+            if (districtAutocomplete) {
+                districtAutocomplete.hide();
+            }
+            disableInput(districtInput, "เลือกจังหวัดก่อน");
+            disableSubdistrict();
+        };
+
+        const handleProvinceSelected = (name, options = {}) => {
+            provinceInput.value = name;
+            provinceInput.setCustomValidity("");
+            enableInput(districtInput, districtPlaceholder);
+            if (options.resetChildren !== false) {
+                districtInput.value = "";
+                disableSubdistrict();
+            }
+            if (options.focusNext) {
+                districtInput.focus({ preventScroll: true });
+            }
+        };
+
+        const handleDistrictSelected = (name, options = {}) => {
+            districtInput.value = name;
+            districtInput.setCustomValidity("");
+            enableInput(subdistrictInput, subdistrictPlaceholder);
+            if (options.resetChildren !== false) {
+                subdistrictInput.value = "";
+            }
+            if (options.focusNext) {
+                subdistrictInput.focus({ preventScroll: true });
+            }
+        };
+
+        const handleSubdistrictSelected = (name) => {
+            subdistrictInput.value = name;
+            subdistrictInput.setCustomValidity("");
+        };
+
+        const createAddressAutocomplete = ({
+            input,
+            suggestions,
+            idPrefix,
+            getValues,
+            invalidMessage,
+            onSelect,
+            onInvalid,
+        }) => {
+            let matches = [];
+            let activeIndex = -1;
+
+            const hide = () => {
+                if (!suggestions) {
+                    return;
+                }
+                suggestions.hidden = true;
+                input.setAttribute("aria-expanded", "false");
+                input.removeAttribute("aria-activedescendant");
+                activeIndex = -1;
+            };
+
+            const setActive = (index) => {
+                if (!suggestions || !matches.length) {
+                    return;
+                }
+                activeIndex = (index + matches.length) % matches.length;
+                Array.from(suggestions.children).forEach((item, itemIndex) => {
+                    const isActive = itemIndex === activeIndex;
+                    item.classList.toggle("is-active", isActive);
+                    item.setAttribute("aria-selected", String(isActive));
+                });
+                input.setAttribute("aria-activedescendant", `${idPrefix}-suggestion-${activeIndex}`);
+            };
+
+            const choose = (name, options = {}) => {
+                input.value = name;
+                input.setCustomValidity("");
+                hide();
+                onSelect(name, options);
+                clearClientError(input);
+            };
+
+            const validateValue = () => {
+                if (input.disabled) {
+                    input.setCustomValidity("");
+                    return "";
+                }
+                if (!input.value.trim()) {
+                    input.setCustomValidity("");
+                    return "";
+                }
+                const exactValue = findExactValue(getValues(), input.value);
+                if (exactValue) {
+                    input.value = exactValue;
+                    input.setCustomValidity("");
+                    return exactValue;
+                }
+                input.setCustomValidity(invalidMessage);
+                return "";
+            };
+
+            const render = () => {
+                if (!suggestions || input.disabled) {
+                    hide();
+                    return;
+                }
+
+                const query = normalizeAddressText(input.value);
+                if (!query) {
+                    matches = [];
+                    suggestions.replaceChildren();
+                    hide();
+                    return;
+                }
+
+                const prefixlessQuery = stripAddressPrefix(input.value);
+                matches = getValues()
+                    .filter((name) => (
+                        normalizeAddressText(name).includes(query)
+                        || stripAddressPrefix(name).includes(prefixlessQuery)
+                    ))
+                    .sort((first, second) => {
+                        const firstStarts = normalizeAddressText(first).startsWith(query);
+                        const secondStarts = normalizeAddressText(second).startsWith(query);
+                        if (firstStarts !== secondStarts) {
+                            return firstStarts ? -1 : 1;
+                        }
+                        const firstPrefixlessStarts = stripAddressPrefix(first).startsWith(prefixlessQuery);
+                        const secondPrefixlessStarts = stripAddressPrefix(second).startsWith(prefixlessQuery);
+                        if (firstPrefixlessStarts !== secondPrefixlessStarts) {
+                            return firstPrefixlessStarts ? -1 : 1;
+                        }
+                        return first.localeCompare(second, "th");
+                    })
+                    .slice(0, 8);
+
+                suggestions.replaceChildren(
+                    ...matches.map((name, index) => {
+                        const button = document.createElement("button");
+                        button.className = "address-suggestion";
+                        button.id = `${idPrefix}-suggestion-${index}`;
+                        button.type = "button";
+                        button.setAttribute("role", "option");
+                        button.textContent = name;
+                        button.addEventListener("mousedown", (event) => event.preventDefault());
+                        button.addEventListener("click", () => choose(name, { focusNext: true }));
+                        return button;
+                    })
+                );
+
+                suggestions.hidden = matches.length === 0;
+                input.setAttribute("aria-expanded", String(matches.length > 0));
+                activeIndex = -1;
+            };
+
+            input.addEventListener("input", () => {
+                const exactValue = validateValue();
+                if (exactValue) {
+                    choose(exactValue, { focusNext: false });
+                    return;
+                }
+                if (input.value.trim()) {
+                    onInvalid();
+                    render();
+                } else {
+                    hide();
+                    onInvalid();
+                }
+                clearClientError(input);
+            });
+
+            input.addEventListener("focus", render);
+            input.addEventListener("blur", () => {
+                validateValue();
+                window.setTimeout(hide, 120);
+            });
+            input.addEventListener("keydown", (event) => {
+                if (event.key === "Escape") {
+                    hide();
+                    return;
+                }
+                if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                    if (suggestions && suggestions.hidden) {
+                        render();
+                    }
+                    if (matches.length) {
+                        event.preventDefault();
+                        setActive(activeIndex + (event.key === "ArrowDown" ? 1 : -1));
+                    }
+                    return;
+                }
+                if (event.key === "Enter" && activeIndex >= 0 && matches[activeIndex]) {
+                    event.preventDefault();
+                    choose(matches[activeIndex], { focusNext: true });
+                }
+            });
+
+            return { hide, validate: validateValue };
+        };
+
+        const provinceAutocomplete = createAddressAutocomplete({
+            input: provinceInput,
+            suggestions: provinceSuggestions,
+            idPrefix: "province",
+            getValues: () => provinceNames,
+            invalidMessage: "กรุณาเลือกจังหวัดจากรายการ",
+            onSelect: handleProvinceSelected,
+            onInvalid: disableDistrict,
         });
-        districtSelect.addEventListener("change", () => {
-            populateSubdistricts();
-            clearClientError(districtSelect);
+
+        districtAutocomplete = createAddressAutocomplete({
+            input: districtInput,
+            suggestions: districtSuggestions,
+            idPrefix: "district",
+            getValues: getDistrictNames,
+            invalidMessage: "กรุณาเลือกอำเภอ / เขตจากรายการ",
+            onSelect: handleDistrictSelected,
+            onInvalid: disableSubdistrict,
         });
-        subdistrictSelect.addEventListener("change", () => clearClientError(subdistrictSelect));
+
+        subdistrictAutocomplete = createAddressAutocomplete({
+            input: subdistrictInput,
+            suggestions: subdistrictSuggestions,
+            idPrefix: "subdistrict",
+            getValues: getSubdistrictNames,
+            invalidMessage: "กรุณาเลือกตำบล / แขวงจากรายการ",
+            onSelect: handleSubdistrictSelected,
+            onInvalid: () => {},
+        });
+
+        disableDistrict();
+        provinceInput.value = initialProvince;
+        const exactProvince = provinceAutocomplete.validate();
+        if (exactProvince) {
+            handleProvinceSelected(exactProvince, { resetChildren: false });
+            districtInput.value = initialDistrict;
+            const exactDistrict = districtAutocomplete.validate();
+            if (exactDistrict) {
+                handleDistrictSelected(exactDistrict, { resetChildren: false });
+                subdistrictInput.value = initialSubdistrict;
+                subdistrictAutocomplete.validate();
+            }
+        }
     };
 
-    if (addressDataUrl && provinceSelect && districtSelect && subdistrictSelect) {
+    if (addressDataUrl && provinceInput && districtInput && subdistrictInput) {
         fetch(addressDataUrl, { credentials: "same-origin" })
             .then((response) => {
                 if (!response.ok) {
@@ -286,11 +557,11 @@
                 }
                 return response.json();
             })
-            .then(setupAddressDropdowns)
+            .then(setupAddressAutocomplete)
             .catch(() => {
-                provinceSelect.disabled = false;
-                districtSelect.disabled = false;
-                subdistrictSelect.disabled = false;
+                provinceInput.disabled = false;
+                districtInput.disabled = false;
+                subdistrictInput.disabled = false;
             });
     }
 

@@ -4,7 +4,7 @@
 {% block title %}สมัครเรียน | BRI School of Fivefold{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20260828-6">
+<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20260828-8">
 {% endblock %}
 
 {% block content %}
@@ -140,7 +140,7 @@
                         <div class="field-group{% if form.date_of_birth.errors %} has-error{% endif %}">
                             <label class="field-label" for="{{ form.date_of_birth.id_for_label }}">วันเดือนปีเกิด <span aria-hidden="true">*</span></label>
                             {{ form.date_of_birth }}
-                            <p class="field-hint">ใส่แบบ วัน/เดือน/ปี พ.ศ. เช่น 15/01/2533</p>
+                            <p class="field-hint">พิมพ์ตัวเลข 8 หลัก เช่น 15012533</p>
                             {{ form.date_of_birth.errors }}
                         </div>
                     </div>
@@ -209,19 +209,28 @@
                     <div class="field-grid field-grid--two">
                         <div class="field-group{% if form.province.errors %} has-error{% endif %}">
                             <label class="field-label" for="{{ form.province.id_for_label }}">จังหวัด <span aria-hidden="true">*</span></label>
-                            {{ form.province }}
+                            <div class="address-combobox">
+                                {{ form.province }}
+                                <div class="address-suggestions" id="province-suggestions" role="listbox" data-address-province-suggestions hidden></div>
+                            </div>
                             {{ form.province.errors }}
                         </div>
                         <div class="field-group{% if form.district.errors %} has-error{% endif %}">
                             <label class="field-label" for="{{ form.district.id_for_label }}">อำเภอ / เขต <span aria-hidden="true">*</span></label>
-                            {{ form.district }}
+                            <div class="address-combobox">
+                                {{ form.district }}
+                                <div class="address-suggestions" id="district-suggestions" role="listbox" data-address-district-suggestions hidden></div>
+                            </div>
                             {{ form.district.errors }}
                         </div>
                     </div>
 
                     <div class="field-group{% if form.sub_district.errors %} has-error{% endif %}">
                         <label class="field-label" for="{{ form.sub_district.id_for_label }}">ตำบล / แขวง <span aria-hidden="true">*</span></label>
-                        {{ form.sub_district }}
+                        <div class="address-combobox">
+                            {{ form.sub_district }}
+                            <div class="address-suggestions" id="subdistrict-suggestions" role="listbox" data-address-subdistrict-suggestions hidden></div>
+                        </div>
                         {{ form.sub_district.errors }}
                     </div>
 
@@ -366,5 +375,5 @@
 
 {% block extra_js %}
 {% include "school/includes/liff_bridge.html" %}
-<script src="{% static 'school/js/registration.js' %}?v=20260828-2" defer></script>
+<script src="{% static 'school/js/registration.js' %}?v=20260828-4" defer></script>
 {% endblock %}

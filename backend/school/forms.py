@@ -1,3 +1,7 @@
+import json
+from functools import lru_cache
+from pathlib import Path
+
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
@@ -8,6 +12,8 @@ from .models import Person, Student
 
 
 CONTROL_CLASS = "form-control"
+THAI_ADDRESS_DATA_PATH = Path(__file__).resolve().parent / "static" / "school" / "data" / "thai_addresses.min.json"
+ADDRESS_PREFIXES = ("จังหวัด", "จ.", "อำเภอ", "อ.", "เขต", "ตำบล", "ต.", "แขวง")
 
 REGION_OPTIONS = (
     {
@@ -36,6 +42,35 @@ GENDER_CHOICES = (
     ("male", "ชาย"),
     ("female", "หญิง"),
 )
+
+
+def normalize_address_text(value):
+    return "".join(str(value or "").strip().lower().split())
+
+
+def strip_address_prefix(value):
+    normalized_value = normalize_address_text(value)
+    for prefix in ADDRESS_PREFIXES:
+        normalized_prefix = normalize_address_text(prefix)
+        if normalized_value.startswith(normalized_prefix):
+            return normalized_value[len(normalized_prefix) :]
+    return normalized_value
+
+
+def address_values_match(first_value, second_value):
+    return (
+        normalize_address_text(first_value) == normalize_address_text(second_value)
+        or strip_address_prefix(first_value) == strip_address_prefix(second_value)
+    )
+
+
+@lru_cache(maxsize=1)
+def load_thai_address_data():
+    try:
+        with THAI_ADDRESS_DATA_PATH.open(encoding="utf-8") as address_file:
+            return json.load(address_file)
+    except OSError:
+        return []
 
 
 class PersonForm(forms.Form):
@@ -86,7 +121,7 @@ class PersonForm(forms.Form):
     )
     gender = forms.ChoiceField(choices=GENDER_CHOICES)
     date_of_birth = forms.DateField(
-        input_formats=["%d/%m/%Y", "%d-%m-%Y", "%Y-%m-%d"],
+        input_formats=["%d/%m/%Y", "%d-%m-%Y", "%d%m%Y", "%Y-%m-%d"],
         widget=forms.DateInput(
             format="%d/%m/%Y",
             attrs={
@@ -94,7 +129,9 @@ class PersonForm(forms.Form):
                 "type": "text",
                 "inputmode": "numeric",
                 "autocomplete": "bday",
-                "placeholder": "เช่น 15/01/2533",
+                "maxlength": "10",
+                "placeholder": "วว/ดด/ปปปป",
+                "data-date-mask": "",
             },
         ),
     )
@@ -132,33 +169,48 @@ class PersonForm(forms.Form):
     region = forms.ChoiceField(choices=REGION_CHOICES)
     province = forms.CharField(
         max_length=100,
-        widget=forms.Select(
-            choices=(("", "เลือกจังหวัด"),),
+        widget=forms.TextInput(
             attrs={
                 "class": CONTROL_CLASS,
-                "autocomplete": "address-level1",
+                "autocomplete": "off",
+                "aria-autocomplete": "list",
+                "aria-controls": "province-suggestions",
+                "aria-expanded": "false",
+                "placeholder": "พิมพ์ชื่อจังหวัด",
+                "role": "combobox",
+                "spellcheck": "false",
                 "data-address-province": "",
             }
         ),
     )
     district = forms.CharField(
         max_length=100,
-        widget=forms.Select(
-            choices=(("", "เลือกอำเภอ / เขต"),),
+        widget=forms.TextInput(
             attrs={
                 "class": CONTROL_CLASS,
-                "autocomplete": "address-level2",
+                "autocomplete": "off",
+                "aria-autocomplete": "list",
+                "aria-controls": "district-suggestions",
+                "aria-expanded": "false",
+                "placeholder": "พิมพ์ชื่ออำเภอ / เขต",
+                "role": "combobox",
+                "spellcheck": "false",
                 "data-address-district": "",
             }
         ),
     )
     sub_district = forms.CharField(
         max_length=100,
-        widget=forms.Select(
-            choices=(("", "เลือกตำบล / แขวง"),),
+        widget=forms.TextInput(
             attrs={
                 "class": CONTROL_CLASS,
-                "autocomplete": "address-level3",
+                "autocomplete": "off",
+                "aria-autocomplete": "list",
+                "aria-controls": "subdistrict-suggestions",
+                "aria-expanded": "false",
+                "placeholder": "พิมพ์ชื่อตำบล / แขวง",
+                "role": "combobox",
+                "spellcheck": "false",
                 "data-address-subdistrict": "",
             }
         ),
@@ -254,18 +306,10 @@ class PersonForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["date_of_birth"].widget.attrs["max"] = timezone.localdate().isoformat()
-        address_placeholders = {
-            "province": "เลือกจังหวัด",
-            "district": "เลือกอำเภอ / เขต",
-            "sub_district": "เลือกตำบล / แขวง",
-        }
-        for field_name, placeholder in address_placeholders.items():
+        for field_name in ("province", "district", "sub_district"):
             selected = self.data.get(self.add_prefix(field_name)) or self.initial.get(field_name)
-            choices = [("", placeholder)]
             if selected:
-                choices.append((selected, selected))
                 self.fields[field_name].widget.attrs["data-selected-value"] = selected
-            self.fields[field_name].widget.choices = choices
 
     def clean_date_of_birth(self):
         date_of_birth = self.cleaned_data["date_of_birth"]
@@ -274,6 +318,58 @@ class PersonForm(forms.Form):
         if date_of_birth > timezone.localdate():
             raise forms.ValidationError("วันเกิดต้องไม่เป็นวันที่ในอนาคต")
         return date_of_birth
+
+    def clean(self):
+        cleaned_data = super().clean()
+        province_name = cleaned_data.get("province")
+        district_name = cleaned_data.get("district")
+        subdistrict_name = cleaned_data.get("sub_district")
+        if not province_name or not district_name or not subdistrict_name:
+            return cleaned_data
+
+        address_data = load_thai_address_data()
+        if not address_data:
+            return cleaned_data
+
+        province = next(
+            (
+                item
+                for item in address_data
+                if address_values_match(item["province"], province_name)
+            ),
+            None,
+        )
+        if not province:
+            self.add_error("province", "กรุณาเลือกจังหวัดจากรายการ")
+            return cleaned_data
+        cleaned_data["province"] = province["province"]
+
+        district = next(
+            (
+                item
+                for item in province["districts"]
+                if address_values_match(item["district"], district_name)
+            ),
+            None,
+        )
+        if not district:
+            self.add_error("district", "กรุณาเลือกอำเภอ / เขตจากรายการ")
+            return cleaned_data
+        cleaned_data["district"] = district["district"]
+
+        subdistrict = next(
+            (
+                item
+                for item in district["subdistricts"]
+                if address_values_match(item, subdistrict_name)
+            ),
+            "",
+        )
+        if not subdistrict:
+            self.add_error("sub_district", "กรุณาเลือกตำบล / แขวงจากรายการ")
+            return cleaned_data
+        cleaned_data["sub_district"] = subdistrict
+        return cleaned_data
 
     @transaction.atomic
     def save(self, line_profile=None):

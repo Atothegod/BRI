@@ -2,11 +2,11 @@
     --auth-brand: #083522;
     --auth-brand-hover: #052a1a;
     --auth-text: #17211b;
-    --auth-muted: #66736b;
+    --auth-muted: #47554c;
     --auth-border: #d8ded9;
     --auth-background: #ffffff;
     --auth-danger: #b42318;
-    --auth-background-image: url("../images/app-background.jpg?v=20260828-gold-silk-1");
+    --auth-background-image: url("../images/app-background.jpg?v=20260828-gold-silk-sharp-1");
 }
 
 *,
@@ -63,8 +63,8 @@ a {
     background-image: var(--auth-background-image);
     background-position: center;
     background-size: cover;
-    filter: blur(1px) saturate(0.88) contrast(1.04) brightness(1.05);
-    transform: scale(1.015);
+    filter: saturate(1.02) contrast(1.08) brightness(1.02);
+    transform: none;
 }
 
 .teacher-auth-page::after {
@@ -217,7 +217,7 @@ a {
     display: flex;
     width: 100%;
     margin: 20px 0;
-    color: #747c77;
+    color: #4f5b54;
     align-items: center;
     gap: 12px;
 }

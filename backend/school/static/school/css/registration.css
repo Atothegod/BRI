@@ -10,13 +10,13 @@
     --color-gold: #c7a554;
     --color-gold-soft: #f6f0df;
     --color-ink: #050505;
-    --color-muted: #6b7280;
-    --color-muted-strong: #4b5563;
+    --color-muted: #4f5b54;
+    --color-muted-strong: #2f3d34;
     --color-border: #e5e7eb;
     --color-border-soft: #f3f4f6;
     --color-danger: #b42318;
     --color-danger-soft: #fff4f2;
-    --app-background-image: url("../images/app-background.jpg?v=20260828-gold-silk-1");
+    --app-background-image: url("../images/app-background.jpg?v=20260828-gold-silk-sharp-1");
     --shadow-card: 0 1px 2px rgba(5, 46, 26, 0.04), 0 12px 34px rgba(5, 46, 26, 0.08), 0 28px 70px rgba(5, 46, 26, 0.04);
     --shadow-float: 0 -1px 0 rgba(5, 46, 26, 0.06), 0 -14px 38px rgba(5, 46, 26, 0.1);
     --radius-card: 8px;
@@ -122,8 +122,8 @@ svg {
     background-image: var(--app-background-image);
     background-position: center;
     background-size: cover;
-    filter: blur(1px) saturate(0.88) contrast(1.04) brightness(1.05);
-    transform: scale(1.015);
+    filter: saturate(1.02) contrast(1.08) brightness(1.02);
+    transform: none;
 }
 
 .registration-app::after,
@@ -554,17 +554,17 @@ svg {
 
 .page-heading h2 {
     margin: 0;
-    color: #ffffff;
+    color: var(--color-brand-950);
     font-size: 1.7rem;
     font-weight: 780;
     line-height: 1.2;
     letter-spacing: 0;
-    text-shadow: 0 2px 14px rgba(3, 24, 14, 0.32);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.62), 0 10px 24px rgba(255, 255, 255, 0.38);
 }
 
 .page-heading p {
     margin: 4px 0 0;
-    color: rgba(255, 255, 255, 0.78);
+    color: var(--color-muted-strong);
     font-size: 0.9rem;
 }
 
@@ -581,7 +581,8 @@ svg {
 
 .hero-copy .eyebrow {
     margin-bottom: 6px;
-    color: #f2d98e;
+    color: #7c5a16;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 
 .mobile-progress {
@@ -651,7 +652,7 @@ svg {
     display: grid;
     min-width: 0;
     padding: 0 2px;
-    color: rgba(5, 46, 26, 0.54);
+    color: rgba(5, 46, 26, 0.68);
     text-align: center;
     background: transparent;
     cursor: pointer;
@@ -713,7 +714,7 @@ svg {
 
 .mobile-step-item[aria-disabled="true"]:not(.is-active) {
     cursor: not-allowed;
-    opacity: 0.58;
+    opacity: 0.78;
 }
 
 .form-alert {
@@ -861,7 +862,7 @@ textarea.form-control {
 }
 
 .form-control::placeholder {
-    color: #9ca3af;
+    color: #6f7a72;
     opacity: 1;
 }
 
@@ -913,7 +914,7 @@ select.form-control {
 }
 
 .form-control:disabled {
-    color: #9ca3af;
+    color: #6f7a72;
     background: #f3f5f4;
     cursor: not-allowed;
 }
@@ -2309,19 +2310,19 @@ select.form-control {
         min-height: 68px;
         margin-bottom: 8px;
         padding: 5px 0 8px;
-        color: #ffffff;
+        color: var(--color-brand-950);
     }
 
     .registration-app .app-hero .eyebrow {
-        color: #f2d98e;
+        color: #7c5a16;
     }
 
     .registration-app .page-heading h2 {
-        color: #ffffff;
+        color: var(--color-brand-950);
     }
 
     .registration-app .page-heading p {
-        color: rgba(255, 255, 255, 0.78);
+        color: var(--color-muted-strong);
     }
 
     .registration-app .mobile-progress {
@@ -2352,11 +2353,11 @@ select.form-control {
     }
 
     .registration-app .mobile-step-item {
-        color: rgba(5, 46, 26, 0.54);
+        color: rgba(5, 46, 26, 0.72);
     }
 
     .registration-app .mobile-step-icon {
-        color: rgba(5, 46, 26, 0.64);
+        color: rgba(5, 46, 26, 0.76);
         background: #ffffff;
         border-color: #e0e9e3;
         box-shadow: 0 10px 22px rgba(5, 46, 26, 0.08);

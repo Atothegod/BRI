@@ -3,7 +3,7 @@
     --teacher-surface: #ffffff;
     --teacher-soft: #f7f9f7;
     --teacher-ink: #162019;
-    --teacher-muted: #68736b;
+    --teacher-muted: #4b584f;
     --teacher-border: #dde3de;
     --teacher-brand: #073521;
     --teacher-brand-soft: #e8f2eb;
@@ -11,7 +11,7 @@
     --teacher-warning: #a65f00;
     --teacher-warning-soft: #fff5df;
     --teacher-danger: #b42318;
-    --teacher-background-image: url("../images/app-background.jpg?v=20260828-gold-silk-1");
+    --teacher-background-image: url("../images/app-background.jpg?v=20260828-gold-silk-sharp-1");
 }
 
 *,
@@ -60,8 +60,8 @@ button {
     background-image: var(--teacher-background-image);
     background-position: center;
     background-size: cover;
-    filter: blur(1px) saturate(0.88) contrast(1.04) brightness(1.05);
-    transform: scale(1.015);
+    filter: saturate(1.02) contrast(1.08) brightness(1.02);
+    transform: none;
 }
 
 .teacher-layout::after {
@@ -352,7 +352,7 @@ button {
 
 .teacher-summary small {
     overflow: hidden;
-    color: #8a948d;
+    color: #59665d;
     font-size: 0.65rem;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -458,7 +458,7 @@ button {
 }
 
 .teacher-student-table th {
-    color: #78827b;
+    color: #566259;
     background: #fafbfa;
     font-size: 0.66rem;
     font-weight: 750;

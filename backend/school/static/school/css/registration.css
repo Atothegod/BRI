@@ -547,6 +547,7 @@ svg {
 }
 
 .page-heading {
+    position: relative;
     justify-content: space-between;
     gap: 16px;
     margin-bottom: 14px;
@@ -555,11 +556,14 @@ svg {
 .page-heading h2 {
     margin: 0;
     color: var(--color-brand-950);
-    font-size: 1.7rem;
-    font-weight: 780;
-    line-height: 1.2;
+    font-size: 2.05rem;
+    font-weight: 850;
+    line-height: 1.12;
     letter-spacing: 0;
-    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.62), 0 10px 24px rgba(255, 255, 255, 0.38);
+    text-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.96),
+        0 3px 0 rgba(255, 255, 255, 0.5),
+        0 16px 30px rgba(3, 24, 14, 0.18);
 }
 
 .page-heading p {
@@ -576,13 +580,38 @@ svg {
 }
 
 .hero-copy {
+    position: relative;
+    z-index: 1;
+    display: inline-grid;
     min-width: 0;
+    padding: 8px 16px 10px 0;
+}
+
+.hero-copy::before {
+    position: absolute;
+    inset: 0 -14px 0 -16px;
+    z-index: -1;
+    content: "";
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.38) 68%, rgba(255, 255, 255, 0));
+    border-left: 4px solid rgba(199, 165, 84, 0.96);
+    border-radius: 0 8px 8px 0;
+    box-shadow: 0 16px 32px rgba(3, 24, 14, 0.1);
+    pointer-events: none;
 }
 
 .hero-copy .eyebrow {
+    display: inline-flex;
+    width: max-content;
+    max-width: 100%;
     margin-bottom: 6px;
-    color: #7c5a16;
-    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55);
+    padding: 3px 8px;
+    color: var(--color-brand-950);
+    font-weight: 850;
+    background: rgba(255, 246, 214, 0.88);
+    border: 1px solid rgba(124, 90, 22, 0.24);
+    border-radius: 999px;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.75);
+    text-shadow: none;
 }
 
 .mobile-progress {
@@ -2309,16 +2338,17 @@ select.form-control {
     .registration-app .app-hero {
         min-height: 68px;
         margin-bottom: 8px;
-        padding: 5px 0 8px;
+        padding: 7px 0 10px;
         color: var(--color-brand-950);
     }
 
     .registration-app .app-hero .eyebrow {
-        color: #7c5a16;
+        color: var(--color-brand-950);
     }
 
     .registration-app .page-heading h2 {
         color: var(--color-brand-950);
+        font-size: 2.15rem;
     }
 
     .registration-app .page-heading p {

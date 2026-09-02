@@ -4,7 +4,7 @@
 {% block title %}สมัครเรียน | BRI School of Fivefold{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20260828-17">
+<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20260902-1">
 {% endblock %}
 
 {% block content %}
@@ -190,12 +190,16 @@
 
                     <fieldset class="field-group{% if form.region.errors %} has-error{% endif %}">
                         <legend class="field-label">ภูมิภาค <span aria-hidden="true">*</span></legend>
-                        <div class="choice-grid choice-grid--four">
+                        <div class="choice-grid choice-grid--six">
                             {% for item in region_options %}
                             <label class="choice-control">
                                 <input type="radio" name="region" value="{{ item.value }}" {% if form.region.value == item.value %}checked{% endif %} required>
                                 <span class="region-choice">
+                                    {% if item.icon %}
                                     <img src="{% static item.icon %}" alt="" width="52" height="52">
+                                    {% else %}
+                                    <span class="region-choice__mark" aria-hidden="true">{{ item.initial }}</span>
+                                    {% endif %}
                                     <strong>{{ item.label }}</strong>
                                 </span>
                             </label>

@@ -111,14 +111,14 @@ def get_line_initial(request):
 
 def get_liff_context(request, reload_on_sync=False):
     return {
-        "line_liff_id": settings.LINE_LIFF_ID,
+        "line_liff_id": settings.LINE_LIFF_ID if settings.LINE_LIFF_ENABLED else "",
         "line_profile": get_session_line_profile(request),
         "liff_reload_on_sync": reload_on_sync,
     }
 
 
 def redirect_to_liff_path(path):
-    if not settings.LINE_LIFF_ID:
+    if not settings.LINE_LIFF_ENABLED or not settings.LINE_LIFF_ID:
         return redirect(path)
     return redirect(f"https://liff.line.me/{settings.LINE_LIFF_ID}{path}")
 
@@ -232,7 +232,12 @@ def latest_closed_loop_notification(request, user_key):
 @never_cache
 @ensure_csrf_cookie
 def registration(request):
-    if request.method == "GET" and request.GET.get("liff.state") and settings.LINE_LIFF_ID:
+    if (
+        request.method == "GET"
+        and request.GET.get("liff.state")
+        and settings.LINE_LIFF_ENABLED
+        and settings.LINE_LIFF_ID
+    ):
         context = {
             "liff_state": request.GET["liff.state"],
         }
@@ -296,9 +301,11 @@ def registration_success(request):
         "receipt": receipt,
         "line_return_url": settings.LINE_RETURN_URL,
         "next_steps": (
-            "ทีมรับสมัครจะตรวจสอบข้อมูลของคุณ",
-            "สถานะเริ่มต้นคือดำเนินการ",
-            "เมื่อผ่านแล้วทีมงานจะสร้างรหัสนักศึกษาให้ในตารางนักเรียน",
+            "รอตรวจสอบข้อมูลของคุณ",
+            "รอนัดหมายสัมภาษณ์ สถานที่ คริสตจักรไบร์ทโรแมนซ์",
+            "ประกาศผลผู้ที่ผ่านสัมภาษณ์",
+            "ยืนยันการเข้าเรียน ด้วยการชำระค่าเทอม",
+            "รับรหัสนักเรียนรอปฐมนิเทศน์",
         ),
     }
     context.update(get_liff_context(request))

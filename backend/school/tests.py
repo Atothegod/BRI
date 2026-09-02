@@ -73,6 +73,10 @@ class PersonViewTests(TestCase):
         self.assertContains(response, "data-address-subdistrict")
         self.assertContains(response, "data-address-subdistrict-suggestions")
         self.assertContains(response, 'placeholder="พิมพ์ชื่อตำบล / แขวง"')
+        self.assertContains(response, 'value="eastern"')
+        self.assertContains(response, "ตะวันออก")
+        self.assertContains(response, 'value="western"')
+        self.assertContains(response, "ตะวันตก")
         self.assertNotContains(response, "LINE ID")
         self.assertNotContains(response, 'value="unspecified"')
         self.assertNotContains(response, "รูปโปรไฟล์")
@@ -99,6 +103,14 @@ class PersonViewTests(TestCase):
         success_response = self.client.get(reverse("school:registration_success"))
         self.assertContains(success_response, person.get_status_display())
         self.assertContains(success_response, f"#{person.pk}")
+        self.assertContains(success_response, "รอตรวจสอบข้อมูลของคุณ")
+        self.assertContains(
+            success_response,
+            "รอนัดหมายสัมภาษณ์ สถานที่ คริสตจักรไบร์ทโรแมนซ์",
+        )
+        self.assertContains(success_response, "ประกาศผลผู้ที่ผ่านสัมภาษณ์")
+        self.assertContains(success_response, "ยืนยันการเข้าเรียน ด้วยการชำระค่าเทอม")
+        self.assertContains(success_response, "รับรหัสนักเรียนรอปฐมนิเทศน์")
 
     def test_registration_ignores_submitted_line_id(self):
         form_data = self.valid_form_data()
@@ -825,6 +837,7 @@ class AnnouncementResultTests(TestCase):
 
 @override_settings(
     LINE_LIFF_ALLOW_UNVERIFIED_PROFILE=True,
+    LINE_LIFF_ENABLED=True,
     LINE_LOGIN_CHANNEL_ID="",
     LINE_LIFF_ID="1234567890-AbCdEf",
 )
@@ -960,3 +973,31 @@ class LiffFlowTests(TestCase):
         self.assertTemplateUsed(response, "school/liff_boot.html")
         self.assertContains(response, "กำลังเปิดหน้าที่เลือก")
         self.assertNotContains(response, "registration-form")
+
+
+@override_settings(
+    LINE_LIFF_ENABLED=False,
+    LINE_LIFF_ID="1234567890-AbCdEf",
+)
+class LocalDevLiffDisabledTests(TestCase):
+    def test_registration_does_not_load_liff_bridge_when_disabled(self):
+        response = self.client.get(reverse("school:registration"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "https://static.line-scdn.net/liff/edge/2/sdk.js")
+        self.assertNotContains(response, "school/js/liff_bridge.js")
+
+    def test_rich_menu_launch_urls_stay_local_when_liff_is_disabled(self):
+        response = self.client.get(reverse("school:liff_results_launch"))
+
+        self.assertRedirects(response, reverse("school:announcement_result"))
+
+    def test_liff_state_does_not_boot_when_liff_is_disabled(self):
+        response = self.client.get(
+            reverse("school:registration"),
+            {"liff.state": "/results/"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "school/registration.html")
+        self.assertNotContains(response, "กำลังเปิดหน้าที่เลือก")

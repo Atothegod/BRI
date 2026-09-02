@@ -4,8 +4,16 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
+def env_bool(name, default=False):
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.lower() in {"1", "true", "yes", "on"}
+
+
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-local-dev-key")
-DEBUG = os.environ.get("DJANGO_DEBUG", "0").lower() in {"1", "true", "yes", "on"}
+DEBUG = env_bool("DJANGO_DEBUG", False)
 
 ALLOWED_HOSTS = [
     host.strip()
@@ -28,20 +36,9 @@ USE_X_FORWARDED_HOST = os.environ.get("DJANGO_USE_X_FORWARDED_HOST", "1").lower(
     "on",
 }
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-SECURE_SSL_REDIRECT = os.environ.get("DJANGO_SECURE_SSL_REDIRECT", "0").lower() in {
-    "1",
-    "true",
-    "yes",
-    "on",
-}
-SESSION_COOKIE_SECURE = os.environ.get(
-    "DJANGO_SESSION_COOKIE_SECURE",
-    "0" if DEBUG else "1",
-).lower() in {"1", "true", "yes", "on"}
-CSRF_COOKIE_SECURE = os.environ.get(
-    "DJANGO_CSRF_COOKIE_SECURE",
-    "0" if DEBUG else "1",
-).lower() in {"1", "true", "yes", "on"}
+SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", False)
+SESSION_COOKIE_SECURE = env_bool("DJANGO_SESSION_COOKIE_SECURE", not DEBUG)
+CSRF_COOKIE_SECURE = env_bool("DJANGO_CSRF_COOKIE_SECURE", not DEBUG)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -167,8 +164,9 @@ LINE_RETURN_URL = os.environ.get(
     "https://line.me/R/oaMessage/%40522lxoja",
 )
 LINE_LIFF_ID = os.environ.get("LINE_LIFF_ID", "")
+LINE_LIFF_ENABLED = env_bool("LINE_LIFF_ENABLED", not DEBUG)
 LINE_LOGIN_CHANNEL_ID = os.environ.get("LINE_LOGIN_CHANNEL_ID", "")
-LINE_LIFF_ALLOW_UNVERIFIED_PROFILE = os.environ.get(
+LINE_LIFF_ALLOW_UNVERIFIED_PROFILE = env_bool(
     "LINE_LIFF_ALLOW_UNVERIFIED_PROFILE",
-    "1" if DEBUG else "0",
-).lower() in {"1", "true", "yes", "on"}
+    DEBUG,
+)

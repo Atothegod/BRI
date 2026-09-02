@@ -1098,6 +1098,7 @@ select.form-control {
     gap: 8px;
 }
 
+.choice-grid--six,
 .choice-grid--four,
 .choice-grid--two {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1170,6 +1171,19 @@ select.form-control {
     width: 52px;
     height: 52px;
     object-fit: contain;
+}
+
+.region-choice__mark {
+    display: grid;
+    width: 52px;
+    height: 52px;
+    color: var(--color-brand-800);
+    font-size: 0.82rem;
+    font-weight: 800;
+    background: linear-gradient(180deg, #f6fbf7, #e8f4ec);
+    border: 1px solid #c9ddd0;
+    border-radius: 50%;
+    place-items: center;
 }
 
 .region-choice strong {
@@ -2438,6 +2452,10 @@ select.form-control {
 
     .choice-grid--four {
         grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .choice-grid--six {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
     .form-action-dock {

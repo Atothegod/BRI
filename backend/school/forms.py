@@ -27,6 +27,16 @@ REGION_OPTIONS = (
         "icon": "school/images/regions/central.png",
     },
     {
+        "value": "eastern",
+        "label": "ตะวันออก",
+        "initial": "ตอ.",
+    },
+    {
+        "value": "western",
+        "label": "ตะวันตก",
+        "initial": "ตก.",
+    },
+    {
         "value": "northeastern",
         "label": "อีสาน",
         "icon": "school/images/regions/northeastern.png",

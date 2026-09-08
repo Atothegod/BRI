@@ -1,5 +1,6 @@
 import json
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -202,6 +203,7 @@ class PersonViewTests(TestCase):
         self.assertEqual(student.student_id, "bri-0001")
         self.assertFalse(student.is_paid)
         self.assertFalse(student.payment_slip)
+        self.assertEqual(person.admission_type, Person.AdmissionType.INTERVIEW)
 
     def test_success_page_requires_a_person_receipt(self):
         response = self.client.get(reverse("school:registration_success"))
@@ -239,6 +241,64 @@ class AgentNotificationEndpointTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["latest_closed_loop"], None)
         self.assertEqual(response.json()["notifications"], [])
+
+
+class LineProactiveNotificationTests(TestCase):
+    @override_settings(
+        LINE_MESSAGING_CHANNEL_ACCESS_TOKEN="line-token",
+        PUBLIC_BASE_URL="https://bri.example",
+    )
+    @patch("school.line.request.urlopen")
+    def test_passing_interview_pushes_result_link_to_line_user(self, mock_urlopen):
+        person = Person.objects.create(
+            first_name="Notify",
+            last_name="Passed",
+            line_user_id="Unotifypass",
+        )
+
+        person.status = Person.Status.PASSED
+        person.save(update_fields=["status"])
+
+        student = Student.objects.get(person=person)
+        self.assertTrue(mock_urlopen.called)
+        line_request = mock_urlopen.call_args.args[0]
+        payload = json.loads(line_request.data.decode("utf-8"))
+        self.assertEqual(payload["to"], "Unotifypass")
+        self.assertIn("ผ่านสัมภาษณ์", payload["messages"][0]["text"])
+        self.assertIn(student.student_id, payload["messages"][0]["text"])
+        self.assertIn(
+            "https://bri.example/results/?line_user_id=Unotifypass",
+            payload["messages"][0]["text"],
+        )
+        person.refresh_from_db()
+        self.assertIn("interview_passed", person.extra_data["line_notifications"])
+
+    @override_settings(
+        LINE_MESSAGING_CHANNEL_ACCESS_TOKEN="line-token",
+        PUBLIC_BASE_URL="https://bri.example",
+    )
+    @patch("school.line.request.urlopen")
+    def test_payment_approval_pushes_student_id_to_line_user(self, mock_urlopen):
+        with self.settings(LINE_MESSAGING_CHANNEL_ACCESS_TOKEN=""):
+            person = Person.objects.create(
+                first_name="Notify",
+                last_name="Paid",
+                line_user_id="Unotifypaid",
+                status=Person.Status.PASSED,
+            )
+        student = Student.objects.get(person=person)
+
+        student.is_paid = True
+        student.save(update_fields=["is_paid"])
+
+        self.assertTrue(mock_urlopen.called)
+        line_request = mock_urlopen.call_args.args[0]
+        payload = json.loads(line_request.data.decode("utf-8"))
+        self.assertEqual(payload["to"], "Unotifypaid")
+        self.assertIn("ยืนยันการชำระเงินเรียบร้อยแล้ว", payload["messages"][0]["text"])
+        self.assertIn(student.student_id, payload["messages"][0]["text"])
+        person.refresh_from_db()
+        self.assertIn("payment_approved", person.extra_data["line_notifications"])
 
 
 class TeacherFlowTests(TestCase):
@@ -729,8 +789,9 @@ class TeacherFlowTests(TestCase):
             last_name="Student",
             line_user_id="Ulinepayment",
             line_display_name="Line Student",
+            status=Person.Status.PASSED,
         )
-        student = Student.objects.create(person=person)
+        student = Student.objects.get(person=person)
         session = self.client.session
         session["line_profile"] = {
             "line_user_id": "Ulinepayment",
@@ -753,6 +814,60 @@ class TeacherFlowTests(TestCase):
         self.assertRedirects(response, reverse("school:student_payment_upload"))
         student.refresh_from_db()
         self.assertTrue(student.payment_slip.name.startswith("payment_slips/"))
+
+    def test_student_payment_upload_requires_student_status(self):
+        person = Person.objects.create(
+            first_name="Pending",
+            last_name="Payment",
+            line_user_id="Upendingpayment",
+        )
+        Student.objects.create(person=person)
+        session = self.client.session
+        session["line_profile"] = {
+            "line_user_id": "Upendingpayment",
+            "line_display_name": "Pending Payment",
+            "line_picture_url": "",
+            "verified": True,
+        }
+        session.save()
+        slip = SimpleUploadedFile(
+            "pending-slip.gif",
+            b"GIF87a\x01\x00\x01\x00\x80\x01\x00\x00\x00\x00ccc,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;",
+            content_type="image/gif",
+        )
+
+        response = self.client.post(
+            reverse("school:student_payment_upload"),
+            {"payment_slip": slip},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "ยังไม่ได้รับสถานะนักศึกษา")
+
+    def test_paid_student_payment_page_shows_student_id_instead_of_form(self):
+        person = Person.objects.create(
+            first_name="Paid",
+            last_name="Complete",
+            line_user_id="Upaidcomplete",
+            status=Person.Status.PASSED,
+        )
+        student = Student.objects.get(person=person)
+        student.is_paid = True
+        student.save(update_fields=["is_paid"])
+        session = self.client.session
+        session["line_profile"] = {
+            "line_user_id": "Upaidcomplete",
+            "line_display_name": "Paid Complete",
+            "line_picture_url": "",
+            "verified": True,
+        }
+        session.save()
+
+        response = self.client.get(reverse("school:student_payment_upload"))
+
+        self.assertContains(response, "ยินดีด้วย ชำระเงินเรียบร้อยแล้ว")
+        self.assertContains(response, student.student_id)
+        self.assertNotContains(response, "ส่งสลิปให้ตรวจสอบ")
 
     def test_person_knows_student_and_payment_status_through_line_account(self):
         person = Person.objects.create(
@@ -792,6 +907,26 @@ class AnnouncementResultTests(TestCase):
         self.assertContains(response, "ไปหน้าแจ้งชำระเงิน")
         self.assertNotContains(response, "หน้าสมัครเรียน")
         self.assertContains(response, 'href="https://line.me/R/"')
+
+    def test_paid_line_account_sees_completed_student_result(self):
+        person = Person.objects.create(
+            first_name="Paid",
+            last_name="Person",
+            line_user_id="Upaidresult",
+            status=Person.Status.PASSED,
+        )
+        student = Student.objects.get(person=person)
+        student.is_paid = True
+        student.save(update_fields=["is_paid"])
+
+        response = self.client.get(
+            reverse("school:announcement_result"),
+            {"line_user_id": "Upaidresult"},
+        )
+
+        self.assertContains(response, "ยินดีด้วย ชำระเงินเรียบร้อยแล้ว")
+        self.assertContains(response, student.student_id)
+        self.assertNotContains(response, "ไปหน้าแจ้งชำระเงิน")
 
     def test_existing_student_is_treated_as_passed_result(self):
         person = Person.objects.create(
@@ -949,6 +1084,24 @@ class LiffFlowTests(TestCase):
         response = self.client.get(reverse("school:registration"))
 
         self.assertTemplateUsed(response, "school/already_registered.html")
+        self.assertContains(response, student.student_id)
+
+    def test_paid_registered_student_sees_completed_status_on_registration_page(self):
+        person = Person.objects.create(
+            first_name="Paid",
+            last_name="Existing",
+            line_user_id="Upaidexisting",
+            status=Person.Status.PASSED,
+        )
+        student = Student.objects.get(person=person)
+        student.is_paid = True
+        student.save(update_fields=["is_paid"])
+        self.sync_line_profile(user_id="Upaidexisting", display_name="Paid Existing")
+
+        response = self.client.get(reverse("school:registration"))
+
+        self.assertTemplateUsed(response, "school/already_registered.html")
+        self.assertContains(response, "ยินดีด้วย คุณเป็นนักศึกษา BRI แล้ว")
         self.assertContains(response, student.student_id)
 
     def test_registration_endpoint_with_liff_state_renders_boot_page(self):

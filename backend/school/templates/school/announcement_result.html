@@ -15,7 +15,7 @@
         </a>
 
         <div class="success-mark result-mark" aria-hidden="true">
-            {% if result_state == "passed" %}
+            {% if result_state == "paid" or result_state == "passed" %}
             <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#check"></use></svg>
             {% elif result_state == "failed" %}
             <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#x"></use></svg>
@@ -26,7 +26,19 @@
 
         <span class="eyebrow">ผลสัมภาษณ์</span>
 
-        {% if result_state == "passed" %}
+        {% if result_state == "paid" %}
+        <h1 id="result-title">ยินดีด้วย ชำระเงินเรียบร้อยแล้ว</h1>
+        <p class="success-lead">คุณ {{ person.full_name }} ได้รับการยืนยันเป็นนักศึกษา BRI อย่างสมบูรณ์แล้ว</p>
+        <div class="receipt-block result-card paid-card">
+            <span>รหัสนักศึกษา</span>
+            <strong>{{ student.student_id|default:person.student_code }}</strong>
+            {% if student.group %}
+            <small>{{ student.group }}{% if student.grade %} · {{ student.grade }}{% endif %}</small>
+            {% else %}
+            <small>ทีมงานจะอัปเดตกลุ่มเรียนให้ในระบบ</small>
+            {% endif %}
+        </div>
+        {% elif result_state == "passed" %}
         <h1 id="result-title">ผ่านการสัมภาษณ์</h1>
         <p class="success-lead">ยินดีด้วยคุณ {{ person.full_name }} ได้รับการยืนยันเป็นนักศึกษา BRI แล้ว</p>
         <div class="receipt-block result-card">
@@ -65,7 +77,12 @@
         {% endif %}
 
         <div class="result-actions">
-            {% if result_state == "passed" %}
+            {% if result_state == "paid" %}
+            <a class="button button--primary success-action" href="{{ line_return_url }}" data-liff-close>
+                <span>กลับไปยัง LINE</span>
+                <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
+            </a>
+            {% elif result_state == "passed" %}
             <a class="button button--primary success-action" href="{% url 'school:student_payment_upload' %}">
                 <span>ไปหน้าแจ้งชำระเงิน</span>
                 <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>

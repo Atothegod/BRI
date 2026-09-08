@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.db import models
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
 
@@ -18,6 +18,10 @@ class Person(TimeStampedModel):
         IN_PROGRESS = "in_progress", "ดำเนินการ"
         PASSED = "passed", "ผ่าน"
         FAILED = "failed", "ไม่ผ่าน"
+
+    class AdmissionType(models.TextChoices):
+        INTERVIEW = "interview", "ผ่านสัมภาษณ์"
+        ONLINE = "online", "ผ่านแบบออนไลน์"
 
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -44,6 +48,11 @@ class Person(TimeStampedModel):
         max_length=20,
         choices=Status.choices,
         default=Status.IN_PROGRESS,
+    )
+    admission_type = models.CharField(
+        max_length=20,
+        choices=AdmissionType.choices,
+        blank=True,
     )
     extra_data = models.JSONField(default=dict, blank=True)
 
@@ -93,11 +102,31 @@ class Person(TimeStampedModel):
             return False
         return self.student.is_paid
 
+    @property
+    def admission_type_name(self):
+        if self.status != self.Status.PASSED:
+            return ""
+        return self.get_admission_type_display() or self.AdmissionType.INTERVIEW.label
+
     def connect_line_account(self, user_id, display_name="", picture_url=""):
         self.line_user_id = user_id
         self.line_display_name = display_name
         self.line_picture_url = picture_url
         self.line_connected_at = timezone.now()
+
+    def normalize_admission_type(self):
+        if self.status != self.Status.PASSED:
+            self.admission_type = ""
+        elif not self.admission_type:
+            self.admission_type = self.AdmissionType.INTERVIEW
+
+    def save(self, *args, **kwargs):
+        original_admission_type = self.admission_type
+        self.normalize_admission_type()
+        update_fields = kwargs.get("update_fields")
+        if update_fields is not None and self.admission_type != original_admission_type:
+            kwargs["update_fields"] = set(update_fields) | {"admission_type"}
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.full_name
@@ -169,12 +198,74 @@ class Student(TimeStampedModel):
         return f"{self.student_id} - {self.person.full_name}"
 
 
+def line_notification_sent(person, key):
+    return bool((person.extra_data or {}).get("line_notifications", {}).get(key))
+
+
+def mark_line_notification_sent(person, key):
+    extra_data = dict(person.extra_data or {})
+    notifications = dict(extra_data.get("line_notifications", {}))
+    notifications[key] = timezone.now().isoformat()
+    extra_data["line_notifications"] = notifications
+    Person.objects.filter(pk=person.pk).update(extra_data=extra_data)
+    person.extra_data = extra_data
+
+
+@receiver(pre_save, sender=Person)
+def remember_previous_person_status(sender, instance, **kwargs):
+    instance._previous_status = None
+    if instance.pk:
+        instance._previous_status = (
+            Person.objects.filter(pk=instance.pk)
+            .values_list("status", flat=True)
+            .first()
+        )
+
+
 @receiver(post_save, sender=Person)
-def create_student_for_passed_person(sender, instance, **kwargs):
+def handle_passed_person(sender, instance, **kwargs):
     if instance.status != Person.Status.PASSED:
         return
 
-    Student.objects.get_or_create(person=instance)
+    student, _ = Student.objects.get_or_create(person=instance)
+    previous_status = getattr(instance, "_previous_status", None)
+    if previous_status == Person.Status.PASSED or line_notification_sent(
+        instance,
+        "interview_passed",
+    ):
+        return
+
+    from .line import notify_interview_passed
+
+    if notify_interview_passed(instance, student):
+        mark_line_notification_sent(instance, "interview_passed")
+
+
+@receiver(pre_save, sender=Student)
+def remember_previous_student_payment_status(sender, instance, **kwargs):
+    instance._previous_is_paid = None
+    if instance.pk:
+        instance._previous_is_paid = (
+            Student.objects.filter(pk=instance.pk)
+            .values_list("is_paid", flat=True)
+            .first()
+        )
+
+
+@receiver(post_save, sender=Student)
+def notify_student_payment_approved(sender, instance, **kwargs):
+    previous_is_paid = getattr(instance, "_previous_is_paid", None)
+    if not instance.is_paid or previous_is_paid is True:
+        return
+
+    person = instance.person
+    if line_notification_sent(person, "payment_approved"):
+        return
+
+    from .line import notify_payment_approved
+
+    if notify_payment_approved(person, instance):
+        mark_line_notification_sent(person, "payment_approved")
 
 
 class AttendanceSession(TimeStampedModel):

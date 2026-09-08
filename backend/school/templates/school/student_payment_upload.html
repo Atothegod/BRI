@@ -14,8 +14,71 @@
             {% include "school/includes/brand_logo.html" with variant="success" %}
         </a>
 
+        {% if payment_state == "paid" %}
+        <div class="success-mark success-mark--paid" aria-hidden="true">
+            <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#check"></use></svg>
+        </div>
+        <span class="eyebrow">ยืนยันการเข้าเรียนแล้ว</span>
+        <h1 id="payment-title">ยินดีด้วย ชำระเงินเรียบร้อยแล้ว</h1>
+        <p class="success-lead">คุณ {{ person.full_name }} ได้รับการยืนยันเป็นนักศึกษา BRI อย่างสมบูรณ์แล้ว</p>
+
+        <div class="receipt-block paid-card">
+            <span>รหัสนักศึกษา</span>
+            <strong>{{ student.student_id }}</strong>
+            {% if student.group %}
+            <small>{{ student.group }}{% if student.grade %} · {{ student.grade }}{% endif %}</small>
+            {% else %}
+            <small>ทีมงานจะอัปเดตกลุ่มเรียนให้ในระบบ</small>
+            {% endif %}
+        </div>
+
+        <a class="button button--primary success-action payment-action" href="{{ line_return_url }}" data-liff-close>
+            <span>กลับไปยัง LINE</span>
+            <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
+        </a>
+        {% elif payment_state == "not_student" %}
+        <div class="success-mark result-mark" aria-hidden="true">
+            <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#lock"></use></svg>
+        </div>
+        <span class="eyebrow">ยังไม่สามารถชำระเงินได้</span>
+        <h1 id="payment-title">รอสถานะนักศึกษา</h1>
+        <p class="success-lead">คุณ {{ person.full_name }} ยังไม่ได้รับสถานะนักศึกษา จึงยังไม่เปิดให้แจ้งชำระเงิน</p>
+        <div class="receipt-block result-card">
+            <span>สถานะใบสมัคร</span>
+            <strong>{{ person.get_status_display }}</strong>
+            <small>กรุณารอตรวจสอบผลประกาศ หรือสอบถามทีมงานผ่าน LINE</small>
+        </div>
+        <div class="result-actions">
+            <a class="button button--primary success-action" href="{% url 'school:announcement_result' %}">
+                <span>ดูประกาศผล</span>
+                <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
+            </a>
+            <a class="button button--secondary success-action" href="{{ line_return_url }}" data-liff-close>
+                <span>กลับไปยัง LINE</span>
+            </a>
+        </div>
+        {% elif payment_state == "missing" %}
+        <div class="success-mark result-mark" aria-hidden="true">
+            <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#user"></use></svg>
+        </div>
+        <span class="eyebrow">ไม่พบข้อมูล</span>
+        <h1 id="payment-title">ไม่พบใบสมัครของ LINE นี้</h1>
+        <p class="success-lead">กรุณาสมัครเรียนก่อน หรือเปิดหน้านี้จาก LINE account ที่ใช้สมัคร</p>
+        <div class="result-actions">
+            <a class="button button--primary success-action" href="{% url 'school:registration' %}">
+                <span>ไปหน้าสมัครเรียน</span>
+                <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
+            </a>
+            <a class="button button--secondary success-action" href="{{ line_return_url }}" data-liff-close>
+                <span>กลับไปยัง LINE</span>
+            </a>
+        </div>
+        {% else %}
         <span class="eyebrow">แจ้งชำระเงิน</span>
         <h1 id="payment-title">อัปโหลดสลิปการโอนเงิน</h1>
+        {% if payment_state == "missing_line" %}
+        <p class="success-lead">กรุณาเปิดหน้านี้ผ่าน LINE เพื่อให้ระบบตรวจสอบสถานะนักศึกษา</p>
+        {% endif %}
 
         {% if messages %}
         {% for message in messages %}
@@ -46,6 +109,7 @@
                 <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#check-circle"></use></svg>
             </button>
         </form>
+        {% endif %}
     </section>
 </main>
 {% endblock %}

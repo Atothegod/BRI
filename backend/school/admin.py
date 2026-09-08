@@ -23,9 +23,10 @@ class PersonAdmin(admin.ModelAdmin):
         "student_code",
         "has_paid",
         "status",
+        "admission_type_display",
         "user",
     )
-    list_filter = ("status", "gender")
+    list_filter = ("status", "admission_type", "gender")
     search_fields = (
         "first_name",
         "last_name",
@@ -37,12 +38,66 @@ class PersonAdmin(admin.ModelAdmin):
         "line_user_id",
         "line_display_name",
     )
-    actions = ("mark_as_passed",)
+    fieldsets = (
+        (
+            "ข้อมูลผู้สมัคร",
+            {
+                "fields": (
+                    "user",
+                    ("first_name", "last_name"),
+                    "nickname",
+                    "gender",
+                    "date_of_birth",
+                    "occupation",
+                    "photo",
+                    "phone",
+                    "email",
+                    "line_id",
+                    "line_user_id",
+                    "line_display_name",
+                    "line_picture_url",
+                    "line_connected_at",
+                    "extra_data",
+                )
+            },
+        ),
+        (
+            "ผลสัมภาษณ์",
+            {
+                "description": "เลือกผลผ่าน/ไม่ผ่านก่อน แล้วเลือกประเภทผู้เรียนเฉพาะกรณีที่ผ่าน",
+                "fields": (("status", "admission_type"),),
+            },
+        ),
+    )
+    readonly_fields = ("line_connected_at",)
+    actions = (
+        "mark_as_passed_interview",
+        "mark_as_passed_online",
+        "mark_as_failed",
+    )
 
-    @admin.action(description="Mark selected people as passed")
-    def mark_as_passed(self, request, queryset):
+    @admin.display(description="ประเภทผู้เรียน")
+    def admission_type_display(self, obj):
+        return obj.admission_type_name or "-"
+
+    @admin.action(description="Mark selected people as passed interview students")
+    def mark_as_passed_interview(self, request, queryset):
         for person in queryset:
             person.status = Person.Status.PASSED
+            person.admission_type = Person.AdmissionType.INTERVIEW
+            person.save(update_fields=["status", "admission_type"])
+
+    @admin.action(description="Mark selected people as online students")
+    def mark_as_passed_online(self, request, queryset):
+        for person in queryset:
+            person.status = Person.Status.PASSED
+            person.admission_type = Person.AdmissionType.ONLINE
+            person.save(update_fields=["status", "admission_type"])
+
+    @admin.action(description="Mark selected people as failed")
+    def mark_as_failed(self, request, queryset):
+        for person in queryset:
+            person.status = Person.Status.FAILED
             person.save(update_fields=["status"])
 
 

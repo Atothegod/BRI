@@ -512,11 +512,19 @@ class PaymentSlipUploadForm(forms.Form):
             raise forms.ValidationError("กรุณาเปิดหน้านี้ผ่าน LINE เพื่อให้ระบบรู้บัญชีของคุณ")
 
         try:
-            self.student = Student.objects.select_related("person").get(
-                person__line_user_id=line_user_id
+            self.student = Student.objects.select_related("person", "group").get(
+                person__line_user_id=line_user_id,
+                person__status=Person.Status.PASSED,
             )
         except Student.DoesNotExist as exc:
-            raise forms.ValidationError("ไม่พบข้อมูลนักศึกษาสำหรับ LINE account นี้") from exc
+            raise forms.ValidationError(
+                "บัญชี LINE นี้ยังไม่ได้รับสถานะนักศึกษา จึงยังไม่สามารถแจ้งชำระเงินได้"
+            ) from exc
+
+        if self.student.is_paid:
+            raise forms.ValidationError(
+                "ระบบยืนยันการชำระเงินของคุณเรียบร้อยแล้ว ไม่ต้องส่งสลิปซ้ำ"
+            )
 
         cleaned_data["line_user_id"] = line_user_id
         return cleaned_data

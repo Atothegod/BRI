@@ -14,9 +14,24 @@
             {% include "school/includes/brand_logo.html" with variant="success" %}
         </a>
 
-        <div class="success-mark" aria-hidden="true">
+        <div class="success-mark{% if student and student.is_paid %} success-mark--paid{% endif %}" aria-hidden="true">
             <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#check"></use></svg>
         </div>
+        {% if student and student.is_paid %}
+        <span class="eyebrow">ยืนยันการเข้าเรียนแล้ว</span>
+        <h1 id="already-title">ยินดีด้วย คุณเป็นนักศึกษา BRI แล้ว</h1>
+        <p class="success-lead">ระบบยืนยันการชำระเงินของคุณ {{ person.full_name }} เรียบร้อยแล้ว</p>
+
+        <div class="receipt-block paid-card">
+            <span>รหัสนักศึกษา</span>
+            <strong>{{ student.student_id }}</strong>
+            {% if student.group %}
+            <small>{{ student.group }}{% if student.grade %} · {{ student.grade }}{% endif %}</small>
+            {% else %}
+            <small>ทีมงานจะอัปเดตกลุ่มเรียนให้ในระบบ</small>
+            {% endif %}
+        </div>
+        {% else %}
         <span class="eyebrow">พบใบสมัครแล้ว</span>
         <h1 id="already-title">คุณสมัครเรียนแล้ว</h1>
         <p class="success-lead">ระบบพบใบสมัครของคุณ {{ person.full_name }} ที่ผูกกับ LINE account นี้แล้ว</p>
@@ -30,6 +45,7 @@
             <small>รหัสข้อมูล #{{ person.pk }}</small>
             {% endif %}
         </div>
+        {% endif %}
 
         <div class="result-actions">
             <a class="button button--primary success-action" href="{{ line_return_url }}" data-liff-close>

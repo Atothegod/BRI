@@ -15,6 +15,11 @@ Enum person_status {
   failed
 }
 
+Enum admission_type {
+  interview
+  online
+}
+
 Enum admin_validation_status {
   pending
   approved
@@ -63,6 +68,7 @@ Table school_person {
   email varchar(254) [not null]
   line_id varchar(120) [not null]
   status person_status [not null, default: 'in_progress']
+  admission_type admission_type [not null]
   extra_data jsonb [not null]
 
   indexes {

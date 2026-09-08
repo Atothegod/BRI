@@ -154,6 +154,26 @@ def get_existing_person_for_line(request):
     )
 
 
+def get_payment_access_state(line_user_id):
+    if not line_user_id:
+        return "missing_line", None, None
+
+    person = (
+        Person.objects.select_related("student", "student__group")
+        .filter(line_user_id=line_user_id)
+        .first()
+    )
+    if not person:
+        return "missing", None, None
+
+    student = getattr(person, "student", None)
+    if person.status != Person.Status.PASSED or not student:
+        return "not_student", person, student
+    if student.is_paid:
+        return "paid", person, student
+    return "ready", person, student
+
+
 @require_POST
 def liff_profile_sync(request):
     try:
@@ -297,8 +317,16 @@ def registration_success(request):
     if not receipt:
         return redirect("school:registration")
 
+    person = (
+        Person.objects.select_related("student", "student__group")
+        .filter(pk=receipt["person_id"])
+        .first()
+    )
+    student = getattr(person, "student", None) if person else None
     context = {
         "receipt": receipt,
+        "person": person,
+        "student": student,
         "line_return_url": settings.LINE_RETURN_URL,
         "next_steps": (
             "รอตรวจสอบข้อมูลของคุณ",
@@ -334,7 +362,7 @@ def announcement_result(request):
     if person:
         student = getattr(person, "student", None)
         if person.status == Person.Status.PASSED or student:
-            result_state = "passed"
+            result_state = "paid" if student and student.is_paid else "passed"
         elif person.status == Person.Status.FAILED:
             result_state = "failed"
         else:
@@ -610,6 +638,8 @@ def admin_overview_dashboard(request):
 def student_payment_upload(request):
     line_initial = get_line_initial(request)
     line_profile = get_session_line_profile(request)
+    line_user_id = (line_profile.get("line_user_id") or line_initial["line_user_id"]).strip()
+    payment_state, person, student = get_payment_access_state(line_user_id)
     form = PaymentSlipUploadForm(
         request.POST or None,
         request.FILES or None,
@@ -632,6 +662,10 @@ def student_payment_upload(request):
         {
             "form": form,
             "uploaded_student": uploaded_student,
+            "payment_state": payment_state,
+            "person": person,
+            "student": student,
+            "line_return_url": settings.LINE_RETURN_URL,
             **get_liff_context(request, reload_on_sync=not bool(line_initial["line_user_id"])),
         },
     )

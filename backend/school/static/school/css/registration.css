@@ -2480,9 +2480,9 @@ select.form-control {
     }
 
     .registration-app .mobile-progress {
-        position: sticky;
-        top: calc(64px + env(safe-area-inset-top) + 8px);
-        z-index: 35;
+        position: relative;
+        top: auto;
+        z-index: 1;
         background: #ffffff;
         border-color: rgba(5, 46, 26, 0.1);
         box-shadow: 0 12px 28px rgba(5, 46, 26, 0.08), 0 1px 0 rgba(255, 255, 255, 0.72);

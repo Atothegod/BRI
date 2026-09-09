@@ -228,6 +228,22 @@ class PersonViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "กรุณากรอกที่อยู่")
         self.assertContains(response, "กรุณากรอกเมือง")
+
+    def test_registration_rejects_unknown_country_name_without_fallback(self):
+        form_data = self.valid_form_data()
+        form_data.update(
+            {
+                "country_code": "",
+                "country_name_en": "Uni",
+                "country_name_th": "",
+            }
+        )
+
+        response = self.client.post(reverse("school:registration"), form_data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "กรุณาเลือกประเทศจากรายการ")
+        self.assertEqual(Person.objects.count(), 0)
         self.assertEqual(Person.objects.count(), 0)
 
     def test_person_admin_exposes_country_display_and_filter(self):

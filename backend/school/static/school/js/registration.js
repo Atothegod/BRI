@@ -322,7 +322,12 @@
 
     const translate = (key) => translations[currentLanguage][key] || translations.th[key] || key;
 
-    const getSelectedCountryCode = () => (countryCodeInput && countryCodeInput.value || form.dataset.countryInitial || "TH").trim().toUpperCase();
+    const getSelectedCountryCode = () => {
+        if (countryCodeInput) {
+            return countryCodeInput.value.trim().toUpperCase();
+        }
+        return (form.dataset.countryInitial || "TH").trim().toUpperCase();
+    };
 
     const getSelectedCountry = () => {
         const code = getSelectedCountryCode();
@@ -339,23 +344,25 @@
     };
 
     const syncAddressMode = () => {
-        const isThailand = getSelectedCountryCode() === "TH";
-        if (thailandAddress) thailandAddress.hidden = !isThailand;
-        if (foreignAddress) foreignAddress.hidden = isThailand;
+        const countryCode = getSelectedCountryCode();
+        const hasCountry = Boolean(countryCode);
+        const isThailand = countryCode === "TH";
+        if (thailandAddress) thailandAddress.hidden = !hasCountry || !isThailand;
+        if (foreignAddress) foreignAddress.hidden = !hasCountry || isThailand;
 
         thailandInputs.forEach((input) => {
-            input.disabled = !isThailand;
-            input.required = isThailand;
-            if (!isThailand) {
+            input.disabled = !hasCountry || !isThailand;
+            input.required = hasCountry && isThailand;
+            if (!hasCountry || !isThailand) {
                 input.setCustomValidity("");
                 clearClientError(input);
             }
         });
         foreignInputs.forEach((input) => {
             const required = input === foreignAddressLine || input === foreignCity;
-            input.disabled = isThailand;
-            input.required = !isThailand && required;
-            if (isThailand) {
+            input.disabled = !hasCountry || isThailand;
+            input.required = hasCountry && !isThailand && required;
+            if (!hasCountry || isThailand) {
                 input.setCustomValidity("");
                 clearClientError(input);
             }
@@ -646,12 +653,23 @@
             clearClientError(countryInput);
         };
 
+        const markPendingCountry = () => {
+            if (countryCodeInput) countryCodeInput.value = "";
+            if (countryNameThInput) countryNameThInput.value = "";
+        };
+
         const validate = () => {
-            const country = findCountry(countryInput.value) || getSelectedCountry();
+            const country = findCountry(countryInput.value);
+            if (!countryInput.value.trim()) {
+                markPendingCountry();
+                countryInput.setCustomValidity("");
+                return false;
+            }
             if (country) {
                 choose(country);
                 return true;
             }
+            markPendingCountry();
             countryInput.setCustomValidity(translate("country_invalid"));
             return false;
         };
@@ -698,8 +716,13 @@
         countryInput.addEventListener("input", () => {
             const exactCountry = findCountry(countryInput.value);
             if (exactCountry) {
-                choose(exactCountry);
-                return;
+                countryCodeInput.value = exactCountry.code;
+                if (countryNameThInput) countryNameThInput.value = exactCountry.name_th;
+                countryInput.setCustomValidity("");
+                syncAddressMode();
+            } else {
+                markPendingCountry();
+                countryInput.setCustomValidity(countryInput.value.trim() ? translate("country_invalid") : "");
             }
             render();
             clearClientError(countryInput);

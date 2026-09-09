@@ -496,11 +496,15 @@ class PersonForm(forms.Form):
             preferred_language = "th"
         cleaned_data["preferred_language"] = preferred_language
 
-        country_code = cleaned_data.get("country_code") or "TH"
+        country_code = cleaned_data.get("country_code")
+        country_name_en = cleaned_data.get("country_name_en")
+        country_name_th = cleaned_data.get("country_name_th")
+        if not country_code and not country_name_en and not country_name_th:
+            country_code = "TH"
         country = (
             get_country_by_code(country_code)
-            or get_country_by_name(cleaned_data.get("country_name_en"))
-            or get_country_by_name(cleaned_data.get("country_name_th"))
+            or get_country_by_name(country_name_en)
+            or get_country_by_name(country_name_th)
         )
         if not country:
             self.add_error("country_name_en", "กรุณาเลือกประเทศจากรายการ")

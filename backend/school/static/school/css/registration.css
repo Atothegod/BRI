@@ -571,6 +571,7 @@ svg {
 }
 
 .app-hero {
+    display: flex;
     min-height: 104px;
     margin-bottom: 12px;
     padding: 18px 2px 16px;
@@ -611,32 +612,45 @@ svg {
     box-shadow: 0 1px 5px rgba(124, 90, 22, 0.22);
 }
 
+.hero-controls {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: flex-start;
+    justify-content: flex-end;
+}
+
 .language-switch {
     display: inline-grid;
-    width: min(100%, 236px);
-    min-height: 44px;
-    margin: 0 0 18px;
-    padding: 4px;
-    background: rgba(255, 255, 255, 0.92);
-    border: 1px solid rgba(5, 46, 26, 0.12);
+    width: 184px;
+    min-height: 40px;
+    margin: 2px 0 0;
+    padding: 3px;
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(5, 46, 26, 0.16);
     border-radius: 8px;
-    box-shadow: 0 12px 28px rgba(5, 46, 26, 0.08);
+    box-shadow: 0 10px 22px rgba(5, 46, 26, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.86);
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 4px;
+    gap: 3px;
 }
 
 .language-option {
     min-width: 0;
-    min-height: 36px;
-    padding: 6px 10px;
+    min-height: 34px;
+    padding: 6px 8px;
     color: var(--color-muted-strong);
     background: transparent;
+    border: 0;
     border-radius: 6px;
     cursor: pointer;
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     font-weight: 800;
     line-height: 1.2;
     transition: color 160ms ease, background-color 160ms ease, box-shadow 160ms ease, transform 120ms ease;
+}
+
+.language-option:focus-visible {
+    outline: 2px solid rgba(34, 197, 94, 0.35);
+    outline-offset: 2px;
 }
 
 .language-option:hover {
@@ -647,7 +661,7 @@ svg {
 .language-option.is-selected {
     color: #ffffff;
     background: var(--color-brand-700);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    box-shadow: 0 6px 14px rgba(15, 81, 50, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 
 .mobile-progress {
@@ -886,6 +900,10 @@ svg {
     border: 0;
 }
 
+.country-field {
+    margin-bottom: 18px;
+}
+
 .field-label {
     display: block;
     margin: 0 0 7px;
@@ -939,6 +957,23 @@ select.form-control {
     position: relative;
 }
 
+.address-combobox .form-control {
+    padding-right: 44px;
+}
+
+.address-combobox::after {
+    position: absolute;
+    top: 50%;
+    right: 14px;
+    width: 8px;
+    height: 8px;
+    content: "";
+    border-right: 2px solid #6f7a72;
+    border-bottom: 2px solid #6f7a72;
+    pointer-events: none;
+    transform: translateY(-64%) rotate(45deg);
+}
+
 .address-suggestions {
     position: absolute;
     top: calc(100% + 6px);
@@ -966,9 +1001,12 @@ select.form-control {
     color: var(--color-ink);
     text-align: left;
     background: transparent;
+    border: 0;
     border-radius: 6px;
     cursor: pointer;
     align-items: center;
+    font-size: 0.9rem;
+    line-height: 1.35;
     transition: color 140ms ease, background-color 140ms ease;
 }
 
@@ -1010,6 +1048,16 @@ select.form-control {
     margin: 6px 1px 0;
     color: var(--color-muted);
     font-size: 0.72rem;
+    line-height: 1.45;
+}
+
+.address-mode[hidden] {
+    display: none;
+}
+
+.address-mode--foreign {
+    display: grid;
+    gap: 0;
 }
 
 .errorlist {
@@ -2413,6 +2461,10 @@ select.form-control {
         color: var(--color-brand-950);
     }
 
+    .registration-app .hero-controls {
+        align-items: center;
+    }
+
     .registration-app .app-hero .eyebrow {
         color: var(--color-brand-950);
     }
@@ -2574,6 +2626,38 @@ select.form-control {
 
     .success-shell {
         padding: 36px 42px;
+    }
+}
+
+@media (max-width: 639px) {
+    .app-hero {
+        display: grid;
+        min-height: 0;
+        gap: 14px;
+    }
+
+    .hero-controls {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .language-switch {
+        width: 100%;
+        max-width: 236px;
+        min-height: 42px;
+        margin: 0;
+    }
+
+    .language-option {
+        min-height: 36px;
+    }
+
+    .registration-app[lang="en"] .region-choice strong {
+        font-size: 0.76rem;
+    }
+
+    .address-suggestions {
+        max-height: 216px;
     }
 }
 

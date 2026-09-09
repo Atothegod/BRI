@@ -473,7 +473,7 @@ class PersonForm(forms.Form):
         if not self.is_bound:
             self.initial.setdefault("preferred_language", "th")
             self.initial.setdefault("country_code", "TH")
-            self.initial.setdefault("country_name_en", "Thailand")
+            self.initial.setdefault("country_name_en", "ไทย")
             self.initial.setdefault("country_name_th", "ไทย")
         self.fields["date_of_birth"].widget.attrs["max"] = timezone.localdate().isoformat()
         for field_name in ("province", "district", "sub_district"):

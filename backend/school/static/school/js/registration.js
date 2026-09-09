@@ -292,11 +292,24 @@
             yes: "Yes",
         },
     };
+    const storedLanguage = (() => {
+        try {
+            return window.localStorage.getItem("bri.registrationLanguage");
+        } catch (error) {
+            return "";
+        }
+    })();
+    const isSupportedLanguage = (language) => Object.prototype.hasOwnProperty.call(translations, language);
+    const formLanguage = languageInput && isSupportedLanguage(languageInput.value)
+        ? languageInput.value
+        : "";
     let currentStep = 1;
     let maxVisitedStep = 1;
-    let currentLanguage = languageInput && languageInput.value in translations
-        ? languageInput.value
-        : "th";
+    let currentLanguage = isSupportedLanguage(storedLanguage)
+        ? storedLanguage
+        : formLanguage
+            ? formLanguage
+            : "th";
     let countryData = [];
 
     const firstErrorPanel = panels.find((panel) => panel.querySelector(".has-error, .errorlist"));
@@ -350,9 +363,16 @@
     };
 
     const setLanguage = (language) => {
-        currentLanguage = language in translations ? language : "th";
+        currentLanguage = isSupportedLanguage(language) ? language : "th";
         if (languageInput) languageInput.value = currentLanguage;
-        app.lang = currentLanguage;
+        app.setAttribute("lang", currentLanguage);
+        document.documentElement.lang = currentLanguage;
+
+        try {
+            window.localStorage.setItem("bri.registrationLanguage", currentLanguage);
+        } catch (error) {
+            // Ignore storage restrictions inside embedded LINE browsers.
+        }
 
         languageButtons.forEach((button) => {
             const isSelected = button.dataset.languageOption === currentLanguage;
@@ -613,6 +633,10 @@
         };
 
         const choose = (country) => {
+            if (!country) {
+                syncAddressMode();
+                return;
+            }
             countryCodeInput.value = country.code;
             countryInput.value = displayName(country);
             if (countryNameThInput) countryNameThInput.value = country.name_th;

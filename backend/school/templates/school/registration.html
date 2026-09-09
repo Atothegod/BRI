@@ -4,7 +4,7 @@
 {% block title %}สมัครเรียน | BRI School of Fivefold{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20260902-1">
+<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20260909-language-2">
 {% endblock %}
 
 {% block content %}
@@ -69,11 +69,12 @@
                     <span class="eyebrow" data-i18n="hero_eyebrow">ระบบรับสมัครนักเรียน</span>
                     <h1 data-i18n="hero_title">ใบสมัครเรียน</h1>
                 </div>
-            </div>
-
-            <div class="language-switch" role="group" aria-label="เลือกภาษา" data-language-switch data-i18n-aria-label="language_switch_aria">
-                <button class="language-option is-selected" type="button" data-language-option="th" aria-pressed="true">ไทย</button>
-                <button class="language-option" type="button" data-language-option="en" aria-pressed="false">English</button>
+                <div class="hero-controls">
+                    <div class="language-switch" role="group" aria-label="เลือกภาษา" data-language-switch data-i18n-aria-label="language_switch_aria">
+                        <button class="language-option is-selected" type="button" data-language-option="th" aria-pressed="true">ไทย</button>
+                        <button class="language-option" type="button" data-language-option="en" aria-pressed="false">English</button>
+                    </div>
+                </div>
             </div>
 
             <div class="mobile-progress mobile-step-map" aria-live="polite" data-reveal>
@@ -109,7 +110,7 @@
             </div>
             {% endif %}
 
-            <form class="registration-form" method="post" enctype="multipart/form-data" novalidate data-registration-form data-address-data-url="{% static 'school/data/thai_addresses.min.json' %}?v=20260828-1" data-country-data-url="{% static 'school/data/countries.min.json' %}?v=20260909-1" data-country-initial="{{ form.country_code.value|default:'TH' }}">
+            <form class="registration-form" method="post" enctype="multipart/form-data" novalidate data-registration-form data-address-data-url="{% static 'school/data/thai_addresses.min.json' %}?v=20260828-1" data-country-data-url="{% static 'school/data/countries.min.json' %}?v=20260909-country-2" data-country-initial="{{ form.country_code.value|default:'TH' }}">
                 {% csrf_token %}
                 {{ form.line_user_id }}
                 {{ form.line_display_name }}
@@ -196,7 +197,7 @@
                         </div>
                     </div>
 
-                    <div class="field-group{% if form.country_name_en.errors %} has-error{% endif %}">
+                    <div class="field-group country-field{% if form.country_name_en.errors %} has-error{% endif %}">
                         <label class="field-label" for="{{ form.country_name_en.id_for_label }}"><span data-i18n="country">ประเทศ</span> <span aria-hidden="true">*</span></label>
                         <div class="address-combobox">
                             {{ form.country_name_en }}
@@ -205,7 +206,7 @@
                         {{ form.country_name_en.errors }}
                     </div>
 
-                    <div data-thailand-address>
+                    <div class="address-mode address-mode--thai" data-thailand-address>
                     <fieldset class="field-group{% if form.region.errors %} has-error{% endif %}">
                         <legend class="field-label"><span data-i18n="region">ภูมิภาค</span> <span aria-hidden="true">*</span></legend>
                         <div class="choice-grid choice-grid--six">
@@ -264,7 +265,7 @@
                     </div>
                     </div>
 
-                    <div data-foreign-address hidden>
+                    <div class="address-mode address-mode--foreign" data-foreign-address hidden>
                         <div class="field-group{% if form.address_line.errors %} has-error{% endif %}">
                             <label class="field-label" for="{{ form.address_line.id_for_label }}"><span data-i18n="foreign_address">Address</span> <span aria-hidden="true">*</span></label>
                             {{ form.address_line }}
@@ -424,5 +425,5 @@
 
 {% block extra_js %}
 {% include "school/includes/liff_bridge.html" %}
-<script src="{% static 'school/js/registration.js' %}?v=20260828-4" defer></script>
+<script src="{% static 'school/js/registration.js' %}?v=20260909-language-2" defer></script>
 {% endblock %}

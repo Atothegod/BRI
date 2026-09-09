@@ -359,12 +359,13 @@ class LineProactiveNotificationTests(TestCase):
         line_request = mock_urlopen.call_args.args[0]
         payload = json.loads(line_request.data.decode("utf-8"))
         self.assertEqual(payload["to"], "Unotifypass")
-        self.assertIn("ผ่านสัมภาษณ์", payload["messages"][0]["text"])
-        self.assertIn(student.student_id, payload["messages"][0]["text"])
+        self.assertEqual(payload["messages"][0]["type"], "flex")
+        self.assertIn("ผ่านการคัดเลือก", payload["messages"][0]["altText"])
         self.assertIn(
             "https://bri.example/results/?line_user_id=Unotifypass",
-            payload["messages"][0]["text"],
+            json.dumps(payload["messages"][0], ensure_ascii=False),
         )
+        self.assertIn(student.student_id, json.dumps(payload["messages"][0], ensure_ascii=False))
         person.refresh_from_db()
         self.assertIn("interview_passed", person.extra_data["line_notifications"])
 
@@ -390,8 +391,9 @@ class LineProactiveNotificationTests(TestCase):
         line_request = mock_urlopen.call_args.args[0]
         payload = json.loads(line_request.data.decode("utf-8"))
         self.assertEqual(payload["to"], "Unotifypaid")
-        self.assertIn("ยืนยันการชำระเงินเรียบร้อยแล้ว", payload["messages"][0]["text"])
-        self.assertIn(student.student_id, payload["messages"][0]["text"])
+        self.assertEqual(payload["messages"][0]["type"], "flex")
+        self.assertIn("ยืนยันการชำระเงิน", payload["messages"][0]["altText"])
+        self.assertIn(student.student_id, json.dumps(payload["messages"][0], ensure_ascii=False))
         person.refresh_from_db()
         self.assertIn("payment_approved", person.extra_data["line_notifications"])
 

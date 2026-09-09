@@ -174,4 +174,7 @@ LINE_MESSAGING_CHANNEL_ACCESS_TOKEN = os.environ.get(
     "LINE_MESSAGING_CHANNEL_ACCESS_TOKEN",
     "",
 ).strip()
-PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "").strip()
+PUBLIC_BASE_URL = os.environ.get(
+    "PUBLIC_BASE_URL",
+    "https://bri.brightromancechurch.org",
+).strip()

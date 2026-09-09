@@ -13,7 +13,12 @@ from .models import Person, Student
 
 CONTROL_CLASS = "form-control"
 THAI_ADDRESS_DATA_PATH = Path(__file__).resolve().parent / "static" / "school" / "data" / "thai_addresses.min.json"
+COUNTRY_DATA_PATH = Path(__file__).resolve().parent / "static" / "school" / "data" / "countries.min.json"
 ADDRESS_PREFIXES = ("จังหวัด", "จ.", "อำเภอ", "อ.", "เขต", "ตำบล", "ต.", "แขวง")
+LANGUAGE_CHOICES = (
+    ("th", "ไทย"),
+    ("en", "English"),
+)
 
 REGION_OPTIONS = (
     {
@@ -83,6 +88,44 @@ def load_thai_address_data():
         return []
 
 
+@lru_cache(maxsize=1)
+def load_country_data():
+    try:
+        with COUNTRY_DATA_PATH.open(encoding="utf-8") as country_file:
+            return json.load(country_file)
+    except OSError:
+        return []
+
+
+def get_country_by_code(country_code):
+    normalized_code = str(country_code or "").strip().upper()
+    if not normalized_code:
+        return None
+    return next(
+        (
+            country
+            for country in load_country_data()
+            if country.get("code") == normalized_code
+        ),
+        None,
+    )
+
+
+def get_country_by_name(country_name):
+    normalized_name = normalize_address_text(country_name)
+    if not normalized_name:
+        return None
+    return next(
+        (
+            country
+            for country in load_country_data()
+            if normalize_address_text(country.get("name_en")) == normalized_name
+            or normalize_address_text(country.get("name_th")) == normalized_name
+        ),
+        None,
+    )
+
+
 class PersonForm(forms.Form):
     line_user_id = forms.CharField(
         max_length=80,
@@ -99,6 +142,12 @@ class PersonForm(forms.Form):
         required=False,
         widget=forms.HiddenInput(),
     )
+    preferred_language = forms.ChoiceField(
+        choices=LANGUAGE_CHOICES,
+        required=False,
+        initial="th",
+        widget=forms.HiddenInput(attrs={"data-language-input": ""}),
+    )
     first_name = forms.CharField(
         max_length=150,
         widget=forms.TextInput(
@@ -106,6 +155,7 @@ class PersonForm(forms.Form):
                 "class": CONTROL_CLASS,
                 "autocomplete": "given-name",
                 "placeholder": "ชื่อจริง",
+                "data-i18n-placeholder": "first_name_placeholder",
             }
         ),
     )
@@ -116,6 +166,7 @@ class PersonForm(forms.Form):
                 "class": CONTROL_CLASS,
                 "autocomplete": "family-name",
                 "placeholder": "นามสกุล",
+                "data-i18n-placeholder": "last_name_placeholder",
             }
         ),
     )
@@ -126,6 +177,7 @@ class PersonForm(forms.Form):
                 "class": CONTROL_CLASS,
                 "autocomplete": "nickname",
                 "placeholder": "ชื่อเล่น",
+                "data-i18n-placeholder": "nickname_placeholder",
             }
         ),
     )
@@ -142,6 +194,7 @@ class PersonForm(forms.Form):
                 "maxlength": "10",
                 "placeholder": "วว/ดด/ปปปป",
                 "data-date-mask": "",
+                "data-i18n-placeholder": "birthdate_placeholder",
             },
         ),
     )
@@ -154,6 +207,7 @@ class PersonForm(forms.Form):
                 "inputmode": "tel",
                 "autocomplete": "tel",
                 "placeholder": "08X-XXX-XXXX",
+                "data-i18n-placeholder": "phone_placeholder",
             }
         ),
     )
@@ -163,6 +217,7 @@ class PersonForm(forms.Form):
                 "class": CONTROL_CLASS,
                 "autocomplete": "email",
                 "placeholder": "name@example.com",
+                "data-i18n-placeholder": "email_placeholder",
             }
         ),
     )
@@ -173,12 +228,46 @@ class PersonForm(forms.Form):
                 "class": CONTROL_CLASS,
                 "autocomplete": "organization-title",
                 "placeholder": "อาชีพปัจจุบัน",
+                "data-i18n-placeholder": "occupation_placeholder",
             }
         ),
     )
-    region = forms.ChoiceField(choices=REGION_CHOICES)
+    country_code = forms.CharField(
+        max_length=2,
+        required=False,
+        initial="TH",
+        widget=forms.HiddenInput(attrs={"data-country-code": ""}),
+    )
+    country_name_en = forms.CharField(
+        max_length=120,
+        required=False,
+        initial="Thailand",
+        widget=forms.TextInput(
+            attrs={
+                "class": CONTROL_CLASS,
+                "autocomplete": "country-name",
+                "aria-autocomplete": "list",
+                "aria-controls": "country-suggestions",
+                "aria-expanded": "false",
+                "placeholder": "Thailand",
+                "required": "required",
+                "role": "combobox",
+                "spellcheck": "false",
+                "data-country-search": "",
+                "data-i18n-placeholder": "country_placeholder",
+            }
+        ),
+    )
+    country_name_th = forms.CharField(
+        max_length=120,
+        required=False,
+        initial="ไทย",
+        widget=forms.HiddenInput(attrs={"data-country-name-th": ""}),
+    )
+    region = forms.ChoiceField(choices=REGION_CHOICES, required=False)
     province = forms.CharField(
         max_length=100,
+        required=False,
         widget=forms.TextInput(
             attrs={
                 "class": CONTROL_CLASS,
@@ -190,11 +279,13 @@ class PersonForm(forms.Form):
                 "role": "combobox",
                 "spellcheck": "false",
                 "data-address-province": "",
+                "data-i18n-placeholder": "province_placeholder",
             }
         ),
     )
     district = forms.CharField(
         max_length=100,
+        required=False,
         widget=forms.TextInput(
             attrs={
                 "class": CONTROL_CLASS,
@@ -206,11 +297,13 @@ class PersonForm(forms.Form):
                 "role": "combobox",
                 "spellcheck": "false",
                 "data-address-district": "",
+                "data-i18n-placeholder": "district_placeholder",
             }
         ),
     )
     sub_district = forms.CharField(
         max_length=100,
+        required=False,
         widget=forms.TextInput(
             attrs={
                 "class": CONTROL_CLASS,
@@ -222,16 +315,71 @@ class PersonForm(forms.Form):
                 "role": "combobox",
                 "spellcheck": "false",
                 "data-address-subdistrict": "",
+                "data-i18n-placeholder": "subdistrict_placeholder",
             }
         ),
     )
     address = forms.CharField(
+        required=False,
         widget=forms.Textarea(
             attrs={
                 "class": CONTROL_CLASS,
                 "rows": 3,
                 "autocomplete": "street-address",
                 "placeholder": "บ้านเลขที่ ถนน และรายละเอียดที่อยู่",
+                "data-i18n-placeholder": "thai_address_placeholder",
+            }
+        ),
+    )
+    address_line = forms.CharField(
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": CONTROL_CLASS,
+                "autocomplete": "address-line1",
+                "placeholder": "Street address, building, room",
+                "data-foreign-address-line": "",
+                "data-i18n-placeholder": "foreign_address_placeholder",
+            }
+        ),
+    )
+    city = forms.CharField(
+        max_length=120,
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": CONTROL_CLASS,
+                "autocomplete": "address-level2",
+                "placeholder": "City",
+                "data-foreign-city": "",
+                "data-i18n-placeholder": "city_placeholder",
+            }
+        ),
+    )
+    state_province = forms.CharField(
+        max_length=120,
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": CONTROL_CLASS,
+                "autocomplete": "address-level1",
+                "placeholder": "State / Province",
+                "data-foreign-state": "",
+                "data-i18n-placeholder": "state_placeholder",
+            }
+        ),
+    )
+    postal_code = forms.CharField(
+        max_length=30,
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": CONTROL_CLASS,
+                "autocomplete": "postal-code",
+                "placeholder": "Postal code",
+                "data-foreign-postal": "",
+                "data-i18n-placeholder": "postal_placeholder",
             }
         ),
     )
@@ -250,6 +398,7 @@ class PersonForm(forms.Form):
                 "class": CONTROL_CLASS,
                 "autocomplete": "url",
                 "placeholder": "https://facebook.com/...",
+                "data-i18n-placeholder": "facebook_placeholder",
             }
         ),
     )
@@ -259,6 +408,7 @@ class PersonForm(forms.Form):
             attrs={
                 "class": CONTROL_CLASS,
                 "placeholder": "ชื่อคริสตจักร",
+                "data-i18n-placeholder": "church_placeholder",
             }
         ),
     )
@@ -269,6 +419,7 @@ class PersonForm(forms.Form):
             attrs={
                 "class": CONTROL_CLASS,
                 "placeholder": "เช่น ศิษยาภิบาล ผู้ช่วยศิษยาภิบาล",
+                "data-i18n-placeholder": "serving_position_placeholder",
             }
         ),
     )
@@ -279,6 +430,7 @@ class PersonForm(forms.Form):
             attrs={
                 "class": CONTROL_CLASS,
                 "placeholder": "ชื่อ - นามสกุลพี่เลี้ยง",
+                "data-i18n-placeholder": "mentor_name_placeholder",
             }
         ),
     )
@@ -290,6 +442,7 @@ class PersonForm(forms.Form):
                 "class": CONTROL_CLASS,
                 "inputmode": "numeric",
                 "placeholder": "จำนวนปี",
+                "data-i18n-placeholder": "believer_years_placeholder",
             }
         ),
     )
@@ -299,6 +452,7 @@ class PersonForm(forms.Form):
                 "class": CONTROL_CLASS,
                 "rows": 5,
                 "placeholder": "เล่าเป้าหมายที่อยากได้รับจากการเรียนครั้งนี้",
+                "data-i18n-placeholder": "goal_placeholder",
             }
         ),
     )
@@ -308,6 +462,7 @@ class PersonForm(forms.Form):
                 "class": CONTROL_CLASS,
                 "rows": 5,
                 "placeholder": "เล่านิมิตและการทรงเรียกที่อยู่ในใจของคุณ",
+                "data-i18n-placeholder": "vision_placeholder",
             }
         ),
     )
@@ -315,6 +470,11 @@ class PersonForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if not self.is_bound:
+            self.initial.setdefault("preferred_language", "th")
+            self.initial.setdefault("country_code", "TH")
+            self.initial.setdefault("country_name_en", "Thailand")
+            self.initial.setdefault("country_name_th", "ไทย")
         self.fields["date_of_birth"].widget.attrs["max"] = timezone.localdate().isoformat()
         for field_name in ("province", "district", "sub_district"):
             selected = self.data.get(self.add_prefix(field_name)) or self.initial.get(field_name)
@@ -331,10 +491,48 @@ class PersonForm(forms.Form):
 
     def clean(self):
         cleaned_data = super().clean()
+        preferred_language = cleaned_data.get("preferred_language") or "th"
+        if preferred_language not in dict(LANGUAGE_CHOICES):
+            preferred_language = "th"
+        cleaned_data["preferred_language"] = preferred_language
+
+        country_code = cleaned_data.get("country_code") or "TH"
+        country = (
+            get_country_by_code(country_code)
+            or get_country_by_name(cleaned_data.get("country_name_en"))
+            or get_country_by_name(cleaned_data.get("country_name_th"))
+        )
+        if not country:
+            self.add_error("country_name_en", "กรุณาเลือกประเทศจากรายการ")
+            return cleaned_data
+
+        cleaned_data["country_code"] = country["code"]
+        cleaned_data["country_name_en"] = country["name_en"]
+        cleaned_data["country_name_th"] = country["name_th"]
+
+        if country["code"] != "TH":
+            if not cleaned_data.get("address_line"):
+                self.add_error("address_line", "กรุณากรอกที่อยู่")
+            if not cleaned_data.get("city"):
+                self.add_error("city", "กรุณากรอกเมือง")
+            return cleaned_data
+
+        region = cleaned_data.get("region")
         province_name = cleaned_data.get("province")
         district_name = cleaned_data.get("district")
         subdistrict_name = cleaned_data.get("sub_district")
-        if not province_name or not district_name or not subdistrict_name:
+        address = cleaned_data.get("address")
+        if not region:
+            self.add_error("region", "กรุณาเลือกภูมิภาค")
+        if not province_name:
+            self.add_error("province", "กรุณาเลือกจังหวัดจากรายการ")
+        if not district_name:
+            self.add_error("district", "กรุณาเลือกอำเภอ / เขตจากรายการ")
+        if not subdistrict_name:
+            self.add_error("sub_district", "กรุณาเลือกตำบล / แขวงจากรายการ")
+        if not address:
+            self.add_error("address", "กรุณากรอกที่อยู่ปัจจุบัน")
+        if not region or not province_name or not district_name or not subdistrict_name or not address:
             return cleaned_data
 
         address_data = load_thai_address_data()
@@ -402,11 +600,35 @@ class PersonForm(forms.Form):
             "line_picture_url": line_picture_url,
             "line_connected_at": timezone.now() if line_user_id else None,
             "extra_data": {
+                "preferred_language": data["preferred_language"],
+                "country_code": data["country_code"],
+                "country_name_en": data["country_name_en"],
+                "country_name_th": data["country_name_th"],
+                "address_language": data["preferred_language"],
                 "region": data["region"],
                 "province": data["province"],
                 "district": data["district"],
                 "sub_district": data["sub_district"],
                 "address": data["address"],
+                "address_th": {
+                    "region": data["region"],
+                    "province": data["province"],
+                    "district": data["district"],
+                    "sub_district": data["sub_district"],
+                    "address": data["address"],
+                }
+                if data["country_code"] == "TH"
+                else {},
+                "address_en": {
+                    "address_line": data["address_line"],
+                    "city": data["city"],
+                    "state_province": data["state_province"],
+                    "postal_code": data["postal_code"],
+                    "country_code": data["country_code"],
+                    "country_name_en": data["country_name_en"],
+                }
+                if data["country_code"] != "TH"
+                else {},
                 "is_pastor": data["is_pastor"],
                 "has_studied_bri": data["has_studied_bri"],
                 "facebook_link": data["facebook_link"],

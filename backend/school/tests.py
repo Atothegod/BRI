@@ -2,6 +2,7 @@ import json
 from datetime import timedelta
 from unittest.mock import patch
 
+from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import RequestFactory, TestCase, override_settings
@@ -12,6 +13,7 @@ from allauth.socialaccount.models import SocialAccount, SocialLogin
 
 from accounts.adapters import TeacherGoogleSocialAccountAdapter
 
+from .admin import CountryCodeFilter, PersonAdmin
 from .models import (
     AttendanceRecord,
     AttendanceSession,
@@ -60,6 +62,11 @@ class PersonViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "school/registration.html")
         self.assertContains(response, "ใบสมัครเรียน")
+        self.assertContains(response, "data-language-switch")
+        self.assertContains(response, 'data-language-option="en"')
+        self.assertContains(response, "data-country-data-url")
+        self.assertContains(response, "data-country-search")
+        self.assertContains(response, "data-foreign-address")
         self.assertContains(response, "เพศ")
         self.assertContains(response, "data-address-data-url")
         self.assertContains(response, "data-date-mask")
@@ -97,6 +104,12 @@ class PersonViewTests(TestCase):
         self.assertEqual(person.line_display_name, "Somchai LINE")
         self.assertIsNotNone(person.line_connected_at)
         self.assertEqual(person.status, Person.Status.IN_PROGRESS)
+        self.assertEqual(person.extra_data["preferred_language"], "th")
+        self.assertEqual(person.extra_data["country_code"], "TH")
+        self.assertEqual(person.extra_data["country_name_en"], "Thailand")
+        self.assertEqual(person.extra_data["country_name_th"], "ไทย")
+        self.assertEqual(person.extra_data["address_th"]["province"], "กรุงเทพมหานคร")
+        self.assertEqual(person.extra_data["address_en"], {})
         self.assertFalse(person.extra_data["is_pastor"])
         self.assertTrue(person.extra_data["has_studied_bri"])
         self.assertEqual(person.extra_data["district"], "เขตบางรัก")
@@ -161,6 +174,72 @@ class PersonViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "กรุณาเลือกอำเภอ / เขตจากรายการ")
         self.assertEqual(Person.objects.count(), 0)
+
+    def test_foreign_registration_skips_thai_address_validation(self):
+        form_data = self.valid_form_data()
+        form_data.update(
+            {
+                "preferred_language": "en",
+                "country_code": "US",
+                "country_name_en": "United States",
+                "country_name_th": "สหรัฐอเมริกา",
+                "region": "",
+                "province": "",
+                "district": "",
+                "sub_district": "",
+                "address": "",
+                "address_line": "123 Main Street",
+                "city": "Los Angeles",
+                "state_province": "California",
+                "postal_code": "90001",
+            }
+        )
+
+        response = self.client.post(reverse("school:registration"), form_data)
+
+        self.assertRedirects(response, reverse("school:registration_success"))
+        person = Person.objects.get()
+        self.assertEqual(person.extra_data["preferred_language"], "en")
+        self.assertEqual(person.extra_data["country_code"], "US")
+        self.assertEqual(person.extra_data["country_name_en"], "United States")
+        self.assertEqual(person.extra_data["country_name_th"], "สหรัฐอเมริกา")
+        self.assertEqual(person.extra_data["address_th"], {})
+        self.assertEqual(person.extra_data["address_en"]["city"], "Los Angeles")
+        self.assertEqual(person.extra_data["address_en"]["state_province"], "California")
+
+    def test_foreign_registration_requires_address_and_city(self):
+        form_data = self.valid_form_data()
+        form_data.update(
+            {
+                "country_code": "GB",
+                "country_name_en": "United Kingdom",
+                "region": "",
+                "province": "",
+                "district": "",
+                "sub_district": "",
+                "address": "",
+                "address_line": "",
+                "city": "",
+            }
+        )
+
+        response = self.client.post(reverse("school:registration"), form_data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "กรุณากรอกที่อยู่")
+        self.assertContains(response, "กรุณากรอกเมือง")
+        self.assertEqual(Person.objects.count(), 0)
+
+    def test_person_admin_exposes_country_display_and_filter(self):
+        person = Person.objects.create(
+            first_name="Country",
+            last_name="Applicant",
+            extra_data={"country_code": "US", "country_name_en": "United States"},
+        )
+        model_admin = PersonAdmin(Person, admin.site)
+
+        self.assertEqual(model_admin.country_display(person), "United States")
+        self.assertIn(CountryCodeFilter, model_admin.list_filter)
 
     def test_registration_allows_blank_mentor_name(self):
         form_data = self.valid_form_data()

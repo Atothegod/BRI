@@ -35,10 +35,34 @@ from .models import (
 
 
 REGISTRATION_STEPS = (
-    {"number": 1, "label": "ข้อมูลส่วนตัว", "icon": "user"},
-    {"number": 2, "label": "ที่อยู่", "icon": "map-pin"},
-    {"number": 3, "label": "คริสตจักร", "icon": "landmark"},
-    {"number": 4, "label": "เป้าหมาย", "icon": "target"},
+    {
+        "number": 1,
+        "label": "ข้อมูลส่วนตัว",
+        "label_en": "Personal",
+        "i18n_key": "step_personal",
+        "icon": "user",
+    },
+    {
+        "number": 2,
+        "label": "ที่อยู่",
+        "label_en": "Address",
+        "i18n_key": "step_address",
+        "icon": "map-pin",
+    },
+    {
+        "number": 3,
+        "label": "คริสตจักร",
+        "label_en": "Church",
+        "i18n_key": "step_church",
+        "icon": "landmark",
+    },
+    {
+        "number": 4,
+        "label": "เป้าหมาย",
+        "label_en": "Calling",
+        "i18n_key": "step_calling",
+        "icon": "target",
+    },
 )
 
 

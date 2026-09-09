@@ -29,11 +29,275 @@
     const districtSuggestions = form.querySelector("[data-address-district-suggestions]");
     const subdistrictSuggestions = form.querySelector("[data-address-subdistrict-suggestions]");
     const dateInputs = Array.from(form.querySelectorAll("[data-date-mask]"));
+    const languageInput = form.querySelector("[data-language-input]");
+    const languageButtons = Array.from(app.querySelectorAll("[data-language-option]"));
+    const countryInput = form.querySelector("[data-country-search]");
+    const countryCodeInput = form.querySelector("[data-country-code]");
+    const countryNameThInput = form.querySelector("[data-country-name-th]");
+    const countrySuggestions = form.querySelector("[data-country-suggestions]");
+    const thailandAddress = form.querySelector("[data-thailand-address]");
+    const foreignAddress = form.querySelector("[data-foreign-address]");
+    const foreignAddressLine = form.querySelector("[data-foreign-address-line]");
+    const foreignCity = form.querySelector("[data-foreign-city]");
+    const foreignState = form.querySelector("[data-foreign-state]");
+    const foreignPostal = form.querySelector("[data-foreign-postal]");
     const addressDataUrl = form.dataset.addressDataUrl;
+    const countryDataUrl = form.dataset.countryDataUrl;
+    const thailandInputs = [
+        ...Array.from(form.querySelectorAll("[data-thailand-required]")),
+        provinceInput,
+        districtInput,
+        subdistrictInput,
+        form.querySelector("[name='address']"),
+    ].filter(Boolean);
+    const foreignInputs = [
+        foreignAddressLine,
+        foreignCity,
+        foreignState,
+        foreignPostal,
+    ].filter(Boolean);
     const totalSteps = panels.length;
     const hasSteps = totalSteps > 0;
+    const translations = {
+        th: {
+            address_copy: "ข้อมูลพื้นที่ช่วยให้เราจัดกลุ่มการเรียนได้เหมาะสม",
+            address_title: "ที่อยู่ปัจจุบัน",
+            assurance_copy: "เมื่อกดส่ง ระบบจะบันทึกข้อมูลและตั้งสถานะเป็นดำเนินการ",
+            assurance_title: "ตรวจสอบก่อนส่งได้เสมอ",
+            back: "ย้อนกลับ",
+            believer_years: "เป็นผู้เชื่อมาแล้ว",
+            believer_years_placeholder: "จำนวนปี",
+            birthdate_placeholder: "วว/ดด/ปปปป",
+            brand_registration_aria: "BRI School of Fivefold หน้าสมัครเรียน",
+            calling_copy: "ส่วนนี้ไม่มีคำตอบถูกผิด เขียนจากเรื่องราวจริงของคุณได้เลย",
+            calling_title: "เป้าหมายและการทรงเรียก",
+            church: "คริสตจักรที่ผูกพันตัว",
+            church_copy: "เล่าบริบทการเติบโตฝ่ายวิญญาณของคุณ",
+            church_placeholder: "ชื่อคริสตจักร",
+            church_title: "ความเชื่อและการรับใช้",
+            city: "เมือง",
+            city_placeholder: "เมือง",
+            close_menu: "ปิดเมนู",
+            country: "ประเทศ",
+            country_invalid: "กรุณาเลือกประเทศจากรายการ",
+            country_placeholder: "ค้นหาประเทศ",
+            date_hint: "พิมพ์ตัวเลข 8 หลัก เช่น 15012533",
+            date_of_birth: "วันเดือนปีเกิด",
+            district: "อำเภอ / เขต",
+            district_invalid: "กรุณาเลือกอำเภอ / เขตจากรายการ",
+            district_placeholder: "พิมพ์ชื่ออำเภอ / เขต",
+            email: "อีเมล",
+            email_placeholder: "name@example.com",
+            facebook_hint: "ใส่ลิงก์โปรไฟล์เต็มเพื่อให้ทีมงานตรวจสอบได้",
+            facebook_link: "Facebook ส่วนตัว",
+            facebook_placeholder: "https://facebook.com/...",
+            first_name: "ชื่อจริง",
+            first_name_placeholder: "ชื่อจริง",
+            foreign_address: "ที่อยู่",
+            foreign_address_placeholder: "บ้านเลขที่ ถนน อาคาร ห้อง",
+            gender: "เพศ",
+            gender_female: "หญิง",
+            gender_male: "ชาย",
+            goal: "เป้าหมายในการสมัครเข้าเรียนครั้งนี้คืออะไร",
+            goal_placeholder: "เล่าเป้าหมายที่อยากได้รับจากการเรียนครั้งนี้",
+            has_studied_bri: "ท่านเคยเรียน BRI มาก่อนหรือไม่",
+            hero_eyebrow: "ระบบรับสมัครนักเรียน",
+            hero_title: "ใบสมัครเรียน",
+            is_pastor: "ท่านเป็นศิษยาภิบาลหรือไม่",
+            language_switch_aria: "เลือกภาษา",
+            last_name: "นามสกุล",
+            last_name_placeholder: "นามสกุล",
+            mentor_name: "ชื่อพี่เลี้ยง",
+            mentor_name_placeholder: "ชื่อ - นามสกุลพี่เลี้ยง",
+            mobile_progress_title: "ลำดับการสมัคร",
+            next: "ถัดไป",
+            nickname: "ชื่อเล่น",
+            nickname_placeholder: "ชื่อเล่น",
+            no: "ไม่ใช่",
+            occupation: "อาชีพ",
+            occupation_placeholder: "อาชีพปัจจุบัน",
+            online_application: "ใบสมัครออนไลน์",
+            open_menu: "เปิดเมนูขั้นตอน",
+            optional: "ไม่บังคับ",
+            pastor_no_copy: "ไม่ได้ทำหน้าที่ศิษยาภิบาล",
+            pastor_yes_copy: "เป็นศิษยาภิบาลอยู่ในปัจจุบัน",
+            personal_copy: "กรอกข้อมูลที่ใช้ติดต่อคุณ",
+            personal_title: "ข้อมูลส่วนตัว",
+            phone: "เบอร์โทรศัพท์",
+            phone_placeholder: "08X-XXX-XXXX",
+            postal_code: "รหัสไปรษณีย์",
+            postal_placeholder: "รหัสไปรษณีย์",
+            privacy_consent: "ข้าพเจ้ารับรองว่าข้อมูลถูกต้อง และยินยอมให้ BRI ใช้ข้อมูลนี้เพื่อดำเนินการรับสมัครและติดต่อเกี่ยวกับการเรียน",
+            progress_aria: "ความคืบหน้าการสมัคร",
+            province: "จังหวัด",
+            province_invalid: "กรุณาเลือกจังหวัดจากรายการ",
+            province_placeholder: "พิมพ์ชื่อจังหวัด",
+            region: "ภูมิภาค",
+            region_central: "กลาง",
+            region_eastern: "ตะวันออก",
+            region_northeastern: "อีสาน",
+            region_northern: "เหนือ",
+            region_southern: "ใต้",
+            region_western: "ตะวันตก",
+            security_copy: "ใช้เพื่อการสมัครเรียนเท่านั้น",
+            security_title: "ข้อมูลของคุณปลอดภัย",
+            server_error_copy: "แก้ไขช่องที่แสดงข้อความสีแดง แล้วลองส่งใบสมัครอีกครั้ง",
+            server_error_title: "ยังมีข้อมูลที่ต้องตรวจสอบ",
+            serving_position: "ตำแหน่งงานรับใช้",
+            serving_position_placeholder: "เช่น ศิษยาภิบาล ผู้ช่วยศิษยาภิบาล",
+            sidebar_aria: "ขั้นตอนการสมัคร",
+            sidebar_copy: "กรอกข้อมูลตามขั้นตอน ใช้เวลาประมาณ 8 นาที",
+            sidebar_title: "เริ่มต้นการเดินทางของคุณ",
+            state_placeholder: "รัฐ / จังหวัด",
+            state_province: "รัฐ / จังหวัด",
+            step_address: "ที่อยู่",
+            step_calling: "เป้าหมาย",
+            step_church: "คริสตจักร",
+            step_personal: "ข้อมูลส่วนตัว",
+            step_prefix: "ขั้นตอน",
+            steps_aria: "ขั้นตอนการสมัคร",
+            studied_no: "ยังไม่เคย",
+            studied_no_copy: "นี่จะเป็นครั้งแรกของฉัน",
+            studied_yes: "เคย",
+            studied_yes_copy: "เคยเข้าร่วมหลักสูตรของ BRI",
+            submit: "ส่งใบสมัคร",
+            submitting: "กำลังส่ง...",
+            sub_district: "ตำบล / แขวง",
+            subdistrict_invalid: "กรุณาเลือกตำบล / แขวงจากรายการ",
+            subdistrict_placeholder: "พิมพ์ชื่อตำบล / แขวง",
+            thai_address: "ที่อยู่ปัจจุบัน",
+            thai_address_hint: "ใช้ชื่อจังหวัด อำเภอ และตำบลภาษาไทยตามรายการทางการ",
+            thai_address_placeholder: "บ้านเลขที่ ถนน และรายละเอียดที่อยู่",
+            type_mismatch: "รูปแบบข้อมูลไม่ถูกต้อง",
+            required: "กรุณากรอกข้อมูลส่วนนี้",
+            vision_calling: "นิมิตและการทรงเรียกของคุณคืออะไร",
+            vision_placeholder: "เล่านิมิตและการทรงเรียกที่อยู่ในใจของคุณ",
+            years_suffix: "ปี",
+            yes: "ใช่",
+        },
+        en: {
+            address_copy: "Your location helps us place you in the right learning group.",
+            address_title: "Current address",
+            assurance_copy: "After submission, your application will be saved with an in-progress status.",
+            assurance_title: "You can review before submitting",
+            back: "Back",
+            believer_years: "Years as a believer",
+            believer_years_placeholder: "Number of years",
+            birthdate_placeholder: "DD/MM/YYYY",
+            brand_registration_aria: "BRI School of Fivefold registration page",
+            calling_copy: "There is no right or wrong answer. Write from your real story.",
+            calling_title: "Goals and calling",
+            church: "Home church",
+            church_copy: "Share the faith and ministry context you are growing in.",
+            church_placeholder: "Church name",
+            church_title: "Faith and ministry",
+            city: "City",
+            city_placeholder: "City",
+            close_menu: "Close menu",
+            country: "Country",
+            country_invalid: "Please select a country from the list",
+            country_placeholder: "Search country",
+            date_hint: "Type 8 digits, for example 15011990",
+            date_of_birth: "Date of birth",
+            district: "District",
+            district_invalid: "Please select a district from the list",
+            district_placeholder: "Type district name",
+            email: "Email",
+            email_placeholder: "name@example.com",
+            facebook_hint: "Use your full profile link so the team can review it.",
+            facebook_link: "Personal Facebook",
+            facebook_placeholder: "https://facebook.com/...",
+            first_name: "First name",
+            first_name_placeholder: "First name",
+            foreign_address: "Address",
+            foreign_address_placeholder: "Street address, building, room",
+            gender: "Gender",
+            gender_female: "Female",
+            gender_male: "Male",
+            goal: "What is your goal for applying this time?",
+            goal_placeholder: "Share what you hope to receive from this program",
+            has_studied_bri: "Have you studied with BRI before?",
+            hero_eyebrow: "Student registration system",
+            hero_title: "Application form",
+            is_pastor: "Are you currently a pastor?",
+            language_switch_aria: "Choose language",
+            last_name: "Last name",
+            last_name_placeholder: "Last name",
+            mentor_name: "Mentor name",
+            mentor_name_placeholder: "Mentor full name",
+            mobile_progress_title: "Application steps",
+            next: "Next",
+            nickname: "Nickname",
+            nickname_placeholder: "Nickname",
+            no: "No",
+            occupation: "Occupation",
+            occupation_placeholder: "Current occupation",
+            online_application: "Online application",
+            open_menu: "Open steps menu",
+            optional: "Optional",
+            pastor_no_copy: "I am not serving as a pastor",
+            pastor_yes_copy: "I am currently serving as a pastor",
+            personal_copy: "Enter the details we can use to contact you.",
+            personal_title: "Personal information",
+            phone: "Phone number",
+            phone_placeholder: "Phone number",
+            postal_code: "Postal code",
+            postal_placeholder: "Postal code",
+            privacy_consent: "I confirm that this information is accurate and allow BRI to use it for registration and study-related contact.",
+            progress_aria: "Application progress",
+            province: "Province",
+            province_invalid: "Please select a province from the list",
+            province_placeholder: "Type province name",
+            region: "Region",
+            region_central: "Central",
+            region_eastern: "Eastern",
+            region_northeastern: "Northeastern",
+            region_northern: "Northern",
+            region_southern: "Southern",
+            region_western: "Western",
+            security_copy: "Used only for this application",
+            security_title: "Your information is secure",
+            server_error_copy: "Fix the fields marked in red, then submit again.",
+            server_error_title: "Some information needs review",
+            serving_position: "Ministry role",
+            serving_position_placeholder: "Pastor, assistant pastor, ministry team",
+            sidebar_aria: "Application steps",
+            sidebar_copy: "Complete the steps in about 8 minutes.",
+            sidebar_title: "Begin your journey",
+            state_placeholder: "State / Province",
+            state_province: "State / Province",
+            step_address: "Address",
+            step_calling: "Calling",
+            step_church: "Church",
+            step_personal: "Personal",
+            step_prefix: "Step",
+            steps_aria: "Application steps",
+            studied_no: "Not yet",
+            studied_no_copy: "This will be my first time",
+            studied_yes: "Yes",
+            studied_yes_copy: "I have joined a BRI course before",
+            submit: "Submit application",
+            submitting: "Submitting...",
+            sub_district: "Subdistrict",
+            subdistrict_invalid: "Please select a subdistrict from the list",
+            subdistrict_placeholder: "Type subdistrict name",
+            thai_address: "Current address",
+            thai_address_hint: "For Thailand, please use official Thai province, district, and subdistrict names.",
+            thai_address_placeholder: "House number, street, and address details",
+            type_mismatch: "This format is not valid",
+            required: "Please complete this field",
+            vision_calling: "What is your vision and calling?",
+            vision_placeholder: "Share the vision and calling you carry",
+            years_suffix: "years",
+            yes: "Yes",
+        },
+    };
     let currentStep = 1;
     let maxVisitedStep = 1;
+    let currentLanguage = languageInput && languageInput.value in translations
+        ? languageInput.value
+        : "th";
+    let countryData = [];
 
     const firstErrorPanel = panels.find((panel) => panel.querySelector(".has-error, .errorlist"));
     if (firstErrorPanel) {
@@ -42,6 +306,85 @@
     }
 
     app.classList.add("is-enhanced", "reveal-enabled");
+
+    const translate = (key) => translations[currentLanguage][key] || translations.th[key] || key;
+
+    const getSelectedCountryCode = () => (countryCodeInput && countryCodeInput.value || form.dataset.countryInitial || "TH").trim().toUpperCase();
+
+    const getSelectedCountry = () => {
+        const code = getSelectedCountryCode();
+        return countryData.find((country) => country.code === code) || null;
+    };
+
+    const syncCountryDisplay = () => {
+        const country = getSelectedCountry();
+        if (!country || !countryInput) {
+            return;
+        }
+        countryInput.value = currentLanguage === "th" ? country.name_th : country.name_en;
+        if (countryNameThInput) countryNameThInput.value = country.name_th;
+    };
+
+    const syncAddressMode = () => {
+        const isThailand = getSelectedCountryCode() === "TH";
+        if (thailandAddress) thailandAddress.hidden = !isThailand;
+        if (foreignAddress) foreignAddress.hidden = isThailand;
+
+        thailandInputs.forEach((input) => {
+            input.disabled = !isThailand;
+            input.required = isThailand;
+            if (!isThailand) {
+                input.setCustomValidity("");
+                clearClientError(input);
+            }
+        });
+        foreignInputs.forEach((input) => {
+            const required = input === foreignAddressLine || input === foreignCity;
+            input.disabled = isThailand;
+            input.required = !isThailand && required;
+            if (isThailand) {
+                input.setCustomValidity("");
+                clearClientError(input);
+            }
+        });
+    };
+
+    const setLanguage = (language) => {
+        currentLanguage = language in translations ? language : "th";
+        if (languageInput) languageInput.value = currentLanguage;
+        app.lang = currentLanguage;
+
+        languageButtons.forEach((button) => {
+            const isSelected = button.dataset.languageOption === currentLanguage;
+            button.classList.toggle("is-selected", isSelected);
+            button.setAttribute("aria-pressed", String(isSelected));
+        });
+
+        app.querySelectorAll("[data-i18n]").forEach((item) => {
+            item.textContent = translate(item.dataset.i18n);
+        });
+        app.querySelectorAll("[data-i18n-prefix]").forEach((item) => {
+            item.textContent = translate(item.dataset.i18nPrefix);
+        });
+        app.querySelectorAll("[data-i18n-placeholder]").forEach((item) => {
+            item.placeholder = translate(item.dataset.i18nPlaceholder);
+        });
+        app.querySelectorAll("[data-i18n-aria-label]").forEach((item) => {
+            item.setAttribute("aria-label", translate(item.dataset.i18nAriaLabel));
+        });
+
+        panels.forEach((panel) => {
+            panel.dataset.stepLabel = currentLanguage === "th"
+                ? panel.dataset.stepLabelTh
+                : panel.dataset.stepLabelEn;
+        });
+
+        syncCountryDisplay();
+        syncAddressMode();
+        if (hasSteps) {
+            showStep(currentStep, { scroll: false });
+        }
+    };
 
     const setClientError = (group, message) => {
         if (!group) {
@@ -163,8 +506,8 @@
                 const message = field.validity.customError
                     ? field.validationMessage
                     : field.validity.typeMismatch
-                        ? "รูปแบบข้อมูลไม่ถูกต้อง"
-                        : "กรุณากรอกข้อมูลส่วนนี้";
+                        ? translate("type_mismatch")
+                        : translate("required");
                 setClientError(group, message);
                 firstInvalid = firstInvalid || field;
             }
@@ -223,6 +566,154 @@
         input.addEventListener("paste", () => window.setTimeout(syncDateInput, 0));
     });
 
+    const normalizeSearchText = (value, locale = "en") => (
+        String(value || "").trim().toLocaleLowerCase(locale).replace(/\s+/g, "")
+    );
+
+    const setupCountryAutocomplete = (countries) => {
+        if (!countryInput || !countryCodeInput || !countrySuggestions || !Array.isArray(countries)) {
+            return;
+        }
+
+        countryData = countries;
+        let matches = [];
+        let activeIndex = -1;
+
+        const displayName = (country) => currentLanguage === "th" ? country.name_th : country.name_en;
+        const findCountry = (value) => {
+            const normalizedValue = normalizeSearchText(value, currentLanguage);
+            if (!normalizedValue) {
+                return null;
+            }
+            return countryData.find((country) => (
+                normalizeSearchText(country.code) === normalizedValue
+                || normalizeSearchText(country.name_en) === normalizedValue
+                || normalizeSearchText(country.name_th, "th-TH") === normalizedValue
+            )) || null;
+        };
+
+        const hide = () => {
+            countrySuggestions.hidden = true;
+            countryInput.setAttribute("aria-expanded", "false");
+            countryInput.removeAttribute("aria-activedescendant");
+            activeIndex = -1;
+        };
+
+        const setActive = (index) => {
+            if (!matches.length) {
+                return;
+            }
+            activeIndex = (index + matches.length) % matches.length;
+            Array.from(countrySuggestions.children).forEach((item, itemIndex) => {
+                const isActive = itemIndex === activeIndex;
+                item.classList.toggle("is-active", isActive);
+                item.setAttribute("aria-selected", String(isActive));
+            });
+            countryInput.setAttribute("aria-activedescendant", `country-suggestion-${activeIndex}`);
+        };
+
+        const choose = (country) => {
+            countryCodeInput.value = country.code;
+            countryInput.value = displayName(country);
+            if (countryNameThInput) countryNameThInput.value = country.name_th;
+            countryInput.setCustomValidity("");
+            hide();
+            syncAddressMode();
+            clearClientError(countryInput);
+        };
+
+        const validate = () => {
+            const country = findCountry(countryInput.value) || getSelectedCountry();
+            if (country) {
+                choose(country);
+                return true;
+            }
+            countryInput.setCustomValidity(translate("country_invalid"));
+            return false;
+        };
+
+        const render = () => {
+            const query = normalizeSearchText(countryInput.value, currentLanguage);
+            if (!query) {
+                matches = [];
+                countrySuggestions.replaceChildren();
+                hide();
+                return;
+            }
+
+            matches = countryData
+                .filter((country) => (
+                    normalizeSearchText(country.code).includes(query)
+                    || normalizeSearchText(country.name_en).includes(query)
+                    || normalizeSearchText(country.name_th, "th-TH").includes(query)
+                ))
+                .sort((first, second) => displayName(first).localeCompare(displayName(second), currentLanguage))
+                .slice(0, 8);
+
+            countrySuggestions.replaceChildren(
+                ...matches.map((country, index) => {
+                    const button = document.createElement("button");
+                    button.className = "address-suggestion";
+                    button.id = `country-suggestion-${index}`;
+                    button.type = "button";
+                    button.setAttribute("role", "option");
+                    button.textContent = currentLanguage === "th"
+                        ? `${country.name_th} · ${country.name_en}`
+                        : `${country.name_en} · ${country.name_th}`;
+                    button.addEventListener("mousedown", (event) => event.preventDefault());
+                    button.addEventListener("click", () => choose(country));
+                    return button;
+                })
+            );
+
+            countrySuggestions.hidden = matches.length === 0;
+            countryInput.setAttribute("aria-expanded", String(matches.length > 0));
+            activeIndex = -1;
+        };
+
+        countryInput.addEventListener("input", () => {
+            const exactCountry = findCountry(countryInput.value);
+            if (exactCountry) {
+                choose(exactCountry);
+                return;
+            }
+            render();
+            clearClientError(countryInput);
+        });
+        countryInput.addEventListener("focus", render);
+        countryInput.addEventListener("blur", () => {
+            validate();
+            window.setTimeout(hide, 120);
+        });
+        countryInput.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") {
+                hide();
+                return;
+            }
+            if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                if (countrySuggestions.hidden) {
+                    render();
+                }
+                if (matches.length) {
+                    event.preventDefault();
+                    setActive(activeIndex + (event.key === "ArrowDown" ? 1 : -1));
+                }
+                return;
+            }
+            if (event.key === "Enter" && activeIndex >= 0 && matches[activeIndex]) {
+                event.preventDefault();
+                choose(matches[activeIndex]);
+            }
+        });
+
+        choose(
+            getSelectedCountry()
+            || findCountry(countryInput.value)
+            || countryData.find((country) => country.code === "TH")
+            || countryData[0]
+        );
+    };
+
     const setupAddressAutocomplete = (addressData) => {
         if (!provinceInput || !districtInput || !subdistrictInput || !Array.isArray(addressData)) {
             return;
@@ -230,8 +721,8 @@
 
         const provinceMap = new Map(addressData.map((province) => [province.province, province]));
         const provinceNames = addressData.map((province) => province.province);
-        const districtPlaceholder = "พิมพ์ชื่ออำเภอ / เขต";
-        const subdistrictPlaceholder = "พิมพ์ชื่อตำบล / แขวง";
+        const districtPlaceholder = () => translate("district_placeholder");
+        const subdistrictPlaceholder = () => translate("subdistrict_placeholder");
         const initialProvince = provinceInput.dataset.selectedValue || provinceInput.value;
         const initialDistrict = districtInput.dataset.selectedValue || districtInput.value;
         const initialSubdistrict = subdistrictInput.dataset.selectedValue || subdistrictInput.value;
@@ -302,21 +793,21 @@
             if (subdistrictAutocomplete) {
                 subdistrictAutocomplete.hide();
             }
-            disableInput(subdistrictInput, "เลือกอำเภอ / เขตก่อน");
+            disableInput(subdistrictInput, subdistrictPlaceholder());
         };
 
         const disableDistrict = () => {
             if (districtAutocomplete) {
                 districtAutocomplete.hide();
             }
-            disableInput(districtInput, "เลือกจังหวัดก่อน");
+            disableInput(districtInput, districtPlaceholder());
             disableSubdistrict();
         };
 
         const handleProvinceSelected = (name, options = {}) => {
             provinceInput.value = name;
             provinceInput.setCustomValidity("");
-            enableInput(districtInput, districtPlaceholder);
+            enableInput(districtInput, districtPlaceholder());
             if (options.resetChildren !== false) {
                 districtInput.value = "";
                 disableSubdistrict();
@@ -329,7 +820,7 @@
         const handleDistrictSelected = (name, options = {}) => {
             districtInput.value = name;
             districtInput.setCustomValidity("");
-            enableInput(subdistrictInput, subdistrictPlaceholder);
+            enableInput(subdistrictInput, subdistrictPlaceholder());
             if (options.resetChildren !== false) {
                 subdistrictInput.value = "";
             }
@@ -348,7 +839,7 @@
             suggestions,
             idPrefix,
             getValues,
-            invalidMessage,
+            invalidMessageKey,
             onSelect,
             onInvalid,
         }) => {
@@ -401,7 +892,7 @@
                     input.setCustomValidity("");
                     return exactValue;
                 }
-                input.setCustomValidity(invalidMessage);
+                input.setCustomValidity(translate(invalidMessageKey));
                 return "";
             };
 
@@ -509,7 +1000,7 @@
             suggestions: provinceSuggestions,
             idPrefix: "province",
             getValues: () => provinceNames,
-            invalidMessage: "กรุณาเลือกจังหวัดจากรายการ",
+            invalidMessageKey: "province_invalid",
             onSelect: handleProvinceSelected,
             onInvalid: disableDistrict,
         });
@@ -519,7 +1010,7 @@
             suggestions: districtSuggestions,
             idPrefix: "district",
             getValues: getDistrictNames,
-            invalidMessage: "กรุณาเลือกอำเภอ / เขตจากรายการ",
+            invalidMessageKey: "district_invalid",
             onSelect: handleDistrictSelected,
             onInvalid: disableSubdistrict,
         });
@@ -529,7 +1020,7 @@
             suggestions: subdistrictSuggestions,
             idPrefix: "subdistrict",
             getValues: getSubdistrictNames,
-            invalidMessage: "กรุณาเลือกตำบล / แขวงจากรายการ",
+            invalidMessageKey: "subdistrict_invalid",
             onSelect: handleSubdistrictSelected,
             onInvalid: () => {},
         });
@@ -547,7 +1038,24 @@
                 subdistrictAutocomplete.validate();
             }
         }
+        syncAddressMode();
     };
+
+    setLanguage(currentLanguage);
+
+    if (countryDataUrl && countryInput) {
+        fetch(countryDataUrl, { credentials: "same-origin" })
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error("Unable to load country data");
+                }
+                return response.json();
+            })
+            .then(setupCountryAutocomplete)
+            .catch(() => syncAddressMode());
+    } else {
+        syncAddressMode();
+    }
 
     if (addressDataUrl && provinceInput && districtInput && subdistrictInput) {
         fetch(addressDataUrl, { credentials: "same-origin" })
@@ -562,6 +1070,7 @@
                 provinceInput.disabled = false;
                 districtInput.disabled = false;
                 subdistrictInput.disabled = false;
+                syncAddressMode();
             });
     }
 
@@ -590,6 +1099,10 @@
         });
     });
 
+    languageButtons.forEach((button) => {
+        button.addEventListener("click", () => setLanguage(button.dataset.languageOption));
+    });
+
     form.addEventListener("input", (event) => clearClientError(event.target));
     form.addEventListener("change", (event) => clearClientError(event.target));
 
@@ -608,7 +1121,7 @@
             submitButton.disabled = true;
             submitButton.setAttribute("aria-busy", "true");
             const label = submitButton.querySelector("span");
-            if (label) label.textContent = "กำลังส่ง...";
+            if (label) label.textContent = translate("submitting");
         }
     });
 

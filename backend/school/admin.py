@@ -1,5 +1,7 @@
 from django.contrib import admin
+from django.utils.translation import gettext_lazy as _
 
+from .forms import load_country_data
 from .models import (
     AttendanceRecord,
     AttendanceSession,
@@ -9,6 +11,29 @@ from .models import (
     Student,
     TeacherGroup,
 )
+
+
+class CountryCodeFilter(admin.SimpleListFilter):
+    title = _("ประเทศ")
+    parameter_name = "country"
+
+    def lookups(self, request, model_admin):
+        used_codes = set(
+            Person.objects.exclude(extra_data__country_code__isnull=True)
+            .exclude(extra_data__country_code="")
+            .values_list("extra_data__country_code", flat=True)
+        )
+        countries = {
+            country["code"]: country["name_en"]
+            for country in load_country_data()
+            if country.get("code") in used_codes
+        }
+        return [(code, countries.get(code, code)) for code in sorted(used_codes)]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(extra_data__country_code=self.value())
+        return queryset
 
 
 @admin.register(Person)
@@ -24,9 +49,10 @@ class PersonAdmin(admin.ModelAdmin):
         "has_paid",
         "status",
         "admission_type_display",
+        "country_display",
         "user",
     )
-    list_filter = ("status", "admission_type", "gender")
+    list_filter = ("status", "admission_type", CountryCodeFilter, "gender")
     search_fields = (
         "first_name",
         "last_name",
@@ -79,6 +105,10 @@ class PersonAdmin(admin.ModelAdmin):
     @admin.display(description="ประเภทผู้เรียน")
     def admission_type_display(self, obj):
         return obj.admission_type_name or "-"
+
+    @admin.display(description="ประเทศ")
+    def country_display(self, obj):
+        return (obj.extra_data or {}).get("country_name_en") or "-"
 
     @admin.action(description="Mark selected people as passed interview students")
     def mark_as_passed_interview(self, request, queryset):

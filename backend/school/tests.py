@@ -760,6 +760,26 @@ class TeacherFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, "รหัสนักศึกษา")
         self.assertNotContains(response, 'name="student_id"')
+        self.assertContains(response, "จ่ายเงินได้หลังสัมภาษณ์ผ่าน")
+        self.assertNotContains(response, "ส่งสลิปให้ตรวจสอบ")
+        self.assertNotContains(response, 'name="payment_slip"')
+
+    def test_student_payment_upload_ignores_query_line_user_id_until_liff_syncs(self):
+        Person.objects.create(
+            first_name="Passed",
+            last_name="Spoof",
+            line_user_id="Uquerypayment",
+            status=Person.Status.PASSED,
+        )
+
+        response = self.client.get(
+            reverse("school:student_payment_upload"),
+            {"line_user_id": "Uquerypayment"},
+        )
+
+        self.assertContains(response, "กำลังตรวจสอบ LINE account")
+        self.assertNotContains(response, "ส่งสลิปให้ตรวจสอบ")
+        self.assertNotContains(response, 'name="payment_slip"')
 
     def test_student_payment_upload_requires_line_session(self):
         person = Person.objects.create(first_name="Paid", last_name="Student")
@@ -780,6 +800,7 @@ class TeacherFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "กรุณาเปิดหน้านี้ผ่าน LINE")
+        self.assertNotContains(response, "ส่งสลิปให้ตรวจสอบ")
         student.refresh_from_db()
         self.assertFalse(student.payment_slip)
 
@@ -842,7 +863,10 @@ class TeacherFlowTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "ยังไม่ได้รับสถานะนักศึกษา")
+        self.assertContains(response, "ยังไม่เปิดให้ชำระเงิน")
+        self.assertContains(response, "จ่ายเงินได้หลังสัมภาษณ์ผ่าน")
+        self.assertNotContains(response, "ส่งสลิปให้ตรวจสอบ")
+        self.assertNotContains(response, 'name="payment_slip"')
 
     def test_paid_student_payment_page_shows_student_id_instead_of_form(self):
         person = Person.objects.create(

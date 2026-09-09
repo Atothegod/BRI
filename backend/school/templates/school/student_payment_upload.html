@@ -40,9 +40,9 @@
         <div class="success-mark result-mark" aria-hidden="true">
             <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#lock"></use></svg>
         </div>
-        <span class="eyebrow">ยังไม่สามารถชำระเงินได้</span>
-        <h1 id="payment-title">รอสถานะนักศึกษา</h1>
-        <p class="success-lead">คุณ {{ person.full_name }} ยังไม่ได้รับสถานะนักศึกษา จึงยังไม่เปิดให้แจ้งชำระเงิน</p>
+        <span class="eyebrow">จ่ายเงินได้หลังสัมภาษณ์ผ่าน</span>
+        <h1 id="payment-title">ยังไม่เปิดให้ชำระเงิน</h1>
+        <p class="success-lead">คุณ {{ person.full_name }} ต้องได้รับสถานะผ่านสัมภาษณ์ก่อน ระบบจึงจะเปิดให้แจ้งชำระเงิน</p>
         <div class="receipt-block result-card">
             <span>สถานะใบสมัคร</span>
             <strong>{{ person.get_status_display }}</strong>
@@ -73,12 +73,26 @@
                 <span>กลับไปยัง LINE</span>
             </a>
         </div>
-        {% else %}
+        {% elif payment_state == "missing_line" %}
+        <div class="success-mark result-mark" aria-hidden="true">
+            <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#lock"></use></svg>
+        </div>
+        <span class="eyebrow">จ่ายเงินได้หลังสัมภาษณ์ผ่าน</span>
+        <h1 id="payment-title">กำลังตรวจสอบ LINE account</h1>
+        <p class="success-lead">กรุณาเปิดหน้านี้ผ่าน LINE เพื่อให้ระบบตรวจสอบผลสัมภาษณ์ก่อนแสดงช่องอัปโหลดสลิป</p>
+        <div class="receipt-block result-card">
+            <span>เงื่อนไขการชำระเงิน</span>
+            <strong>ผ่านสัมภาษณ์ก่อน</strong>
+            <small>เมื่อระบบพบว่าสถานะผ่านแล้ว ช่องอัปโหลดสลิปจะแสดงในหน้านี้</small>
+        </div>
+        <a class="button button--primary success-action payment-action" href="{{ line_return_url }}" data-liff-close>
+            <span>กลับไปยัง LINE</span>
+            <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
+        </a>
+        {% elif payment_state == "ready" %}
         <span class="eyebrow">แจ้งชำระเงิน</span>
         <h1 id="payment-title">อัปโหลดสลิปการโอนเงิน</h1>
-        {% if payment_state == "missing_line" %}
-        <p class="success-lead">กรุณาเปิดหน้านี้ผ่าน LINE เพื่อให้ระบบตรวจสอบสถานะนักศึกษา</p>
-        {% endif %}
+        <p class="success-lead">ระบบตรวจสอบแล้วว่าคุณผ่านสัมภาษณ์ สามารถส่งสลิปเพื่อยืนยันการเข้าเรียนได้</p>
 
         {% if messages %}
         {% for message in messages %}

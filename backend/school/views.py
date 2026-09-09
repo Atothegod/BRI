@@ -636,19 +636,19 @@ def admin_overview_dashboard(request):
 
 @never_cache
 def student_payment_upload(request):
-    line_initial = get_line_initial(request)
     line_profile = get_session_line_profile(request)
-    line_user_id = (line_profile.get("line_user_id") or line_initial["line_user_id"]).strip()
+    line_user_id = line_profile.get("line_user_id", "").strip()
     payment_state, person, student = get_payment_access_state(line_user_id)
+    should_bind_form = request.method == "POST" and payment_state == "ready"
     form = PaymentSlipUploadForm(
-        request.POST or None,
-        request.FILES or None,
-        initial={"line_user_id": line_initial["line_user_id"]} if request.method == "GET" else None,
+        request.POST if should_bind_form else None,
+        request.FILES if should_bind_form else None,
+        initial={"line_user_id": line_user_id} if request.method == "GET" else None,
         line_profile=line_profile,
     )
     uploaded_student = None
 
-    if request.method == "POST" and form.is_valid():
+    if should_bind_form and form.is_valid():
         uploaded_student = form.save()
         messages.success(
             request,
@@ -666,6 +666,6 @@ def student_payment_upload(request):
             "person": person,
             "student": student,
             "line_return_url": settings.LINE_RETURN_URL,
-            **get_liff_context(request, reload_on_sync=not bool(line_initial["line_user_id"])),
+            **get_liff_context(request, reload_on_sync=not bool(line_user_id)),
         },
     )

@@ -151,7 +151,7 @@ def build_interview_passed_flex_message(person, student):
     )
     rows = [
         build_flex_row("ผลการคัดเลือก", admission_type),
-        build_flex_row("สถานะการชำระเงิน", payment_status, color="#0F5132" if student.is_paid else "#B45309"),
+        build_flex_row("สถานะการชำระเงิน", payment_status, color="#425B46" if student.is_paid else "#A44928"),
     ]
     if student.is_paid:
         rows.append(build_flex_row("รหัสนักศึกษา", student.student_id))
@@ -167,12 +167,12 @@ def build_interview_passed_flex_message(person, student):
                 "type": "box",
                 "layout": "vertical",
                 "paddingAll": "20px",
-                "backgroundColor": "#0F5132",
+                "backgroundColor": "#12271D",
                 "contents": [
                     {
                         "type": "text",
                         "text": "BRI Admission Result",
-                        "color": "#D9B65D",
+                        "color": "#C2A256",
                         "size": "xs",
                         "weight": "bold",
                     },
@@ -197,7 +197,7 @@ def build_interview_passed_flex_message(person, student):
                         "text": person.full_name,
                         "weight": "bold",
                         "size": "md",
-                        "color": "#152018",
+                        "color": "#12271D",
                         "wrap": True,
                     },
                     {
@@ -218,13 +218,14 @@ def build_interview_passed_flex_message(person, student):
             "footer": {
                 "type": "box",
                 "layout": "vertical",
+                "backgroundColor": "#F3F0E8",
                 "spacing": "sm",
                 "contents": [
                     {
                         "type": "button",
                         "style": "primary",
                         "height": "sm",
-                        "color": "#0F5132",
+                        "color": "#425B46",
                         "action": {
                             "type": "uri",
                             "label": "ดูประกาศผล",
@@ -261,12 +262,12 @@ def build_payment_approved_flex_message(person, student):
                 "type": "box",
                 "layout": "vertical",
                 "paddingAll": "20px",
-                "backgroundColor": "#0F5132",
+                "backgroundColor": "#12271D",
                 "contents": [
                     {
                         "type": "text",
                         "text": "BRI Payment Confirmed",
-                        "color": "#D9B65D",
+                        "color": "#C2A256",
                         "size": "xs",
                         "weight": "bold",
                     },
@@ -291,7 +292,7 @@ def build_payment_approved_flex_message(person, student):
                         "text": f"ยินดีด้วยคุณ {person.full_name}",
                         "weight": "bold",
                         "size": "md",
-                        "color": "#152018",
+                        "color": "#12271D",
                         "wrap": True,
                     },
                     {
@@ -299,7 +300,7 @@ def build_payment_approved_flex_message(person, student):
                         "layout": "vertical",
                         "spacing": "sm",
                         "contents": [
-                            build_flex_row("สถานะการชำระเงิน", "ชำระเรียบร้อย", color="#0F5132"),
+                            build_flex_row("สถานะการชำระเงิน", "ชำระเรียบร้อย", color="#425B46"),
                             build_flex_row("รหัสนักศึกษา", student.student_id),
                         ],
                     },
@@ -308,12 +309,13 @@ def build_payment_approved_flex_message(person, student):
             "footer": {
                 "type": "box",
                 "layout": "vertical",
+                "backgroundColor": "#F3F0E8",
                 "contents": [
                     {
                         "type": "button",
                         "style": "primary",
                         "height": "sm",
-                        "color": "#0F5132",
+                        "color": "#425B46",
                         "action": {
                             "type": "uri",
                             "label": "ดูข้อมูลของฉัน",
@@ -326,7 +328,7 @@ def build_payment_approved_flex_message(person, student):
     }
 
 
-def build_flex_row(label, value, *, color="#152018"):
+def build_flex_row(label, value, *, color="#12271D"):
     return {
         "type": "box",
         "layout": "baseline",
@@ -336,7 +338,7 @@ def build_flex_row(label, value, *, color="#152018"):
                 "type": "text",
                 "text": label,
                 "wrap": True,
-                "color": "#7A847D",
+                "color": "#5F6B63",
                 "size": "sm",
                 "flex": 3,
             },

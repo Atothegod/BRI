@@ -5,13 +5,12 @@
     --teacher-ink: #162019;
     --teacher-muted: #4b584f;
     --teacher-border: #dde3de;
-    --teacher-brand: #073521;
-    --teacher-brand-soft: #e8f2eb;
-    --teacher-gold: #c7a554;
-    --teacher-warning: #a65f00;
-    --teacher-warning-soft: #fff5df;
+    --teacher-brand: var(--bri-forest);
+    --teacher-brand-soft: var(--bri-success-soft);
+    --teacher-gold: var(--bri-gold);
+    --teacher-warning: var(--bri-warning-ink);
+    --teacher-warning-soft: var(--bri-warning-soft);
     --teacher-danger: #b42318;
-    --teacher-background-image: url("../images/app-background.jpg?v=20260828-gold-silk-sharp-1");
 }
 
 *,
@@ -23,7 +22,7 @@
 html {
     min-width: 320px;
     scroll-behavior: smooth;
-    background: #061b11;
+    background: #ffffff;
 }
 
 body {
@@ -31,7 +30,7 @@ body {
     min-height: 100vh;
     margin: 0;
     color: var(--teacher-ink);
-    background: #061b11;
+    background: #ffffff;
 }
 
 a {
@@ -47,41 +46,18 @@ button {
 .teacher-layout {
     position: relative;
     min-height: 100vh;
-    background: #061b11;
+    background: #ffffff;
     isolation: isolate;
     overflow-x: clip;
 }
 
 .teacher-layout::before {
     position: fixed;
-    inset: -6px;
-    z-index: -2;
-    content: "";
-    background-image: var(--teacher-background-image);
-    background-position: center;
-    background-size: cover;
-    filter: saturate(1.02) contrast(1.08) brightness(1.02);
-    transform: none;
-}
-
-.teacher-layout::after {
-    position: fixed;
     inset: 0;
     z-index: -1;
     content: "";
-    background:
-        linear-gradient(104deg, rgba(255, 255, 255, 0) 22%, rgba(255, 226, 148, 0.24) 42%, rgba(255, 255, 255, 0.38) 50%, rgba(255, 226, 148, 0.18) 58%, rgba(255, 255, 255, 0) 78%),
-        linear-gradient(115deg, rgba(3, 24, 14, 0.34), rgba(255, 255, 255, 0.08) 42%, rgba(255, 255, 255, 0.58)),
-        rgba(255, 255, 255, 0.08);
-    background-position: 130% 0, 0 0, 0 0;
-    background-size: 240% 100%, auto, auto;
-    animation: goldSilkSheen 16s ease-in-out infinite alternate;
+    background: var(--bri-page-background);
     pointer-events: none;
-}
-
-@keyframes goldSilkSheen {
-    from { background-position: 130% 0, 0 0, 0 0; }
-    to { background-position: -30% 0, 0 0, 0 0; }
 }
 
 .teacher-sidebar {
@@ -264,25 +240,25 @@ button {
 .teacher-eyebrow {
     display: block;
     margin-bottom: 4px;
-    color: #f2d98e;
+    color: var(--bri-sage);
     font-size: 0.68rem;
     font-weight: 800;
     text-transform: uppercase;
-    text-shadow: 0 2px 12px rgba(3, 24, 14, 0.28);
+    text-shadow: none;
 }
 
 .teacher-page-heading h1 {
     margin: 0;
-    color: #ffffff;
+    color: var(--bri-forest);
     font-size: 1.72rem;
     font-weight: 800;
     line-height: 1.22;
-    text-shadow: 0 2px 14px rgba(3, 24, 14, 0.32);
+    text-shadow: none;
 }
 
 .teacher-page-heading p {
     margin: 5px 0 0;
-    color: rgba(255, 255, 255, 0.78);
+    color: var(--teacher-muted);
     font-size: 0.84rem;
 }
 
@@ -290,7 +266,7 @@ button {
     display: flex;
     min-height: 36px;
     padding: 7px 11px;
-    color: #17663d;
+    color: var(--bri-sage);
     background: rgba(232, 242, 235, 0.86);
     border: 1px solid rgba(255, 255, 255, 0.56);
     border-radius: 6px;
@@ -317,7 +293,7 @@ button {
     background: rgba(255, 255, 255, 0.9);
     border: 1px solid rgba(255, 255, 255, 0.54);
     border-radius: 8px;
-    box-shadow: 0 18px 48px rgba(3, 24, 14, 0.16);
+    box-shadow: 0 4px 18px rgba(18, 39, 29, 0.045);
     -webkit-backdrop-filter: blur(16px);
     backdrop-filter: blur(16px);
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -418,7 +394,7 @@ button {
     background: rgba(255, 255, 255, 0.91);
     border: 1px solid rgba(255, 255, 255, 0.54);
     border-radius: 8px;
-    box-shadow: 0 18px 48px rgba(3, 24, 14, 0.14);
+    box-shadow: 0 4px 18px rgba(18, 39, 29, 0.045);
     -webkit-backdrop-filter: blur(16px);
     backdrop-filter: blur(16px);
 }
@@ -492,7 +468,7 @@ button {
     width: 38px;
     height: 38px;
     object-fit: cover;
-    color: #145c39;
+    color: var(--bri-sage);
     background: #e4f0e8;
     border-radius: 50%;
     font-size: 0.78rem;
@@ -564,7 +540,7 @@ button {
     display: block;
     max-width: 100%;
     height: 100%;
-    background: #2b8a58;
+    background: var(--bri-sage);
     border-radius: inherit;
 }
 
@@ -606,12 +582,12 @@ button {
 }
 
 .status-label--ok {
-    color: #17663d;
-    background: #e8f4ec;
+    color: var(--bri-sage);
+    background: var(--bri-success-soft);
 }
 
 .status-label--attention {
-    color: #865000;
+    color: var(--bri-warning-ink);
     background: var(--teacher-warning-soft);
 }
 

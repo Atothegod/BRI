@@ -32,9 +32,11 @@ class LineMessageContentTests(SimpleTestCase):
                     self.student.payment_slip = slip
                     message = build_interview_passed_flex_message(self.person, self.student)
                     rows = self.rows(message)
+                    self.assertEqual(message["contents"]["header"]["backgroundColor"], "#12271D")
+                    self.assertEqual(message["contents"]["footer"]["backgroundColor"], "#F3F0E8")
                     self.assertEqual(rows["ผลการคัดเลือก"]["text"], result)
                     self.assertEqual(rows["สถานะการชำระเงิน"]["text"], status)
-                    self.assertEqual(rows["สถานะการชำระเงิน"]["color"], "#0F5132" if paid else "#B45309")
+                    self.assertEqual(rows["สถานะการชำระเงิน"]["color"], "#425B46" if paid else "#A44928")
                     self.assertEqual(self.student.student_id in json.dumps(message), paid)
                     self.assertEqual("รหัสนักศึกษา" in rows, paid)
 
@@ -42,8 +44,10 @@ class LineMessageContentTests(SimpleTestCase):
         self.student.is_paid = True
         message = build_payment_approved_flex_message(self.person, self.student)
         rows = self.rows(message)
+        self.assertEqual(message["contents"]["header"]["backgroundColor"], "#12271D")
+        self.assertEqual(message["contents"]["footer"]["backgroundColor"], "#F3F0E8")
         self.assertEqual(rows["สถานะการชำระเงิน"]["text"], "ชำระเรียบร้อย")
-        self.assertEqual(rows["สถานะการชำระเงิน"]["color"], "#0F5132")
+        self.assertEqual(rows["สถานะการชำระเงิน"]["color"], "#425B46")
         self.assertEqual(rows["รหัสนักศึกษา"]["text"], self.student.student_id)
         self.assertIn("ยินดีด้วย", json.dumps(message, ensure_ascii=False))
 

@@ -613,8 +613,7 @@
                 return null;
             }
             return countryData.find((country) => (
-                normalizeSearchText(country.code) === normalizedValue
-                || normalizeSearchText(country.name_en) === normalizedValue
+                normalizeSearchText(country.name_en) === normalizedValue
                 || normalizeSearchText(country.name_th, "th-TH") === normalizedValue
             )) || null;
         };

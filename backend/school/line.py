@@ -139,7 +139,22 @@ def send_line_push_message(line_user_id, messages):
 
 
 def build_interview_passed_flex_message(person, student):
-    admission_type = person.admission_type_name or "ผ่านสัมภาษณ์"
+    admission_type = (
+        "ผ่านสัมภาษณ์ (ออนไลน์)"
+        if person.admission_type == person.AdmissionType.ONLINE
+        else "ผ่านสัมภาษณ์"
+    )
+    payment_status = (
+        "ชำระเรียบร้อย" if student.is_paid
+        else "รอตรวจสอบการชำระเงิน" if student.payment_slip
+        else "รอชำระเงิน"
+    )
+    rows = [
+        build_flex_row("ผลการคัดเลือก", admission_type),
+        build_flex_row("สถานะการชำระเงิน", payment_status, color="#0F5132" if student.is_paid else "#B45309"),
+    ]
+    if student.is_paid:
+        rows.append(build_flex_row("รหัสนักศึกษา", student.student_id))
     result_link = result_url(person.line_user_id)
     pay_link = payment_url()
     return {
@@ -189,10 +204,7 @@ def build_interview_passed_flex_message(person, student):
                         "type": "box",
                         "layout": "vertical",
                         "spacing": "sm",
-                        "contents": [
-                            build_flex_row("ผลการคัดเลือก", admission_type),
-                            build_flex_row("รหัสนักศึกษา", student.student_id),
-                        ],
+                        "contents": rows,
                     },
                     {
                         "type": "text",
@@ -236,6 +248,8 @@ def build_interview_passed_flex_message(person, student):
 
 
 def build_payment_approved_flex_message(person, student):
+    if not student.is_paid:
+        raise ValueError("Payment approval message requires is_paid=True")
     result_link = result_url(person.line_user_id)
     return {
         "type": "flex",
@@ -258,7 +272,7 @@ def build_payment_approved_flex_message(person, student):
                     },
                     {
                         "type": "text",
-                        "text": "ยืนยันการชำระเงินเรียบร้อยแล้ว",
+                        "text": "ยินดีด้วย ยืนยันการชำระเงินแล้ว",
                         "color": "#FFFFFF",
                         "size": "lg",
                         "weight": "bold",
@@ -285,7 +299,7 @@ def build_payment_approved_flex_message(person, student):
                         "layout": "vertical",
                         "spacing": "sm",
                         "contents": [
-                            build_flex_row("สถานะ", "เป็นนักศึกษา BRI อย่างสมบูรณ์"),
+                            build_flex_row("สถานะการชำระเงิน", "ชำระเรียบร้อย", color="#0F5132"),
                             build_flex_row("รหัสนักศึกษา", student.student_id),
                         ],
                     },
@@ -312,7 +326,7 @@ def build_payment_approved_flex_message(person, student):
     }
 
 
-def build_flex_row(label, value):
+def build_flex_row(label, value, *, color="#152018"):
     return {
         "type": "box",
         "layout": "baseline",
@@ -321,6 +335,7 @@ def build_flex_row(label, value):
             {
                 "type": "text",
                 "text": label,
+                "wrap": True,
                 "color": "#7A847D",
                 "size": "sm",
                 "flex": 3,
@@ -329,7 +344,7 @@ def build_flex_row(label, value):
                 "type": "text",
                 "text": value,
                 "wrap": True,
-                "color": "#152018",
+                "color": color,
                 "size": "sm",
                 "weight": "bold",
                 "flex": 5,
@@ -346,6 +361,8 @@ def notify_interview_passed(person, student):
 
 
 def notify_payment_approved(person, student):
+    if not student.is_paid:
+        return False
     return send_line_push_message(
         person.line_user_id,
         [build_payment_approved_flex_message(person, student)],

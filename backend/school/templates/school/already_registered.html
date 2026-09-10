@@ -40,7 +40,7 @@
             <span>สถานะใบสมัคร</span>
             <strong>{{ person.get_status_display }}</strong>
             {% if student %}
-            <small>รหัสนักศึกษา {{ student.student_id }}</small>
+            <small>{% if student.payment_slip %}รอตรวจสอบการชำระเงิน{% else %}รอชำระเงิน{% endif %}</small>
             {% else %}
             <small>รหัสข้อมูล #{{ person.pk }}</small>
             {% endif %}

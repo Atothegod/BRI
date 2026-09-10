@@ -365,7 +365,8 @@ class LineProactiveNotificationTests(TestCase):
             "https://bri.example/results/?line_user_id=Unotifypass",
             json.dumps(payload["messages"][0], ensure_ascii=False),
         )
-        self.assertIn(student.student_id, json.dumps(payload["messages"][0], ensure_ascii=False))
+        self.assertNotIn(student.student_id, json.dumps(payload["messages"][0], ensure_ascii=False))
+        self.assertIn("รอชำระเงิน", json.dumps(payload["messages"][0], ensure_ascii=False))
         person.refresh_from_db()
         self.assertIn("interview_passed", person.extra_data["line_notifications"])
 
@@ -1022,8 +1023,9 @@ class AnnouncementResultTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "school/announcement_result.html")
-        self.assertContains(response, "ผ่านการสัมภาษณ์")
-        self.assertContains(response, student.student_id)
+        self.assertContains(response, "ผ่านสัมภาษณ์")
+        self.assertNotContains(response, student.student_id)
+        self.assertContains(response, "รอชำระเงิน")
         self.assertContains(response, reverse("school:student_payment_upload"))
         self.assertContains(response, "ไปหน้าแจ้งชำระเงิน")
         self.assertNotContains(response, "หน้าสมัครเรียน")
@@ -1062,8 +1064,8 @@ class AnnouncementResultTests(TestCase):
             {"line_user_id": "Ustudent"},
         )
 
-        self.assertContains(response, "ผ่านการสัมภาษณ์")
-        self.assertContains(response, student.student_id)
+        self.assertContains(response, "ผ่านสัมภาษณ์")
+        self.assertNotContains(response, student.student_id)
 
     def test_failed_line_account_sees_failed_result(self):
         Person.objects.create(
@@ -1192,7 +1194,7 @@ class LiffFlowTests(TestCase):
         self.assertContains(response, 'href="https://line.me/R/nv/chat"')
         self.assertNotContains(response, "registration-form")
 
-    def test_registered_student_sees_student_id_on_already_registered_page(self):
+    def test_unpaid_registered_student_cannot_see_student_id(self):
         person = Person.objects.create(
             first_name="Existing",
             last_name="Student",
@@ -1205,7 +1207,8 @@ class LiffFlowTests(TestCase):
         response = self.client.get(reverse("school:registration"))
 
         self.assertTemplateUsed(response, "school/already_registered.html")
-        self.assertContains(response, student.student_id)
+        self.assertNotContains(response, student.student_id)
+        self.assertEqual(person.student_code, "")
 
     def test_paid_registered_student_sees_completed_status_on_registration_page(self):
         person = Person.objects.create(

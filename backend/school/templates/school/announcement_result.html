@@ -39,16 +39,12 @@
             {% endif %}
         </div>
         {% elif result_state == "passed" %}
-        <h1 id="result-title">ผ่านการสัมภาษณ์</h1>
-        <p class="success-lead">ยินดีด้วยคุณ {{ person.full_name }} ได้รับการยืนยันเป็นนักศึกษา BRI แล้ว</p>
+        <h1 id="result-title">ผ่านสัมภาษณ์{% if person.admission_type == "online" %} (ออนไลน์){% endif %}</h1>
+        <p class="success-lead">ยินดีด้วยคุณ {{ person.full_name }} ผ่านการคัดเลือกแล้ว</p>
         <div class="receipt-block result-card">
-            <span>รหัสนักศึกษา</span>
-            <strong>{{ student.student_id|default:person.student_code }}</strong>
-            {% if student.group %}
-            <small>{{ student.group }}{% if student.grade %} · {{ student.grade }}{% endif %}</small>
-            {% else %}
-            <small>ทีมงานจะอัปเดตกลุ่มเรียนให้ในระบบ</small>
-            {% endif %}
+            <span>สถานะการชำระเงิน</span>
+            <strong>{% if student.payment_slip %}รอตรวจสอบการชำระเงิน{% else %}รอชำระเงิน{% endif %}</strong>
+            <small>รหัสนักศึกษาจะแสดงหลังทีมงานยืนยันการชำระเงิน</small>
         </div>
         {% elif result_state == "failed" %}
         <h1 id="result-title">ไม่ผ่านการสัมภาษณ์</h1>

@@ -92,7 +92,7 @@ class Person(TimeStampedModel):
 
     @property
     def student_code(self):
-        if not hasattr(self, "student"):
+        if not hasattr(self, "student") or not self.student.is_paid:
             return ""
         return self.student.student_id
 

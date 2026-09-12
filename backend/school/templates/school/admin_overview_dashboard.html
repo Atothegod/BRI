@@ -14,6 +14,7 @@
             {% include "school/includes/brand_logo.html" with variant="nav" %}
         </a>
         <div class="dashboard-actions">
+            <a class="button button--secondary" href="{% url 'school:student_group_assignment' %}">จัดกลุ่มนักศึกษา</a>
             <a class="button button--secondary" href="{% url 'school:appointment_schedule' %}">จัดการนัดหมาย</a>
             {% if request.user.is_staff or request.user.is_superuser %}
             <a class="button button--secondary" href="{% url 'admin:index' %}">

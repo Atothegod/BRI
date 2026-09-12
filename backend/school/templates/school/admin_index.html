@@ -4,6 +4,7 @@
 {% if request.user.is_superuser %}
 <div class="module">
     <h2>จัดการโรงเรียน BRI</h2>
+    <p><a href="{% url 'school:student_group_assignment' %}">จัดนักศึกษาเข้ากลุ่มผู้สอน</a></p>
     <p><a href="{% url 'school:appointment_schedule' %}">จัดการนัดหมายและแจ้ง LINE</a></p>
     <p><a href="{% url 'school:admin_overview_dashboard' %}">ภาพรวมโรงเรียน</a></p>
 </div>

@@ -4,11 +4,17 @@ from django.views.generic import RedirectView
 
 from . import views
 from . import interviews
+from . import student_groups
 
 
 app_name = "school"
 
 urlpatterns = [
+    path(
+        "school-admin/student-groups/",
+        student_groups.student_group_assignment,
+        name="student_group_assignment",
+    ),
     path("school-admin/appointments/", interviews.interview_schedule, name="appointment_schedule"),
     path("school-admin/appointments/<int:pk>/notify/", interviews.interview_notify, name="appointment_notify"),
     path("school-admin/appointments/status/", interviews.interview_confirmation_status, name="appointment_confirmation_status"),

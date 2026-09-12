@@ -6,7 +6,7 @@
 <main class="interviews">
     <header class="schedule-header">
         <a href="{% url 'school:admin_overview_dashboard' %}">{% include "school/includes/brand_logo.html" with variant="nav" %}</a>
-        <nav aria-label="เมนูผู้ดูแล"><a href="{% url 'admin:index' %}">Django Admin</a><a href="{% url 'school:admin_overview_dashboard' %}">ภาพรวมโรงเรียน</a></nav>
+        <nav aria-label="เมนูผู้ดูแล"><a href="{% url 'admin:index' %}">Django Admin</a><a href="{% url 'school:admin_overview_dashboard' %}">ภาพรวมโรงเรียน</a><a href="{% url 'school:student_group_assignment' %}">จัดกลุ่มนักศึกษา</a></nav>
     </header>
     <div class="page-heading"><div><span>BRI APPOINTMENTS</span><h1>จัดการนัดหมาย</h1><p>{{ candidate_description }}</p></div></div>
     <nav class="type-tabs" aria-label="ประเภทนัดหมาย">

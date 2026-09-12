@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}จัดกลุ่มนักศึกษา | BRI{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20260912-card-theme-1">
+<link rel="stylesheet" href="{% static 'school/css/student_group_assignment.css' %}?v=20260912-1">
+{% endblock %}
+{% block content %}
+<main class="interviews student-group-page">
+    <header class="schedule-header">
+        <a href="{% url 'school:admin_overview_dashboard' %}">{% include "school/includes/brand_logo.html" with variant="nav" %}</a>
+        <nav aria-label="เมนูผู้ดูแล">
+            <a href="{% url 'admin:index' %}">Django Admin</a>
+            <a href="{% url 'school:admin_overview_dashboard' %}">ภาพรวมโรงเรียน</a>
+            <a href="{% url 'school:appointment_schedule' %}">จัดการนัดหมาย</a>
+        </nav>
+    </header>
+
+    <div class="page-heading">
+        <div>
+            <span>BRI STUDENT GROUPS</span>
+            <h1>จัดกลุ่มนักศึกษา</h1>
+            <p>เลือกนักศึกษาที่ชำระเงินและได้รับรหัสแล้ว เพื่อมอบหมายเข้ากลุ่มของผู้สอน</p>
+        </div>
+    </div>
+
+    <section class="assignment-stats" aria-label="สรุปการจัดกลุ่ม">
+        <div><span>พร้อมจัดกลุ่ม</span><strong>{{ stats.total }}</strong></div>
+        <div><span>ยังไม่มีกลุ่ม</span><strong>{{ stats.unassigned }}</strong></div>
+        <div><span>จัดกลุ่มแล้ว</span><strong>{{ stats.assigned }}</strong></div>
+        <div><span>กลุ่มที่พร้อมใช้</span><strong>{{ stats.groups }}</strong></div>
+    </section>
+
+    {% for message in messages %}<p role="status" class="notice">{{ message }}</p>{% endfor %}
+
+    <form method="get" class="filter-panel assignment-filters">
+        <div class="filter-search">
+            <label for="search">ค้นหานักศึกษา</label>
+            <input id="search" name="q" value="{{ query }}" placeholder="รหัส ชื่อ ชื่อเล่น หรือเบอร์โทร">
+        </div>
+        <div>
+            <label for="assignment-filter">สถานะกลุ่ม</label>
+            <select id="assignment-filter" name="assignment">
+                <option value="all"{% if filters.assignment == "all" %} selected{% endif %}>ทั้งหมด</option>
+                <option value="unassigned"{% if filters.assignment == "unassigned" %} selected{% endif %}>ยังไม่มีกลุ่ม</option>
+                <option value="assigned"{% if filters.assignment == "assigned" %} selected{% endif %}>มีกลุ่มแล้ว</option>
+            </select>
+        </div>
+        <div>
+            <label for="teacher-filter">ผู้สอนปัจจุบัน</label>
+            <select id="teacher-filter" name="teacher">
+                <option value="">ผู้สอนทั้งหมด</option>
+                {% for teacher in teachers %}<option value="{{ teacher.pk }}"{% if filters.teacher == teacher.pk|stringformat:"s" %} selected{% endif %}>{{ teacher.get_full_name|default:teacher.username }}</option>{% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="group-filter">กลุ่มปัจจุบัน</label>
+            <select id="group-filter" name="group">
+                <option value="">กลุ่มทั้งหมด</option>
+                {% for group in groups %}<option value="{{ group.pk }}"{% if filters.group == group.pk|stringformat:"s" %} selected{% endif %}>{{ group.group_name }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="filter-actions">
+            <button type="submit">ใช้ตัวกรอง</button>
+            {% if has_filters %}<a href="{% url 'school:student_group_assignment' %}">ล้างทั้งหมด</a>{% endif %}
+        </div>
+    </form>
+
+    {% if groups %}
+    <form method="post" id="assignment-form">
+        {% csrf_token %}
+        {% if form.errors %}<div role="alert" class="errors">{{ form.errors }}</div>{% endif %}
+        {% regroup groups by teacher as groups_by_teacher %}
+        <section class="group-picker" aria-label="กลุ่มปลายทาง">
+            <div>
+                <span>ASSIGN TO</span>
+                <h2>เลือกกลุ่มและผู้สอน</h2>
+            </div>
+            <div class="group-select-field">
+                <label for="id_group">กลุ่มเรียน</label>
+                <select name="group" id="id_group" required>
+                    <option value="">เลือกกลุ่มเรียน</option>
+                    {% for teacher_groups in groups_by_teacher %}
+                    <optgroup label="{{ teacher_groups.grouper.get_full_name|default:teacher_groups.grouper.username }}">
+                        {% for group in teacher_groups.list %}<option value="{{ group.pk }}"{% if form.group.value|stringformat:"s" == group.pk|stringformat:"s" %} selected{% endif %}>{{ group.group_name }} · ปัจจุบัน {{ group.student_count }} คน</option>{% endfor %}
+                    </optgroup>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="assignment-action">
+                <span>เลือกแล้ว <strong><b id="selected-count">0</b> คน</strong></span>
+                <button type="submit" id="confirm-assignment" disabled>จัดเข้ากลุ่ม</button>
+                <small id="reassignment-warning" hidden></small>
+            </div>
+        </section>
+
+        <div class="selection-bar">
+            <strong>พบ {{ page_obj.paginator.count }} คน</strong>
+            <span>แสดงหน้าละไม่เกิน 50 คน</span>
+        </div>
+        <div class="table-scroll">
+            <table>
+                <thead><tr><th><input type="checkbox" id="select-all" aria-label="เลือกทุกคนในหน้านี้"></th><th>รหัสนักศึกษา</th><th>นักศึกษา</th><th>ประเภท</th><th>กลุ่มปัจจุบัน</th><th>ผู้สอน</th></tr></thead>
+                <tbody>
+                {% for student in page_obj %}
+                    <tr data-student-row data-has-group="{% if student.group_id %}true{% else %}false{% endif %}">
+                        <td><input type="checkbox" name="students" value="{{ student.pk }}" aria-label="เลือก {{ student.person.full_name }}"{% if student.pk|stringformat:"s" in selected_ids %} checked{% endif %}></td>
+                        <td><strong>{{ student.student_id }}</strong></td>
+                        <td><strong>{{ student.person.full_name }}</strong><small>{{ student.person.nickname|default:student.person.phone|default:"-" }}</small></td>
+                        <td>{{ student.person.admission_type_name|default:"ผ่านสัมภาษณ์" }}</td>
+                        <td>{% if student.group %}<strong>{{ student.group.group_name }}</strong>{% else %}<span class="state-pending">ยังไม่มีกลุ่ม</span>{% endif %}</td>
+                        <td>{% if student.group %}{{ student.group.teacher.get_full_name|default:student.group.teacher.username }}{% else %}-{% endif %}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="6">ไม่พบนักศึกษาที่ตรงเงื่อนไข</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <footer class="schedule-footer">
+            <span>หน้า {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+            <nav aria-label="หน้ารายชื่อ">
+                {% if page_obj.has_previous %}<a href="{{ page_query_prefix }}page={{ page_obj.previous_page_number }}">ก่อนหน้า</a>{% endif %}
+                {% if page_obj.has_next %}<a href="{{ page_query_prefix }}page={{ page_obj.next_page_number }}">ถัดไป</a>{% endif %}
+            </nav>
+        </footer>
+    </form>
+    {% else %}
+    <section class="empty-groups">
+        <strong>ยังไม่มีกลุ่มที่พร้อมใช้งาน</strong>
+        <p>สร้างกลุ่มและเลือกผู้สอนที่ได้รับอนุมัติก่อนเริ่มจัดนักศึกษา</p>
+        <a class="admin-action-link" href="{% url 'admin:school_teachergroup_add' %}">สร้างกลุ่มใน Django Admin</a>
+    </section>
+    {% endif %}
+</main>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'school/js/student_group_assignment.js' %}?v=20260912-1" defer></script>{% endblock %}

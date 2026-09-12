@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static tz %}
 {% block title %}ยืนยันนัดหมาย | BRI{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20260912-appointments-1">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20260912-card-theme-1">{% endblock %}
 {% block content %}
 <main class="confirmation-page"><section class="confirmation-shell" aria-labelledby="confirmation-title">
     <div class="confirmation-brand">{% include "school/includes/brand_logo.html" with variant="success" %}</div>
@@ -11,8 +11,8 @@
         <p>คุณ {{ person.full_name }}</p>
         <dl class="appointment-summary">{% timezone "Asia/Bangkok" %}
             <div><dt>กิจกรรม</dt><dd>{{ appointment.title }}</dd></div>
-            <div><dt>วันที่ (ค.ศ.)</dt><dd>{{ appointment.starts_at|date:"d/m/Y" }}</dd></div>
-            <div><dt>เวลาไทย</dt><dd>{{ appointment.starts_at|date:"H:i" }} น.</dd></div>
+            <div><dt>วันที่</dt><dd>{{ appointment.starts_at|date:"d/m/Y" }}</dd></div>
+            <div><dt>เวลา</dt><dd>{{ appointment.starts_at|date:"H:i" }} น.</dd></div>
             {% if appointment.location %}<div><dt>สถานที่</dt><dd>{{ appointment.location }}</dd></div>{% endif %}
             {% if appointment.details %}<div><dt>รายละเอียด</dt><dd>{{ appointment.details|linebreaksbr }}</dd></div>{% endif %}
         {% endtimezone %}</dl>

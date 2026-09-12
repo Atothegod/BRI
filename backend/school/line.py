@@ -175,6 +175,7 @@ def build_interview_passed_flex_message(person, student):
             "body": {
                 "type": "box",
                 "layout": "vertical",
+                "backgroundColor": "#F3F0E8",
                 "spacing": "md",
                 "contents": [
                     {
@@ -270,6 +271,7 @@ def build_payment_approved_flex_message(person, student):
             "body": {
                 "type": "box",
                 "layout": "vertical",
+                "backgroundColor": "#F3F0E8",
                 "spacing": "md",
                 "contents": [
                     {
@@ -375,14 +377,14 @@ def build_appointment_invitation_flex_message(participant):
         compress=True,
     )
     confirmation_link = (
-        f"{settings.PUBLIC_BASE_URL.rstrip('/')}{reverse('school:interview_confirmation')}"
+        f"{settings.PUBLIC_BASE_URL.rstrip('/')}{reverse('school:appointment_confirmation')}"
         f"?{parse.urlencode({'token': confirmation_token})}"
     )
     contents = [
         {"type": "text", "text": person.full_name, "weight": "bold", "wrap": True, "color": "#12271D"},
         {"type": "text", "text": appointment.title, "size": "sm", "wrap": True, "color": "#425B46"},
-        build_flex_row("วันที่ (ค.ศ.)", date),
-        build_flex_row("เวลาไทย", f"{time} น."),
+        build_flex_row("วันที่", date),
+        build_flex_row("เวลา", f"{time} น."),
     ]
     if appointment.location:
         contents.append(build_flex_row("สถานที่", appointment.location))
@@ -418,7 +420,13 @@ def build_appointment_invitation_flex_message(participant):
                     {"type": "text", "text": heading, "color": "#FFFFFF", "size": "lg", "weight": "bold", "margin": "sm", "wrap": True},
                 ],
             },
-            "body": {"type": "box", "layout": "vertical", "spacing": "md", "contents": contents},
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "backgroundColor": "#F3F0E8",
+                "spacing": "md",
+                "contents": contents,
+            },
             "footer": {
                 "type": "box",
                 "layout": "vertical",

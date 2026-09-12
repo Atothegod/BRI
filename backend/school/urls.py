@@ -1,5 +1,6 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
+from django.views.generic import RedirectView
 
 from . import views
 from . import interviews
@@ -8,10 +9,22 @@ from . import interviews
 app_name = "school"
 
 urlpatterns = [
-    path("school-admin/interviews/", interviews.interview_schedule, name="interview_schedule"),
-    path("school-admin/interviews/<int:pk>/notify/", interviews.interview_notify, name="interview_notify"),
-    path("school-admin/interviews/status/", interviews.interview_confirmation_status, name="interview_confirmation_status"),
-    path("interviews/confirm/", interviews.interview_confirmation, name="interview_confirmation"),
+    path("school-admin/appointments/", interviews.interview_schedule, name="appointment_schedule"),
+    path("school-admin/appointments/<int:pk>/notify/", interviews.interview_notify, name="appointment_notify"),
+    path("school-admin/appointments/status/", interviews.interview_confirmation_status, name="appointment_confirmation_status"),
+    path("appointments/confirm/", interviews.interview_confirmation, name="appointment_confirmation"),
+    path(
+        "school-admin/interviews/",
+        RedirectView.as_view(pattern_name="school:appointment_schedule", permanent=False, query_string=True),
+        name="legacy_interview_schedule",
+    ),
+    path("school-admin/interviews/<int:pk>/notify/", interviews.interview_notify, name="legacy_interview_notify"),
+    path("school-admin/interviews/status/", interviews.interview_confirmation_status, name="legacy_interview_confirmation_status"),
+    path(
+        "interviews/confirm/",
+        RedirectView.as_view(pattern_name="school:appointment_confirmation", permanent=False, query_string=True),
+        name="legacy_interview_confirmation",
+    ),
     path("", views.registration, name="registration"),
     path("liff/profile/", views.liff_profile_sync, name="liff_profile_sync"),
     path("line/results/", views.liff_results_launch, name="liff_results_launch"),

@@ -23,7 +23,7 @@ class AppointmentScheduleTests(TestCase):
             for index in range(2)
         ]
         self.at = (timezone.now() + timedelta(days=2)).astimezone(ZoneInfo("Asia/Bangkok")).replace(hour=9, minute=30, second=0, microsecond=0)
-        self.url = reverse("school:interview_schedule")
+        self.url = reverse("school:appointment_schedule")
 
     def schedule(self, appointment_type="interview", people=None, **changes):
         data = {
@@ -43,7 +43,7 @@ class AppointmentScheduleTests(TestCase):
         ).latest("pk")
 
     def notify(self, participant, at=None):
-        return self.client.post(reverse("school:interview_notify", args=[participant.pk]), {
+        return self.client.post(reverse("school:appointment_notify", args=[participant.pk]), {
             "at": (at or participant.appointment.starts_at).isoformat()
         })
 
@@ -106,6 +106,8 @@ class AppointmentScheduleTests(TestCase):
         participant = self.latest_participant()
         message = build_appointment_invitation_flex_message(participant)
         self.assertIn("BRI Orientation", json.dumps(message, ensure_ascii=False))
+        self.assertEqual(message["contents"]["body"]["backgroundColor"], "#F3F0E8")
+        self.assertEqual(message["contents"]["footer"]["backgroundColor"], "#F3F0E8")
         parsed = urlsplit(self.confirmation_url(participant))
         token = parse_qs(parsed.query)["token"][0]
         preview = self.client.get(parsed.path, {"token": token})
@@ -118,14 +120,28 @@ class AppointmentScheduleTests(TestCase):
         self.assertContains(confirmed, "ยืนยันเข้าร่วมปฐมนิเทศแล้ว")
         participant.refresh_from_db()
         self.assertEqual(participant.response_status, "confirmed")
-        status = self.client.post(reverse("school:interview_confirmation_status"), {
+        status = self.client.post(reverse("school:appointment_confirmation_status"), {
             "participants": [participant.pk]
         }).json()["participants"][str(participant.pk)]
         self.assertEqual(status["status"], "confirmed")
         self.assertTrue(status["confirmed_at"])
 
+    @override_settings(PUBLIC_BASE_URL="https://bri.example")
+    def test_public_urls_use_appointment_names_and_legacy_routes_redirect(self):
+        self.schedule(people=[self.people[0].pk])
+        participant = self.latest_participant()
+        self.assertEqual(reverse("school:appointment_schedule"), "/school-admin/appointments/")
+        self.assertEqual(reverse("school:appointment_confirmation"), "/appointments/confirm/")
+        self.assertNotIn("/interviews/", self.confirmation_url(participant))
+        response = self.client.get("/school-admin/interviews/", {"type": "orientation"})
+        self.assertRedirects(
+            response,
+            "/school-admin/appointments/?type=orientation",
+            fetch_redirect_response=False,
+        )
+
     def test_invalid_changed_and_cancelled_confirmation_links_are_rejected(self):
-        path = reverse("school:interview_confirmation")
+        path = reverse("school:appointment_confirmation")
         self.assertEqual(self.client.get(path, {"token": "invalid"}).status_code, 400)
         self.schedule()
         participant = self.latest_participant()
@@ -141,7 +157,7 @@ class AppointmentScheduleTests(TestCase):
         Person.objects.filter(pk=self.people[0].pk).update(status=Person.Status.FAILED)
         self.assertEqual(self.notify(participant).status_code, 409)
         token = parse_qs(urlsplit(self.confirmation_url(participant)).query)["token"][0]
-        self.assertEqual(self.client.get(reverse("school:interview_confirmation"), {"token": token}).status_code, 409)
+        self.assertEqual(self.client.get(reverse("school:appointment_confirmation"), {"token": token}).status_code, 409)
         send.assert_not_called()
 
     def test_old_interview_confirmation_token_remains_supported(self):
@@ -151,7 +167,7 @@ class AppointmentScheduleTests(TestCase):
             "person_id": participant.person_id,
             "interview_at": participant.appointment.starts_at.isoformat(),
         }, salt="school.interview-confirmation", compress=True)
-        response = self.client.get(reverse("school:interview_confirmation"), {"token": token})
+        response = self.client.get(reverse("school:appointment_confirmation"), {"token": token})
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "ยืนยันนัดสัมภาษณ์")
 

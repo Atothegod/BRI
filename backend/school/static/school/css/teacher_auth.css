@@ -4,7 +4,7 @@
     --auth-text: #17211b;
     --auth-muted: #47554c;
     --auth-border: #d8ded9;
-    --auth-background: #ffffff;
+    --auth-background: var(--bri-page-background);
     --auth-danger: #b42318;
 }
 
@@ -66,8 +66,8 @@ a {
 .teacher-auth-shell {
     width: min(100%, 440px);
     padding: 30px 32px 28px;
-    background: #ffffff;
-    border: 1px solid var(--bri-border);
+    background: var(--bri-card-background);
+    border: 1px solid #ded8c9;
     border-top: 3px solid var(--bri-gold);
     border-radius: 8px;
     box-shadow: 0 8px 28px rgba(18, 39, 29, 0.06);

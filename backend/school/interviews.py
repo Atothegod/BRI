@@ -38,7 +38,7 @@ class AppointmentScheduleForm(forms.Form):
         error_messages={"required": "กรุณาเลือกผู้เข้าร่วมอย่างน้อย 1 คน", "invalid_choice": "มีผู้เข้าร่วมที่ไม่ตรงเงื่อนไข กรุณาเลือกใหม่"},
     )
     title = forms.CharField(label="ชื่อกิจกรรม", max_length=255)
-    date = forms.DateField(label="วันที่ (ค.ศ.)", widget=forms.DateInput(attrs={"type": "date"}))
+    date = forms.DateField(label="วันที่", widget=forms.DateInput(attrs={"type": "date"}))
     time = forms.TimeField(label="เวลา (ประเทศไทย)", widget=forms.TimeInput(attrs={"type": "time"}))
     location = forms.CharField(label="สถานที่", required=False, max_length=500)
     meeting_url = forms.URLField(label="ลิงก์เข้าร่วม (ถ้ามี)", required=False, max_length=1000)
@@ -105,7 +105,7 @@ def interview_schedule(request):
                 {"id": participant.pk, "at": appointment.starts_at.isoformat()} for participant in participants
             ]
             messages.success(request, f"สร้างนัดและเตรียมส่ง LINE ให้ {len(ids)} คนแล้ว")
-            return redirect(f"{reverse('school:interview_schedule')}?type={appointment_type}")
+            return redirect(f"{reverse('school:appointment_schedule')}?type={appointment_type}")
 
     query = request.GET.get("q", "").strip()
     filters = {key: request.GET.get(key, "") for key in ("appointment", "line", "notification", "confirmation")}

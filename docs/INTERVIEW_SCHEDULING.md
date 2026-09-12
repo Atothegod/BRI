@@ -1,6 +1,6 @@
 # Appointment Scheduling
 
-Open `/school-admin/interviews/` from the school overview as a superuser,
+Open `/school-admin/appointments/` from the school overview as a superuser,
 matching the existing school-admin authorization. Use the Interview or
 Orientation tab, select up to 50 participants, enter a future date/time in
 Asia/Bangkok, location, link and details, then confirm. The date is Gregorian
@@ -36,7 +36,9 @@ Legacy interview fields are updated temporarily for rollout compatibility, and
 previous signed interview confirmation links continue to work. Notification
 endpoints reject stale or expired appointments. Successful sends are guarded
 by a participant row lock and are not repeated for the same saved appointment.
-No student IDs are included.
+No student IDs are included. The old `/school-admin/interviews/` and
+`/interviews/confirm/` URLs remain as compatibility routes, but new links use
+`appointments`.
 
 ## Deployment
 

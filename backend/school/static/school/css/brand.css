@@ -9,5 +9,6 @@
     --bri-warning-soft: #fbf0eb;
     --bri-border: #dce1dc;
     --bri-success-soft: #edf2ed;
-    --bri-page-background: linear-gradient(180deg, #ffffff 0%, #ffffff 35%, #f7f8f6 100%);
+    --bri-card-background: #f3f0e8;
+    --bri-page-background: #ffffff;
 }

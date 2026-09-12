@@ -649,8 +649,8 @@ svg {
     z-index: 1;
     margin: 0 0 14px;
     padding: 10px 10px 11px;
-    background: rgba(255, 255, 255, 0.96);
-    border: 1px solid rgba(5, 46, 26, 0.1);
+    background: var(--bri-card-background);
+    border: 1px solid #ded8c9;
     border-radius: var(--radius-card);
     box-shadow: 0 12px 28px rgba(5, 46, 26, 0.1);
 }
@@ -820,8 +820,8 @@ svg {
     min-width: 0;
     max-width: 100%;
     padding: 20px 16px 108px;
-    background: #ffffff;
-    border: 1px solid var(--color-border);
+    background: var(--bri-card-background);
+    border: 1px solid #ded8c9;
     border-top: 3px solid var(--color-gold);
     border-radius: var(--radius-card);
     box-shadow: var(--shadow-card);
@@ -1684,12 +1684,12 @@ select.form-control {
 
 .dashboard-shell .page-heading h1 {
     margin: 0;
-    color: #ffffff;
+    color: var(--color-brand-950);
     font-size: 1.72rem;
     font-weight: 800;
     line-height: 1.2;
     letter-spacing: 0;
-    text-shadow: 0 2px 14px rgba(3, 24, 14, 0.32);
+    text-shadow: none;
 }
 
 .summary-strip {
@@ -1705,11 +1705,9 @@ select.form-control {
 
 .summary-strip > div {
     padding: 16px;
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.52);
+    background: var(--bri-card-background);
+    border: 1px solid #ded8c9;
     border-radius: 8px;
-    -webkit-backdrop-filter: blur(16px);
-    backdrop-filter: blur(16px);
 }
 
 .summary-strip span,
@@ -1741,12 +1739,10 @@ select.form-control {
 .dashboard-panel {
     min-width: 0;
     padding: 18px;
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.52);
+    background: var(--bri-card-background);
+    border: 1px solid #ded8c9;
     border-radius: 8px;
     box-shadow: 0 18px 42px rgba(3, 24, 14, 0.14);
-    -webkit-backdrop-filter: blur(16px);
-    backdrop-filter: blur(16px);
 }
 
 .dashboard-panel--wide {
@@ -2155,8 +2151,8 @@ select.form-control {
     width: min(100%, 520px);
     padding: 28px 20px;
     text-align: center;
-    background: #ffffff;
-    border: 1px solid var(--color-border);
+    background: var(--bri-card-background);
+    border: 1px solid #ded8c9;
     border-top: 3px solid var(--color-gold);
     border-radius: 8px;
     box-shadow: var(--shadow-card);
@@ -2251,8 +2247,8 @@ select.form-control {
 
 .receipt-block {
     padding: 17px;
-    background: var(--color-gold-soft);
-    border: 1px solid #e8dbb8;
+    background: #ffffff;
+    border: 1px solid #ded8c9;
     border-radius: 8px;
 }
 
@@ -2468,11 +2464,9 @@ select.form-control {
         position: static !important;
         top: auto !important;
         z-index: 1;
-        background: #ffffff;
-        border-color: rgba(5, 46, 26, 0.1);
+        background: var(--bri-card-background);
+        border-color: #ded8c9;
         box-shadow: 0 2px 8px rgba(24, 35, 30, 0.035);
-        -webkit-backdrop-filter: blur(14px);
-        backdrop-filter: blur(14px);
     }
 
     .registration-app .mobile-step-summary {

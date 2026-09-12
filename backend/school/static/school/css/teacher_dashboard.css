@@ -290,12 +290,10 @@ button {
     display: grid;
     margin-top: 16px;
     overflow: hidden;
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.54);
+    background: var(--bri-card-background);
+    border: 1px solid #ded8c9;
     border-radius: 8px;
     box-shadow: 0 4px 18px rgba(18, 39, 29, 0.045);
-    -webkit-backdrop-filter: blur(16px);
-    backdrop-filter: blur(16px);
     grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
@@ -391,12 +389,10 @@ button {
 
 .teacher-section {
     min-width: 0;
-    background: rgba(255, 255, 255, 0.91);
-    border: 1px solid rgba(255, 255, 255, 0.54);
+    background: var(--bri-card-background);
+    border: 1px solid #ded8c9;
     border-radius: 8px;
     box-shadow: 0 4px 18px rgba(18, 39, 29, 0.045);
-    -webkit-backdrop-filter: blur(16px);
-    backdrop-filter: blur(16px);
 }
 
 .teacher-section-heading {

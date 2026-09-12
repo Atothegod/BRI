@@ -140,6 +140,90 @@ class Person(TimeStampedModel):
         return self.full_name
 
 
+class Appointment(TimeStampedModel):
+    class Type(models.TextChoices):
+        INTERVIEW = "interview", "สัมภาษณ์"
+        ORIENTATION = "orientation", "ปฐมนิเทศ"
+
+    class Status(models.TextChoices):
+        SCHEDULED = "scheduled", "กำหนดนัดแล้ว"
+        CANCELLED = "cancelled", "ยกเลิก"
+        COMPLETED = "completed", "เสร็จสิ้น"
+
+    appointment_type = models.CharField(max_length=20, choices=Type.choices)
+    title = models.CharField(max_length=255)
+    starts_at = models.DateTimeField()
+    location = models.CharField(max_length=500, blank=True)
+    meeting_url = models.URLField(max_length=1000, blank=True)
+    details = models.TextField(blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.SCHEDULED,
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_appointments",
+    )
+
+    class Meta:
+        ordering = ("-starts_at", "-pk")
+
+    def __str__(self):
+        return f"{self.title} - {timezone.localtime(self.starts_at):%d/%m/%Y %H:%M}"
+
+
+class AppointmentParticipant(TimeStampedModel):
+    class ResponseStatus(models.TextChoices):
+        WAITING = "waiting", "รอตอบรับ"
+        CONFIRMED = "confirmed", "ยืนยันแล้ว"
+        DECLINED = "declined", "ไม่สะดวกเข้าร่วม"
+
+    class NotificationStatus(models.TextChoices):
+        PENDING = "pending", "รอส่ง"
+        SENT = "sent", "LINE รับข้อความแล้ว"
+        FAILED = "failed", "ส่งไม่สำเร็จ"
+
+    appointment = models.ForeignKey(
+        Appointment,
+        on_delete=models.CASCADE,
+        related_name="participants",
+    )
+    person = models.ForeignKey(
+        Person,
+        on_delete=models.PROTECT,
+        related_name="appointment_participations",
+    )
+    response_status = models.CharField(
+        max_length=20,
+        choices=ResponseStatus.choices,
+        default=ResponseStatus.WAITING,
+    )
+    notification_status = models.CharField(
+        max_length=20,
+        choices=NotificationStatus.choices,
+        default=NotificationStatus.PENDING,
+    )
+    notified_at = models.DateTimeField(null=True, blank=True)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    notification_error = models.CharField(max_length=500, blank=True)
+
+    class Meta:
+        ordering = ("pk",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=("appointment", "person"),
+                name="uniq_appointment_participant",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.appointment.title} - {self.person.full_name}"
+
+
 class TeacherGroup(TimeStampedModel):
     teacher = models.ForeignKey(
         settings.AUTH_USER_MODEL,

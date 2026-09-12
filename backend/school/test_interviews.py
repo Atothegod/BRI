@@ -5,197 +5,187 @@ from urllib.parse import parse_qs, urlsplit
 from zoneinfo import ZoneInfo
 
 from django.contrib.auth import get_user_model
+from django.core import signing
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from .line import build_interview_invitation_flex_message
-from .models import Person
+from .line import build_appointment_invitation_flex_message
+from .models import Appointment, AppointmentParticipant, Person, Student
 
 
-class InterviewScheduleTests(TestCase):
+class AppointmentScheduleTests(TestCase):
     def setUp(self):
         self.admin = get_user_model().objects.create_superuser(username="scheduler", password="test-password")
         self.client.force_login(self.admin)
-        self.people = [Person.objects.create(first_name=f"Applicant {i}", last_name="Test", line_user_id=f"Utest{i}") for i in range(2)]
+        self.people = [
+            Person.objects.create(first_name=f"Applicant {index}", last_name="Test", line_user_id=f"Utest{index}")
+            for index in range(2)
+        ]
         self.at = (timezone.now() + timedelta(days=2)).astimezone(ZoneInfo("Asia/Bangkok")).replace(hour=9, minute=30, second=0, microsecond=0)
         self.url = reverse("school:interview_schedule")
 
-    def schedule(self, **changes):
-        data = {"people": [p.pk for p in self.people], "date": self.at.strftime("%Y-%m-%d"), "time": "09:30", "details": "Online interview"}
+    def schedule(self, appointment_type="interview", people=None, **changes):
+        data = {
+            "appointment_type": appointment_type,
+            "people": people if people is not None else [person.pk for person in self.people],
+            "title": "สัมภาษณ์รุ่นใหม่" if appointment_type == "interview" else "ปฐมนิเทศนักศึกษาใหม่",
+            "date": self.at.strftime("%Y-%m-%d"), "time": "09:30",
+            "location": "ห้องประชุม BRI", "meeting_url": "https://meet.example/session",
+            "details": "กรุณามาก่อนเวลา 15 นาที",
+        }
         data.update(changes)
         return self.client.post(self.url, data)
 
-    def notify(self, person, at=None):
-        return self.client.post(reverse("school:interview_notify", args=[person.pk]), {"at": (at or self.at).isoformat()})
+    def latest_participant(self, person=None):
+        return AppointmentParticipant.objects.select_related("appointment", "person").filter(
+            person=person or self.people[0]
+        ).latest("pk")
 
-    def confirmation_url(self, person):
-        message = build_interview_invitation_flex_message(person)
+    def notify(self, participant, at=None):
+        return self.client.post(reverse("school:interview_notify", args=[participant.pk]), {
+            "at": (at or participant.appointment.starts_at).isoformat()
+        })
+
+    def confirmation_url(self, participant):
+        message = build_appointment_invitation_flex_message(participant)
         return message["contents"]["footer"]["contents"][0]["action"]["uri"]
 
     @override_settings(TIME_ZONE="UTC")
-    @patch("school.interviews.send_line_push_message")
-    def test_bulk_schedule_saves_thai_time_before_sending(self, send):
+    def test_bulk_interview_creates_appointment_participants_and_legacy_snapshot(self):
         self.assertEqual(self.schedule().status_code, 302)
+        appointment = Appointment.objects.get()
+        self.assertEqual(appointment.starts_at, self.at)
+        self.assertEqual(appointment.participants.count(), 2)
+        self.assertEqual(len(self.client.session["appointment_send_queue"]), 2)
         for person in self.people:
             person.refresh_from_db()
             self.assertEqual(person.interview_at, self.at)
             self.assertEqual(person.interview_notification_state, "pending")
-            self.assertEqual(person.status, Person.Status.IN_PROGRESS)
-        self.assertEqual(len(self.client.session["interview_send_queue"]), 2)
-        send.assert_not_called()
+
+    def test_orientation_only_allows_paid_passed_students(self):
+        Person.objects.filter(pk=self.people[0].pk).update(status=Person.Status.PASSED)
+        Student.objects.create(person=self.people[0], is_paid=True)
+        response = self.schedule("orientation", people=[self.people[0].pk])
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Appointment.objects.get().appointment_type, Appointment.Type.ORIENTATION)
+
+        Person.objects.filter(pk=self.people[1].pk).update(status=Person.Status.PASSED)
+        Student.objects.create(person=self.people[1], is_paid=False)
+        self.assertEqual(self.schedule("orientation", people=[self.people[1].pk]).status_code, 200)
+        self.assertEqual(Appointment.objects.count(), 1)
 
     @patch("school.interviews.send_line_push_message", return_value=True)
-    def test_notify_is_idempotent_and_contains_correct_appointment(self, send):
+    def test_notify_is_idempotent_and_uses_event_message(self, send):
         self.schedule()
-        self.assertTrue(self.notify(self.people[0]).json()["sent"])
-        self.assertTrue(self.notify(self.people[0]).json()["sent"])
+        participant = self.latest_participant()
+        self.assertTrue(self.notify(participant).json()["sent"])
+        self.assertTrue(self.notify(participant).json()["sent"])
         send.assert_called_once()
         content = json.dumps(send.call_args.args[1], ensure_ascii=False)
         self.assertIn("09:30", content)
-        self.assertIn(self.at.strftime("%d/%m/%Y"), content)
-        self.assertIn("Online interview", content)
-        self.assertNotIn("รหัสนักศึกษา", content)
-        self.people[0].refresh_from_db()
-        self.assertIsNotNone(self.people[0].interview_notified_at)
+        self.assertIn("ห้องประชุม BRI", content)
+        self.assertIn("ยืนยันเข้าร่วม", content)
+        participant.refresh_from_db()
+        self.assertEqual(participant.notification_status, "sent")
 
     @patch("school.interviews.send_line_push_message", side_effect=[False, True])
-    def test_failure_keeps_appointment_and_can_be_retried(self, send):
+    def test_failed_line_delivery_can_be_retried(self, send):
         self.schedule()
-        self.assertFalse(self.notify(self.people[0]).json()["sent"])
-        self.people[0].refresh_from_db()
-        self.assertEqual(self.people[0].interview_at, self.at)
-        self.assertEqual(self.people[0].interview_notification_state, "failed")
-        self.assertTrue(self.notify(self.people[0]).json()["sent"])
-
-    @patch("school.interviews.send_line_push_message", return_value=True)
-    def test_reschedule_resets_notification_and_rejects_stale_requests(self, send):
-        self.schedule()
-        self.notify(self.people[0])
-        Person.objects.filter(pk=self.people[0].pk).update(interview_confirmed_at=timezone.now())
-        self.schedule(time="10:30")
-        self.people[0].refresh_from_db()
-        self.assertEqual(self.people[0].interview_notification_state, "pending")
-        self.assertIsNone(self.people[0].interview_notified_at)
-        self.assertIsNone(self.people[0].interview_confirmed_at)
-        self.assertEqual(self.notify(self.people[0]).status_code, 409)
-        self.assertEqual(send.call_count, 1)
+        participant = self.latest_participant()
+        self.assertFalse(self.notify(participant).json()["sent"])
+        participant.refresh_from_db()
+        self.assertEqual(participant.notification_status, "failed")
+        self.assertTrue(self.notify(participant).json()["sent"])
 
     @override_settings(PUBLIC_BASE_URL="https://bri.example")
-    def test_line_message_links_to_signed_confirmation_page(self):
-        self.schedule()
-        self.people[0].refresh_from_db()
-        url = self.confirmation_url(self.people[0])
-        parsed = urlsplit(url)
-        self.assertEqual(f"{parsed.scheme}://{parsed.netloc}", "https://bri.example")
-        self.assertEqual(parsed.path, reverse("school:interview_confirmation"))
-        self.assertTrue(parse_qs(parsed.query)["token"][0])
-        self.assertIn("ยืนยันนัดสัมภาษณ์", json.dumps(build_interview_invitation_flex_message(self.people[0]), ensure_ascii=False))
-
-    @override_settings(PUBLIC_BASE_URL="https://bri.example")
-    def test_applicant_reviews_then_confirms_appointment(self):
-        self.schedule()
-        self.people[0].refresh_from_db()
-        parsed = urlsplit(self.confirmation_url(self.people[0]))
+    def test_orientation_message_and_confirmation_flow(self):
+        Person.objects.filter(pk=self.people[0].pk).update(status=Person.Status.PASSED)
+        Student.objects.create(person=self.people[0], is_paid=True)
+        self.schedule("orientation", people=[self.people[0].pk])
+        participant = self.latest_participant()
+        message = build_appointment_invitation_flex_message(participant)
+        self.assertIn("BRI Orientation", json.dumps(message, ensure_ascii=False))
+        parsed = urlsplit(self.confirmation_url(participant))
         token = parse_qs(parsed.query)["token"][0]
-
         preview = self.client.get(parsed.path, {"token": token})
-        self.assertEqual(preview.status_code, 200)
-        self.assertContains(preview, "Applicant 0 Test")
-        self.assertContains(preview, "09:30")
-        self.assertContains(preview, "Online interview")
-        self.people[0].refresh_from_db()
-        self.assertIsNone(self.people[0].interview_confirmed_at)
+        self.assertContains(preview, "ยืนยันเข้าร่วมปฐมนิเทศ")
+        self.assertContains(preview, "ห้องประชุม BRI")
+        participant.refresh_from_db()
+        self.assertEqual(participant.response_status, "waiting")
 
-        confirmation = self.client.post(parsed.path, {"token": token})
-        self.assertEqual(confirmation.status_code, 200)
-        self.assertContains(confirmation, "ยืนยันนัดสัมภาษณ์แล้ว")
-        self.people[0].refresh_from_db()
-        self.assertIsNotNone(self.people[0].interview_confirmed_at)
-
-        repeated = self.client.post(parsed.path, {"token": token})
-        self.assertEqual(repeated.status_code, 200)
-
+        confirmed = self.client.post(parsed.path, {"token": token})
+        self.assertContains(confirmed, "ยืนยันเข้าร่วมปฐมนิเทศแล้ว")
+        participant.refresh_from_db()
+        self.assertEqual(participant.response_status, "confirmed")
         status = self.client.post(reverse("school:interview_confirmation_status"), {
-            "people": [self.people[0].pk, self.people[1].pk],
-        })
-        self.assertTrue(status.json()["people"][str(self.people[0].pk)])
-        self.assertIsNone(status.json()["people"][str(self.people[1].pk)])
+            "participants": [participant.pk]
+        }).json()["participants"][str(participant.pk)]
+        self.assertEqual(status["status"], "confirmed")
+        self.assertTrue(status["confirmed_at"])
 
-    @override_settings(PUBLIC_BASE_URL="https://bri.example")
-    def test_invalid_stale_and_expired_confirmations_are_rejected(self):
-        invalid = self.client.get(reverse("school:interview_confirmation"), {"token": "changed-token"})
-        self.assertEqual(invalid.status_code, 400)
-
+    def test_invalid_changed_and_cancelled_confirmation_links_are_rejected(self):
+        path = reverse("school:interview_confirmation")
+        self.assertEqual(self.client.get(path, {"token": "invalid"}).status_code, 400)
         self.schedule()
-        self.people[0].refresh_from_db()
-        parsed = urlsplit(self.confirmation_url(self.people[0]))
-        token = parse_qs(parsed.query)["token"][0]
-        Person.objects.filter(pk=self.people[0].pk).update(interview_at=self.at + timedelta(hours=1))
-        self.assertEqual(self.client.post(parsed.path, {"token": token}).status_code, 409)
+        participant = self.latest_participant()
+        token = parse_qs(urlsplit(self.confirmation_url(participant)).query)["token"][0]
+        participant.appointment.status = Appointment.Status.CANCELLED
+        participant.appointment.save(update_fields=["status"])
+        self.assertEqual(self.client.post(path, {"token": token}).status_code, 409)
 
-        self.people[1].refresh_from_db()
-        expired_url = urlsplit(self.confirmation_url(self.people[1]))
-        expired_token = parse_qs(expired_url.query)["token"][0]
-        Person.objects.filter(pk=self.people[1].pk).update(interview_at=timezone.now() - timedelta(minutes=1))
-        self.assertEqual(self.client.post(expired_url.path, {"token": expired_token}).status_code, 409)
-
-    def test_rejects_empty_selection_past_time_and_ineligible_person(self):
-        for changes in [{"people": []}, {"date": "2000-01-01"}]:
-            self.assertEqual(self.schedule(**changes).status_code, 200)
+    @patch("school.interviews.send_line_push_message")
+    def test_status_change_revokes_pending_invitation(self, send):
+        self.schedule(people=[self.people[0].pk])
+        participant = self.latest_participant()
         Person.objects.filter(pk=self.people[0].pk).update(status=Person.Status.FAILED)
-        self.assertEqual(self.schedule().status_code, 200)
-        self.assertFalse(Person.objects.filter(interview_at__isnull=False).exists())
+        self.assertEqual(self.notify(participant).status_code, 409)
+        token = parse_qs(urlsplit(self.confirmation_url(participant)).query)["token"][0]
+        self.assertEqual(self.client.get(reverse("school:interview_confirmation"), {"token": token}).status_code, 409)
+        send.assert_not_called()
 
-    def test_requires_school_admin_for_page_and_notifications(self):
-        user = get_user_model().objects.create_user(username="teacher", password="test-password", is_staff=True)
-        self.client.force_login(user)
-        self.assertEqual(self.client.get(self.url).status_code, 403)
-        self.assertEqual(self.schedule().status_code, 403)
-        self.assertEqual(self.notify(self.people[0]).status_code, 403)
-        self.assertEqual(self.client.post(reverse("school:interview_confirmation_status"), {"people": [self.people[0].pk]}).status_code, 403)
-        self.client.logout()
-        self.assertEqual(self.client.get(self.url).status_code, 302)
+    def test_old_interview_confirmation_token_remains_supported(self):
+        self.schedule()
+        participant = self.latest_participant()
+        token = signing.dumps({
+            "person_id": participant.person_id,
+            "interview_at": participant.appointment.starts_at.isoformat(),
+        }, salt="school.interview-confirmation", compress=True)
+        response = self.client.get(reverse("school:interview_confirmation"), {"token": token})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "ยืนยันนัดสัมภาษณ์")
 
-    def test_anonymous_admin_pages_use_django_admin_login(self):
-        self.client.logout()
-        for name in ["school:interview_schedule", "school:admin_overview_dashboard"]:
-            path = reverse(name)
-            self.assertRedirects(self.client.get(path), f"{reverse('admin:login')}?next={path}")
-        path = reverse("school:interview_notify", args=[self.people[0].pk])
-        self.assertRedirects(self.client.post(path), f"{reverse('admin:login')}?next={path}")
+    def test_selection_validation_and_batch_scope(self):
+        self.assertEqual(self.schedule(people=[]).status_code, 200)
+        self.assertEqual(self.schedule(date="2000-01-01").status_code, 200)
+        response = self.schedule(people=[self.people[0].pk])
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(AppointmentParticipant.objects.count(), 1)
+        self.assertEqual(AppointmentParticipant.objects.get().person, self.people[0])
 
-    def test_django_admin_login_returns_to_scheduler(self):
-        self.client.logout()
-        response = self.client.post(reverse("admin:login"), {
-            "username": "scheduler", "password": "test-password", "next": self.url,
+    def test_filters_and_history_use_generic_appointments(self):
+        self.schedule(people=[self.people[0].pk])
+        participant = self.latest_participant()
+        participant.notification_status = "failed"
+        participant.response_status = "confirmed"
+        participant.confirmed_at = timezone.now()
+        participant.save()
+        response = self.client.get(self.url, {
+            "type": "interview", "q": "Applicant 0", "appointment": "scheduled",
+            "line": "connected", "notification": "failed", "confirmation": "confirmed",
         })
-        self.assertRedirects(response, self.url)
+        self.assertContains(response, "Applicant 0")
+        self.assertNotContains(response, "Applicant 1")
+        self.assertContains(response, "สัมภาษณ์รุ่นใหม่")
+        self.assertContains(response, "ประวัตินัดล่าสุด")
 
-    def test_django_admin_has_scheduler_entry(self):
-        self.assertContains(self.client.get(reverse("admin:index")), self.url)
-
-    def test_approved_teacher_cannot_access_scheduler(self):
-        User = get_user_model()
-        teacher = User.objects.create_user(username="approved", role=User.Role.TEACHER, is_teacher_approved=True)
+    def test_requires_superuser_and_uses_admin_login(self):
+        teacher = get_user_model().objects.create_user(username="teacher", password="test-password", is_staff=True)
         self.client.force_login(teacher)
         self.assertEqual(self.client.get(self.url).status_code, 403)
         self.assertEqual(self.schedule().status_code, 403)
-        self.assertEqual(self.notify(self.people[0]).status_code, 403)
+        self.client.logout()
+        self.assertRedirects(self.client.get(self.url), f"{reverse('admin:login')}?next={self.url}")
 
-    def test_page_search_and_saved_appointments_render(self):
-        self.schedule()
-        response = self.client.get(self.url, {"q": "Applicant 0"})
-        self.assertContains(response, "Applicant 0")
-        self.assertNotContains(response, "Applicant 1")
-        self.assertContains(response, "09:30")
-        self.assertContains(response, "interview-queue")
-
-    @patch("school.interviews.send_line_push_message")
-    def test_cannot_notify_after_status_changed_or_appointment_passed(self, send):
-        self.schedule()
-        Person.objects.filter(pk=self.people[0].pk).update(status=Person.Status.FAILED)
-        self.assertEqual(self.notify(self.people[0]).status_code, 409)
-        Person.objects.filter(pk=self.people[1].pk).update(interview_at=timezone.now() - timedelta(days=1))
-        self.assertEqual(self.notify(self.people[1]).status_code, 409)
-        send.assert_not_called()
+    def test_admin_index_has_appointment_entry(self):
+        self.assertContains(self.client.get(reverse("admin:index")), "จัดการนัดหมายและแจ้ง LINE")

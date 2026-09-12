@@ -1,59 +1,57 @@
 {% extends "base.html" %}
 {% load static tz %}
-{% block title %}นัดสัมภาษณ์ | BRI{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20260912-2">{% endblock %}
+{% block title %}จัดการนัดหมาย | BRI{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20260912-appointments-1">{% endblock %}
 {% block content %}
 <main class="interviews">
     <header class="schedule-header">
         <a href="{% url 'school:admin_overview_dashboard' %}">{% include "school/includes/brand_logo.html" with variant="nav" %}</a>
-        <nav aria-label="เมนูผู้ดูแล">
-            <a href="{% url 'admin:index' %}">Django Admin</a>
-            <a href="{% url 'school:admin_overview_dashboard' %}">ภาพรวมโรงเรียน</a>
-        </nav>
+        <nav aria-label="เมนูผู้ดูแล"><a href="{% url 'admin:index' %}">Django Admin</a><a href="{% url 'school:admin_overview_dashboard' %}">ภาพรวมโรงเรียน</a></nav>
     </header>
-    <h1>นัดสัมภาษณ์</h1>
+    <div class="page-heading"><div><span>BRI APPOINTMENTS</span><h1>จัดการนัดหมาย</h1><p>{{ candidate_description }}</p></div></div>
+    <nav class="type-tabs" aria-label="ประเภทนัดหมาย">
+        {% for value, label in appointment_types %}<a href="?type={{ value }}" class="{% if appointment_type == value %}active{% endif %}"{% if appointment_type == value %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}
+    </nav>
     {% for message in messages %}<p role="status" class="notice">{{ message }}</p>{% endfor %}
     <p id="send-summary" role="status" hidden></p>
-    <form method="get" class="search-bar">
-        <label for="search">ค้นหาผู้สมัคร</label>
-        <input id="search" name="q" value="{{ query }}" placeholder="ชื่อ เบอร์โทร หรือชื่อ LINE">
-        <button type="submit">ค้นหา</button>
-        {% if query %}<a href="{% url 'school:interview_schedule' %}">ล้างการค้นหา</a>{% endif %}
+    <form method="get" class="filter-panel">
+        <input type="hidden" name="type" value="{{ appointment_type }}">
+        <div class="filter-search"><label for="search">ค้นหาผู้เข้าร่วม</label><input id="search" name="q" value="{{ query }}" placeholder="ชื่อ เบอร์โทร หรือชื่อ LINE"></div>
+        <div><label for="appointment-filter">สถานะนัด</label><select id="appointment-filter" name="appointment"><option value="">ทั้งหมด</option><option value="unscheduled"{% if filters.appointment == "unscheduled" %} selected{% endif %}>ยังไม่มีนัด</option><option value="scheduled"{% if filters.appointment == "scheduled" %} selected{% endif %}>มีนัดแล้ว</option></select></div>
+        <div><label for="line-filter">LINE</label><select id="line-filter" name="line"><option value="">ทั้งหมด</option><option value="connected"{% if filters.line == "connected" %} selected{% endif %}>เชื่อมแล้ว</option><option value="missing"{% if filters.line == "missing" %} selected{% endif %}>ยังไม่เชื่อม</option></select></div>
+        <div><label for="notification-filter">การส่งข้อความ</label><select id="notification-filter" name="notification"><option value="">ทั้งหมด</option><option value="pending"{% if filters.notification == "pending" %} selected{% endif %}>รอส่ง</option><option value="sent"{% if filters.notification == "sent" %} selected{% endif %}>ส่งแล้ว</option><option value="failed"{% if filters.notification == "failed" %} selected{% endif %}>ส่งไม่สำเร็จ</option></select></div>
+        <div><label for="confirmation-filter">การตอบรับ</label><select id="confirmation-filter" name="confirmation"><option value="">ทั้งหมด</option><option value="waiting"{% if filters.confirmation == "waiting" %} selected{% endif %}>รอยืนยัน</option><option value="confirmed"{% if filters.confirmation == "confirmed" %} selected{% endif %}>ยืนยันแล้ว</option></select></div>
+        <div class="filter-actions"><button type="submit">ใช้ตัวกรอง</button>{% if has_filters %}<a href="{% url 'school:interview_schedule' %}?type={{ appointment_type }}">ล้างทั้งหมด</a>{% endif %}</div>
     </form>
-    <form method="post" id="schedule-form">
-        {% csrf_token %}
+    <form method="post" id="schedule-form" data-type-label="{% if appointment_type == 'orientation' %}ปฐมนิเทศ{% else %}สัมภาษณ์{% endif %}">
+        {% csrf_token %}{{ form.appointment_type }}
         {% if form.errors %}<div role="alert" class="errors">{{ form.errors }}</div>{% endif %}
-        <div class="schedule-fields">
-            <div>{{ form.date.label_tag }}{{ form.date }}</div>
-            <div>{{ form.time.label_tag }}{{ form.time }}</div>
+        <section class="schedule-fields" aria-label="รายละเอียดนัดหมาย">
+            <div class="title-field">{{ form.title.label_tag }}{{ form.title }}</div>
+            <div>{{ form.date.label_tag }}{{ form.date }}</div><div>{{ form.time.label_tag }}{{ form.time }}</div>
+            <div class="location-field">{{ form.location.label_tag }}{{ form.location }}</div><div class="url-field">{{ form.meeting_url.label_tag }}{{ form.meeting_url }}</div>
             <div class="details-field">{{ form.details.label_tag }}{{ form.details }}</div>
-        </div>
-        <div class="selection-bar"><strong>ผู้สมัครระหว่างดำเนินการ {{ page_obj.paginator.count }} คน</strong><span>เลือก <b id="selected-count">0</b> คน</span></div>
-        <div class="table-scroll">
-        <table>
-            <thead><tr><th><input type="checkbox" id="select-all" aria-label="เลือกทุกคนในหน้านี้"></th><th>ผู้สมัคร</th><th>LINE</th><th>นัดสัมภาษณ์ (เวลาไทย)</th><th>การแจ้งเตือน</th><th>การตอบรับ</th></tr></thead>
-            <tbody>{% timezone "Asia/Bangkok" %}{% for person in page_obj %}
+        </section>
+        <div class="selection-bar"><strong>พบ {{ page_obj.paginator.count }} คน</strong><span>เลือก <b id="selected-count">0</b> คน</span></div>
+        <div class="table-scroll"><table>
+            <thead><tr><th><input type="checkbox" id="select-all" aria-label="เลือกทุกคนในหน้านี้"></th><th>ผู้เข้าร่วม</th><th>LINE</th><th>นัดล่าสุด (เวลาไทย)</th><th>การแจ้งเตือน</th><th>การตอบรับ</th></tr></thead>
+            <tbody>{% timezone "Asia/Bangkok" %}{% for person in page_obj %}{% with participant=person.latest_appointment_participant %}
                 <tr>
                     <td><input type="checkbox" name="people" value="{{ person.pk }}" aria-label="เลือก {{ person.full_name }}" {% if person.pk|stringformat:"s" in selected_ids %}checked{% endif %}></td>
                     <td><strong>{{ person.full_name }}</strong><small>{{ person.phone|default:"-" }}</small></td>
                     <td>{{ person.line_display_name|default:"-" }}{% if not person.line_user_id %}<small class="warning">ยังไม่เชื่อม LINE</small>{% endif %}</td>
-                    <td>{% if person.interview_at %}{{ person.interview_at|date:"d/m/Y H:i" }}<small>{{ person.interview_details|truncatechars:100 }}</small>{% else %}-{% endif %}</td>
-                    <td><span data-status="{{ person.pk }}" class="state-{{ person.interview_notification_state }}">{{ person.get_interview_notification_state_display|default:"ยังไม่นัด" }}</span>
-                        {% if person.interview_at and person.interview_notification_state != "sent" %}<button class="retry" type="button" data-notify="{{ person.pk }}" data-at="{{ person.interview_at|date:'c' }}" data-url="{% url 'school:interview_notify' person.pk %}">ส่ง LINE</button>{% endif %}
-                    </td>
-                    <td data-confirmation="{{ person.pk }}">{% if person.interview_confirmed_at %}<strong class="state-sent">ยืนยันแล้ว</strong><small>{{ person.interview_confirmed_at|date:"d/m/Y H:i" }}</small>{% elif person.interview_at %}<span class="state-pending">รอผู้สมัครยืนยัน</span>{% else %}-{% endif %}</td>
+                    <td>{% if participant %}<strong>{{ participant.appointment.title }}</strong><small>{{ participant.appointment.starts_at|date:"d/m/Y H:i" }}{% if participant.appointment.location %} · {{ participant.appointment.location }}{% endif %}</small>{% else %}-{% endif %}</td>
+                    <td>{% if participant %}<span data-status="{{ participant.pk }}" class="state-{{ participant.notification_status }}">{{ participant.get_notification_status_display }}</span>{% if participant.notification_status != "sent" %}<button class="retry" type="button" data-notify="{{ participant.pk }}" data-at="{{ participant.appointment.starts_at|date:'c' }}" data-url="{% url 'school:interview_notify' participant.pk %}">ส่ง LINE</button>{% endif %}{% else %}-{% endif %}</td>
+                    <td{% if participant %} data-confirmation="{{ participant.pk }}"{% endif %}>{% if participant.response_status == "confirmed" %}<strong class="state-sent">ยืนยันแล้ว</strong><small>{{ participant.confirmed_at|date:"d/m/Y H:i" }}</small>{% elif participant %}<span class="state-pending">รอผู้เข้าร่วมยืนยัน</span>{% else %}-{% endif %}</td>
                 </tr>
-            {% empty %}<tr><td colspan="6">ไม่พบผู้สมัคร</td></tr>{% endfor %}{% endtimezone %}</tbody>
-        </table>
-        </div>
-        <footer class="schedule-footer">
-            <span>หน้า {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
-            <nav aria-label="หน้ารายชื่อ">{% if page_obj.has_previous %}<a href="?q={{ query|urlencode }}&page={{ page_obj.previous_page_number }}">ก่อนหน้า</a>{% endif %} {% if page_obj.has_next %}<a href="?q={{ query|urlencode }}&page={{ page_obj.next_page_number }}">ถัดไป</a>{% endif %}</nav>
-            <button type="submit" id="confirm-schedule" disabled>ยืนยันนัดและแจ้ง LINE</button>
-        </footer>
+            {% endwith %}{% empty %}<tr><td colspan="6">ไม่พบรายชื่อที่ตรงเงื่อนไข</td></tr>{% endfor %}{% endtimezone %}</tbody>
+        </table></div>
+        <footer class="schedule-footer"><span>หน้า {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span><nav aria-label="หน้ารายชื่อ">{% if page_obj.has_previous %}<a href="{{ page_query_prefix }}page={{ page_obj.previous_page_number }}">ก่อนหน้า</a>{% endif %} {% if page_obj.has_next %}<a href="{{ page_query_prefix }}page={{ page_obj.next_page_number }}">ถัดไป</a>{% endif %}</nav><button type="submit" id="confirm-schedule" disabled>สร้างนัดและแจ้ง LINE</button></footer>
     </form>
+    <section class="appointment-history" aria-labelledby="history-title"><div class="history-heading"><h2 id="history-title">ประวัตินัดล่าสุด</h2><span>{{ appointments|length }} รายการ</span></div>
+        <div class="table-scroll"><table><thead><tr><th>กิจกรรม</th><th>วันและเวลา</th><th>สถานที่</th><th>ผู้เข้าร่วม</th><th>ตอบรับแล้ว</th><th>สถานะ</th></tr></thead><tbody>{% timezone "Asia/Bangkok" %}{% for item in appointments %}<tr><td><strong>{{ item.title }}</strong><small>{{ item.get_appointment_type_display }}</small></td><td>{{ item.starts_at|date:"d/m/Y H:i" }}</td><td>{{ item.location|default:"-" }}</td><td>{{ item.participant_count }} คน</td><td>{{ item.confirmed_count }} คน</td><td>{{ item.get_status_display }}</td></tr>{% empty %}<tr><td colspan="6">ยังไม่มีประวัตินัดหมาย</td></tr>{% endfor %}{% endtimezone %}</tbody></table></div>
+    </section>
 </main>
-{{ send_queue|json_script:"interview-queue" }}
-<div hidden data-confirmation-status-url="{% url 'school:interview_confirmation_status' %}"></div>
+{{ send_queue|json_script:"interview-queue" }}<div hidden data-confirmation-status-url="{% url 'school:interview_confirmation_status' %}"></div>
 {% endblock %}
-{% block extra_js %}<script src="{% static 'school/js/interviews.js' %}?v=20260912-2" defer></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'school/js/interviews.js' %}?v=20260912-appointments-1" defer></script>{% endblock %}

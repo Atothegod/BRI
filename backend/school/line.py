@@ -356,16 +356,22 @@ def notify_payment_approved(person, student):
     )
 
 
-def build_interview_invitation_flex_message(person):
+def build_appointment_invitation_flex_message(participant):
     from zoneinfo import ZoneInfo
     from django.utils import timezone
 
-    appointment = timezone.localtime(person.interview_at, ZoneInfo("Asia/Bangkok"))
-    date = appointment.strftime("%d/%m/%Y")
-    time = appointment.strftime("%H:%M")
+    appointment = participant.appointment
+    person = participant.person
+    local_start = timezone.localtime(appointment.starts_at, ZoneInfo("Asia/Bangkok"))
+    date = local_start.strftime("%d/%m/%Y")
+    time = local_start.strftime("%H:%M")
+    is_orientation = appointment.appointment_type == appointment.Type.ORIENTATION
+    heading = "ขอเชิญเข้าร่วมปฐมนิเทศ" if is_orientation else "แจ้งนัดสัมภาษณ์"
+    event_name = "BRI Orientation" if is_orientation else "BRI Interview"
+    alt_event = "ปฐมนิเทศ" if is_orientation else "นัดสัมภาษณ์"
     confirmation_token = signing.dumps(
-        {"person_id": person.pk, "interview_at": person.interview_at.isoformat()},
-        salt="school.interview-confirmation",
+        {"participant_id": participant.pk, "starts_at": appointment.starts_at.isoformat()},
+        salt="school.appointment-confirmation",
         compress=True,
     )
     confirmation_link = (
@@ -374,35 +380,51 @@ def build_interview_invitation_flex_message(person):
     )
     contents = [
         {"type": "text", "text": person.full_name, "weight": "bold", "wrap": True, "color": "#12271D"},
+        {"type": "text", "text": appointment.title, "size": "sm", "wrap": True, "color": "#425B46"},
         build_flex_row("วันที่ (ค.ศ.)", date),
         build_flex_row("เวลาไทย", f"{time} น."),
     ]
-    if person.interview_details:
-        contents.append({"type": "text", "text": person.interview_details, "size": "sm", "wrap": True, "color": "#425B46"})
+    if appointment.location:
+        contents.append(build_flex_row("สถานที่", appointment.location))
+    if appointment.details:
+        contents.append({"type": "text", "text": appointment.details, "size": "sm", "wrap": True, "color": "#425B46"})
+    buttons = [{
+        "type": "button",
+        "style": "primary",
+        "height": "sm",
+        "color": "#425B46",
+        "action": {"type": "uri", "label": "ยืนยันเข้าร่วม", "uri": confirmation_link},
+    }]
+    if appointment.meeting_url:
+        buttons.append({
+            "type": "button",
+            "style": "secondary",
+            "height": "sm",
+            "action": {"type": "uri", "label": "เปิดลิงก์เข้าร่วม", "uri": appointment.meeting_url},
+        })
     return {
-        "type": "flex", "altText": f"BRI นัดสัมภาษณ์ {date} เวลา {time} น. (ประเทศไทย)",
+        "type": "flex",
+        "altText": f"BRI {alt_event} {date} เวลา {time} น. (ประเทศไทย)",
         "contents": {
-            "type": "bubble", "size": "mega",
-            "header": {"type": "box", "layout": "vertical", "backgroundColor": "#12271D", "paddingAll": "20px", "contents": [
-                {"type": "text", "text": "BRI Interview", "color": "#C2A256", "size": "xs", "weight": "bold"},
-                {"type": "text", "text": "แจ้งนัดสัมภาษณ์", "color": "#FFFFFF", "size": "lg", "weight": "bold", "margin": "sm", "wrap": True},
-            ]},
+            "type": "bubble",
+            "size": "mega",
+            "header": {
+                "type": "box",
+                "layout": "vertical",
+                "backgroundColor": "#12271D",
+                "paddingAll": "20px",
+                "contents": [
+                    {"type": "text", "text": event_name, "color": "#C2A256", "size": "xs", "weight": "bold"},
+                    {"type": "text", "text": heading, "color": "#FFFFFF", "size": "lg", "weight": "bold", "margin": "sm", "wrap": True},
+                ],
+            },
             "body": {"type": "box", "layout": "vertical", "spacing": "md", "contents": contents},
             "footer": {
                 "type": "box",
                 "layout": "vertical",
+                "spacing": "sm",
                 "backgroundColor": "#F3F0E8",
-                "contents": [{
-                    "type": "button",
-                    "style": "primary",
-                    "height": "sm",
-                    "color": "#425B46",
-                    "action": {
-                        "type": "uri",
-                        "label": "ยืนยันนัดสัมภาษณ์",
-                        "uri": confirmation_link,
-                    },
-                }],
+                "contents": buttons,
             },
         },
     }

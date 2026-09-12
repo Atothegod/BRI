@@ -15,7 +15,8 @@
     selectAll.addEventListener('change', () => { boxes.forEach(box => { box.checked = selectAll.checked; }); sync(); });
     form.addEventListener('submit', event => {
         const count = boxes.filter(box => box.checked).length;
-        if (busy || !window.confirm(`ยืนยันนัดสัมภาษณ์ ${count} คน วันที่ ${form.elements.date.value} เวลา ${form.elements.time.value} (ประเทศไทย)? นัดเดิมของคนที่เลือกจะถูกแทนที่`)) event.preventDefault();
+        const typeLabel = form.dataset.typeLabel || 'นัดหมาย';
+        if (busy || !window.confirm(`สร้างนัด${typeLabel}สำหรับ ${count} คน วันที่ ${form.elements.date.value} เวลา ${form.elements.time.value} (ประเทศไทย) และส่ง LINE ใช่หรือไม่?`)) event.preventDefault();
         else { busy = true; sync(); }
     });
     async function send(item) {
@@ -56,7 +57,7 @@
         if (!cells.length || document.hidden) return;
         try {
             const body = new URLSearchParams();
-            cells.forEach(cell => body.append('people', cell.dataset.confirmation));
+            cells.forEach(cell => body.append('participants', cell.dataset.confirmation));
             const response = await fetch(document.querySelector('[data-confirmation-status-url]').dataset.confirmationStatusUrl, {
                 method: 'POST',
                 headers: { 'X-CSRFToken': form.elements.csrfmiddlewaretoken.value },
@@ -65,9 +66,11 @@
             if (!response.ok) return;
             const data = await response.json();
             cells.forEach(cell => {
-                const confirmedAt = data.people[cell.dataset.confirmation];
-                if (confirmedAt) cell.innerHTML = '<strong class="state-sent">ยืนยันแล้ว</strong><small></small>';
-                if (confirmedAt) cell.querySelector('small').textContent = confirmedAt;
+                const item = data.participants[cell.dataset.confirmation];
+                if (item && item.status === 'confirmed') {
+                    cell.innerHTML = '<strong class="state-sent">ยืนยันแล้ว</strong><small></small>';
+                    cell.querySelector('small').textContent = item.confirmed_at;
+                }
             });
         } catch (_) {
             // The next visibility change or polling interval retries quietly.

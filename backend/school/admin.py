@@ -6,6 +6,8 @@ from .line import line_push_unavailable_reason, notify_interview_passed
 from .models import (
     AttendanceRecord,
     AttendanceSession,
+    Appointment,
+    AppointmentParticipant,
     HomeworkAssignment,
     HomeworkSubmission,
     Person,
@@ -17,6 +19,26 @@ from .models import (
 
 
 admin.site.index_template = "school/admin_index.html"
+
+
+@admin.register(Appointment)
+class AppointmentAdmin(admin.ModelAdmin):
+    list_display = ("title", "appointment_type", "starts_at", "status", "participant_total", "created_by")
+    list_filter = ("appointment_type", "status", "starts_at")
+    search_fields = ("title", "location", "details")
+    autocomplete_fields = ("created_by",)
+
+    @admin.display(description="ผู้เข้าร่วม")
+    def participant_total(self, obj):
+        return obj.participants.count()
+
+
+@admin.register(AppointmentParticipant)
+class AppointmentParticipantAdmin(admin.ModelAdmin):
+    list_display = ("appointment", "person", "notification_status", "response_status", "notified_at", "confirmed_at")
+    list_filter = ("appointment__appointment_type", "notification_status", "response_status")
+    search_fields = ("appointment__title", "person__first_name", "person__last_name", "person__phone")
+    autocomplete_fields = ("appointment", "person")
 
 
 class CountryCodeFilter(admin.SimpleListFilter):

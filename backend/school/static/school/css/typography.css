@@ -1,6 +1,6 @@
 @font-face {
     font-family: "NotoSansThai_Condensed-Medium";
-    src: url("../fonts/NotoSansThai_Condensed-Medium.ttf") format("truetype");
+    src: url("../fonts/NotoSansThai_Condensed-Medium.ttf?v=20260912-font-1") format("truetype");
     font-style: normal;
     font-weight: 500;
     font-display: swap;
@@ -8,7 +8,7 @@
 
 @font-face {
     font-family: "NotoSansThai_Condensed-Medium";
-    src: url("../fonts/NotoSans-Italic-VariableFont_wdth,wght.ttf") format("truetype");
+    src: url("../fonts/NotoSans-Italic-VariableFont_wdth,wght.ttf?v=20260912-font-1") format("truetype");
     font-style: italic;
     font-weight: 100 900;
     font-stretch: 62.5% 100%;

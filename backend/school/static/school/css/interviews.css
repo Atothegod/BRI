@@ -1,0 +1,52 @@
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; color: var(--bri-forest); background: #fff; font-family: var(--font-primary); }
+.interviews { max-width: 1200px; margin: auto; padding: 24px; }
+.schedule-header, .search-bar, .selection-bar, .schedule-footer { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.schedule-header { justify-content: space-between; padding-bottom: 24px; border-bottom: 1px solid var(--bri-border); }
+.schedule-header > a:first-child { display: block; width: 210px; height: 64px; overflow: hidden; background: var(--bri-forest); }
+.schedule-header .brand-logo-frame { position: relative; display: block; width: 210px; height: 64px; overflow: hidden; }
+.schedule-header img { position: absolute; width: 286px; height: 286px; max-width: none; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+a { color: var(--bri-sage); text-underline-offset: 3px; }
+h1 { font-size: 28px; margin: 24px 0; }
+button, input, textarea { font: inherit; letter-spacing: 0; }
+input:not([type=checkbox]), textarea { width: 100%; padding: 10px 12px; border: 1px solid #89978b; border-radius: 4px; min-height: 44px; background: #fff; color: var(--bri-forest); }
+input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--bri-sage); cursor: pointer; }
+button { padding: 10px 16px; min-height: 44px; border: 1px solid var(--bri-sage); border-radius: 4px; background: var(--bri-sage); color: #fff; cursor: pointer; }
+button:disabled { opacity: .5; cursor: default; }
+:focus-visible { outline: 3px solid var(--bri-gold); outline-offset: 3px; }
+.search-bar { margin-bottom: 24px; }
+.search-bar input { flex: 1; min-width: 180px; }
+.schedule-fields { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 20px; padding: 24px 0; border-top: 1px solid var(--bri-border); }
+label { display: block; margin-bottom: 6px; font-weight: 600; }
+.selection-bar { justify-content: space-between; padding: 16px 0; }
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+th, td { padding: 14px 12px; border-bottom: 1px solid var(--bri-border); vertical-align: top; min-width: 130px; }
+th:first-child, td:first-child { min-width: 44px; width: 44px; }
+th { background: #f7f8f6; white-space: nowrap; }
+td small { display: block; color: #5f6b63; margin-top: 4px; overflow-wrap: anywhere; }
+.retry { display: block; background: #fff; color: var(--bri-sage); margin-top: 8px; }
+.schedule-footer { padding: 24px 0; }
+.schedule-footer nav { flex: 1; }
+.notice, #send-summary { background: var(--bri-success-soft); padding: 14px; border-left: 3px solid var(--bri-sage); }
+.errors { background: #fff4f2; color: #b42318; padding: 12px; }
+.warning, .state-failed, .state-pending { color: var(--bri-warning-ink); }
+.state-sent { color: var(--bri-sage); }
+.confirmation-page { display: grid; min-height: 100vh; min-height: 100dvh; padding: 24px 16px; background: var(--bri-page-background); place-items: center; }
+.confirmation-shell { width: min(100%, 520px); padding: 28px 24px; text-align: center; background: #fff; border: 1px solid var(--bri-border); border-top: 3px solid var(--bri-gold); border-radius: 8px; box-shadow: 0 8px 28px rgba(18, 39, 29, .06); }
+.confirmation-brand { width: 226px; height: 66px; margin: 0 auto 24px; overflow: hidden; background: var(--bri-forest); border-radius: 8px; }
+.confirmation-brand .brand-logo-frame { position: relative; display: block; width: 100%; height: 100%; overflow: hidden; }
+.confirmation-brand img { position: absolute; width: 310px; height: 310px; max-width: none; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+.confirmation-eyebrow { color: var(--bri-sage); font-size: 13px; font-weight: 700; text-transform: uppercase; }
+.confirmation-shell h1 { margin: 8px 0; font-size: 26px; }
+.confirmation-shell > p { margin: 0 0 22px; color: #5f6b63; }
+.appointment-summary { margin: 0 0 24px; text-align: left; border: 1px solid var(--bri-border); border-radius: 6px; overflow: hidden; }
+.appointment-summary div { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 12px; padding: 13px 15px; border-bottom: 1px solid var(--bri-border); }
+.appointment-summary div:last-child { border-bottom: 0; }
+.appointment-summary dt { color: #5f6b63; }
+.appointment-summary dd { margin: 0; color: var(--bri-forest); font-weight: 700; overflow-wrap: anywhere; }
+.confirm-button { width: 100%; background: var(--bri-forest); border-color: var(--bri-forest); font-weight: 700; }
+.confirmation-success { padding: 14px; color: var(--bri-sage); background: var(--bri-success-soft); border-radius: 6px; font-weight: 700; }
+@media(max-width: 420px) { .appointment-summary div { grid-template-columns: 1fr; gap: 3px; } }
+@media(max-width: 640px) { .interviews { padding: 16px; } .schedule-fields { grid-template-columns: 1fr 1fr; } .details-field { grid-column: 1 / -1; } .schedule-fields > div { min-width: 0; } #confirm-schedule { width: 100%; } }

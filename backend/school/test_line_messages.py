@@ -11,7 +11,12 @@ from .line import (
 from .models import Person, Student
 
 
-@override_settings(PUBLIC_BASE_URL="https://bri.example", LINE_LIFF_ENABLED=False)
+@override_settings(
+    PUBLIC_BASE_URL="https://bri.example", LINE_LIFF_ENABLED=False,
+    LINE_LIFF_ID="unrelated-registration-app",
+    LINE_ANNOUNCEMENT_LIFF_URL="https://liff.line.me/2011088039-52ryg2t9",
+    LINE_PAYMENT_LIFF_URL="https://liff.line.me/2011088039-wZDRAbFk",
+)
 class LineMessageContentTests(SimpleTestCase):
     def setUp(self):
         self.person = Person(first_name="Test", last_name="Student", status=Person.Status.PASSED)
@@ -31,6 +36,10 @@ class LineMessageContentTests(SimpleTestCase):
                     self.student.is_paid = paid
                     self.student.payment_slip = slip
                     message = build_interview_passed_flex_message(self.person, self.student)
+                    self.assertEqual(
+                        [button["action"]["uri"] for button in message["contents"]["footer"]["contents"]],
+                        ["https://liff.line.me/2011088039-52ryg2t9", "https://liff.line.me/2011088039-wZDRAbFk"],
+                    )
                     rows = self.rows(message)
                     self.assertEqual(message["contents"]["header"]["backgroundColor"], "#12271D")
                     self.assertEqual(message["contents"]["footer"]["backgroundColor"], "#F3F0E8")
@@ -43,6 +52,10 @@ class LineMessageContentTests(SimpleTestCase):
     def test_payment_confirmation_has_green_status_and_student_id(self):
         self.student.is_paid = True
         message = build_payment_approved_flex_message(self.person, self.student)
+        self.assertEqual(
+            message["contents"]["footer"]["contents"][0]["action"]["uri"],
+            "https://liff.line.me/2011088039-52ryg2t9",
+        )
         rows = self.rows(message)
         self.assertEqual(message["contents"]["header"]["backgroundColor"], "#12271D")
         self.assertEqual(message["contents"]["footer"]["backgroundColor"], "#F3F0E8")

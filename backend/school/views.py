@@ -609,7 +609,7 @@ def teacher_dashboard(request):
     return render(request, "school/teacher_dashboard.html", context)
 
 
-@login_required
+@login_required(login_url="admin:login")
 def admin_overview_dashboard(request):
     if not is_school_admin(request.user):
         raise PermissionDenied

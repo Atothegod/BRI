@@ -4,6 +4,7 @@ from urllib import error
 from urllib import parse, request
 
 from django.conf import settings
+from django.core import signing
 from django.urls import reverse
 
 
@@ -63,28 +64,12 @@ def verify_line_id_token(id_token):
     return profile
 
 
-def build_public_url(path):
-    base_url = settings.PUBLIC_BASE_URL.rstrip("/")
-    if not base_url:
-        return path
-    return f"{base_url}{path}"
-
-
-def build_liff_or_public_url(path):
-    if settings.LINE_LIFF_ENABLED and settings.LINE_LIFF_ID:
-        return f"https://liff.line.me/{settings.LINE_LIFF_ID}{path}"
-    return build_public_url(path)
-
-
-def result_url(line_user_id):
-    path = reverse("school:announcement_result")
-    if line_user_id:
-        path = f"{path}?{parse.urlencode({'line_user_id': line_user_id})}"
-    return build_liff_or_public_url(path)
+def result_url():
+    return settings.LINE_ANNOUNCEMENT_LIFF_URL
 
 
 def payment_url():
-    return build_liff_or_public_url(reverse("school:student_payment_upload"))
+    return settings.LINE_PAYMENT_LIFF_URL
 
 
 def line_push_unavailable_reason(person):
@@ -155,7 +140,7 @@ def build_interview_passed_flex_message(person, student):
     ]
     if student.is_paid:
         rows.append(build_flex_row("รหัสนักศึกษา", student.student_id))
-    result_link = result_url(person.line_user_id)
+    result_link = result_url()
     pay_link = payment_url()
     return {
         "type": "flex",
@@ -251,7 +236,7 @@ def build_interview_passed_flex_message(person, student):
 def build_payment_approved_flex_message(person, student):
     if not student.is_paid:
         raise ValueError("Payment approval message requires is_paid=True")
-    result_link = result_url(person.line_user_id)
+    result_link = result_url()
     return {
         "type": "flex",
         "altText": f"BRI ยืนยันการชำระเงินแล้ว รหัสนักศึกษา {student.student_id}",
@@ -369,3 +354,55 @@ def notify_payment_approved(person, student):
         person.line_user_id,
         [build_payment_approved_flex_message(person, student)],
     )
+
+
+def build_interview_invitation_flex_message(person):
+    from zoneinfo import ZoneInfo
+    from django.utils import timezone
+
+    appointment = timezone.localtime(person.interview_at, ZoneInfo("Asia/Bangkok"))
+    date = appointment.strftime("%d/%m/%Y")
+    time = appointment.strftime("%H:%M")
+    confirmation_token = signing.dumps(
+        {"person_id": person.pk, "interview_at": person.interview_at.isoformat()},
+        salt="school.interview-confirmation",
+        compress=True,
+    )
+    confirmation_link = (
+        f"{settings.PUBLIC_BASE_URL.rstrip('/')}{reverse('school:interview_confirmation')}"
+        f"?{parse.urlencode({'token': confirmation_token})}"
+    )
+    contents = [
+        {"type": "text", "text": person.full_name, "weight": "bold", "wrap": True, "color": "#12271D"},
+        build_flex_row("วันที่ (ค.ศ.)", date),
+        build_flex_row("เวลาไทย", f"{time} น."),
+    ]
+    if person.interview_details:
+        contents.append({"type": "text", "text": person.interview_details, "size": "sm", "wrap": True, "color": "#425B46"})
+    return {
+        "type": "flex", "altText": f"BRI นัดสัมภาษณ์ {date} เวลา {time} น. (ประเทศไทย)",
+        "contents": {
+            "type": "bubble", "size": "mega",
+            "header": {"type": "box", "layout": "vertical", "backgroundColor": "#12271D", "paddingAll": "20px", "contents": [
+                {"type": "text", "text": "BRI Interview", "color": "#C2A256", "size": "xs", "weight": "bold"},
+                {"type": "text", "text": "แจ้งนัดสัมภาษณ์", "color": "#FFFFFF", "size": "lg", "weight": "bold", "margin": "sm", "wrap": True},
+            ]},
+            "body": {"type": "box", "layout": "vertical", "spacing": "md", "contents": contents},
+            "footer": {
+                "type": "box",
+                "layout": "vertical",
+                "backgroundColor": "#F3F0E8",
+                "contents": [{
+                    "type": "button",
+                    "style": "primary",
+                    "height": "sm",
+                    "color": "#425B46",
+                    "action": {
+                        "type": "uri",
+                        "label": "ยืนยันนัดสัมภาษณ์",
+                        "uri": confirmation_link,
+                    },
+                }],
+            },
+        },
+    }

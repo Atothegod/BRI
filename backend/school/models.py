@@ -55,6 +55,14 @@ class Person(TimeStampedModel):
         blank=True,
     )
     extra_data = models.JSONField(default=dict, blank=True)
+    interview_at = models.DateTimeField(null=True, blank=True)
+    interview_details = models.CharField(max_length=1000, blank=True)
+    interview_notified_at = models.DateTimeField(null=True, blank=True)
+    interview_confirmed_at = models.DateTimeField(null=True, blank=True)
+    interview_notification_state = models.CharField(
+        max_length=10, blank=True,
+        choices=[("pending", "รอส่ง"), ("sent", "LINE รับข้อความแล้ว"), ("failed", "ส่งไม่สำเร็จ")],
+    )
 
     class Meta:
         constraints = [

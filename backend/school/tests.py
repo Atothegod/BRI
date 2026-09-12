@@ -338,6 +338,10 @@ class AgentNotificationEndpointTests(TestCase):
         self.assertEqual(response.json()["notifications"], [])
 
 
+@override_settings(
+    LINE_ANNOUNCEMENT_LIFF_URL="https://liff.line.me/2011088039-52ryg2t9",
+    LINE_PAYMENT_LIFF_URL="https://liff.line.me/2011088039-wZDRAbFk",
+)
 class LineProactiveNotificationTests(TestCase):
     @override_settings(
         LINE_MESSAGING_CHANNEL_ACCESS_TOKEN="line-token",
@@ -362,7 +366,7 @@ class LineProactiveNotificationTests(TestCase):
         self.assertEqual(payload["messages"][0]["type"], "flex")
         self.assertIn("ผ่านการคัดเลือก", payload["messages"][0]["altText"])
         self.assertIn(
-            "https://bri.example/results/?line_user_id=Unotifypass",
+            "https://liff.line.me/2011088039-52ryg2t9",
             json.dumps(payload["messages"][0], ensure_ascii=False),
         )
         self.assertNotIn(student.student_id, json.dumps(payload["messages"][0], ensure_ascii=False))

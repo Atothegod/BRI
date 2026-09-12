@@ -1,0 +1,12 @@
+{% extends "admin/index.html" %}
+
+{% block content %}
+{% if request.user.is_superuser %}
+<div class="module">
+    <h2>จัดการโรงเรียน BRI</h2>
+    <p><a href="{% url 'school:interview_schedule' %}">นัดสัมภาษณ์และแจ้ง LINE</a></p>
+    <p><a href="{% url 'school:admin_overview_dashboard' %}">ภาพรวมโรงเรียน</a></p>
+</div>
+{% endif %}
+{{ block.super }}
+{% endblock %}

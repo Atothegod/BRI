@@ -164,6 +164,12 @@ LINE_RETURN_URL = os.environ.get(
     "https://line.me/R/oaMessage/%40522lxoja",
 )
 LINE_LIFF_ID = os.environ.get("LINE_LIFF_ID", "")
+LINE_PAYMENT_LIFF_URL = os.environ.get(
+    "LINE_PAYMENT_LIFF_URL", "https://liff.line.me/2011088039-wZDRAbFk"
+).strip() or "https://liff.line.me/2011088039-wZDRAbFk"
+LINE_ANNOUNCEMENT_LIFF_URL = os.environ.get(
+    "LINE_ANNOUNCEMENT_LIFF_URL", "https://liff.line.me/2011088039-52ryg2t9"
+).strip() or "https://liff.line.me/2011088039-52ryg2t9"
 LINE_LIFF_ENABLED = env_bool("LINE_LIFF_ENABLED", not DEBUG)
 LINE_LOGIN_CHANNEL_ID = os.environ.get("LINE_LOGIN_CHANNEL_ID", "")
 LINE_LIFF_ALLOW_UNVERIFIED_PROFILE = env_bool(

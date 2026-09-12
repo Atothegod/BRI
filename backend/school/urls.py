@@ -2,11 +2,16 @@ from django.contrib.auth import views as auth_views
 from django.urls import path
 
 from . import views
+from . import interviews
 
 
 app_name = "school"
 
 urlpatterns = [
+    path("school-admin/interviews/", interviews.interview_schedule, name="interview_schedule"),
+    path("school-admin/interviews/<int:pk>/notify/", interviews.interview_notify, name="interview_notify"),
+    path("school-admin/interviews/status/", interviews.interview_confirmation_status, name="interview_confirmation_status"),
+    path("interviews/confirm/", interviews.interview_confirmation, name="interview_confirmation"),
     path("", views.registration, name="registration"),
     path("liff/profile/", views.liff_profile_sync, name="liff_profile_sync"),
     path("line/results/", views.liff_results_launch, name="liff_results_launch"),

@@ -16,6 +16,9 @@ from .models import (
 )
 
 
+admin.site.index_template = "school/admin_index.html"
+
+
 class CountryCodeFilter(admin.SimpleListFilter):
     title = _("ประเทศ")
     parameter_name = "country"
@@ -53,6 +56,9 @@ class PersonAdmin(admin.ModelAdmin):
         "status",
         "admission_type_display",
         "country_display",
+        "interview_at",
+        "interview_notification_state",
+        "interview_confirmed_at",
         "user",
     )
     list_filter = ("status", "admission_type", CountryCodeFilter, "gender")
@@ -68,6 +74,7 @@ class PersonAdmin(admin.ModelAdmin):
         "line_display_name",
     )
     fieldsets = (
+        ("นัดสัมภาษณ์", {"fields": ("interview_at", "interview_details", "interview_notification_state", "interview_notified_at", "interview_confirmed_at")}),
         (
             "ข้อมูลผู้สมัคร",
             {
@@ -98,7 +105,7 @@ class PersonAdmin(admin.ModelAdmin):
             },
         ),
     )
-    readonly_fields = ("line_connected_at",)
+    readonly_fields = ("line_connected_at", "interview_at", "interview_details", "interview_notification_state", "interview_notified_at", "interview_confirmed_at")
     actions = (
         "mark_as_passed_interview",
         "mark_as_passed_online",

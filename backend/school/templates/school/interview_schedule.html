@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load static tz %}
+{% block title %}นัดสัมภาษณ์ | BRI{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20260912-2">{% endblock %}
+{% block content %}
+<main class="interviews">
+    <header class="schedule-header">
+        <a href="{% url 'school:admin_overview_dashboard' %}">{% include "school/includes/brand_logo.html" with variant="nav" %}</a>
+        <nav aria-label="เมนูผู้ดูแล">
+            <a href="{% url 'admin:index' %}">Django Admin</a>
+            <a href="{% url 'school:admin_overview_dashboard' %}">ภาพรวมโรงเรียน</a>
+        </nav>
+    </header>
+    <h1>นัดสัมภาษณ์</h1>
+    {% for message in messages %}<p role="status" class="notice">{{ message }}</p>{% endfor %}
+    <p id="send-summary" role="status" hidden></p>
+    <form method="get" class="search-bar">
+        <label for="search">ค้นหาผู้สมัคร</label>
+        <input id="search" name="q" value="{{ query }}" placeholder="ชื่อ เบอร์โทร หรือชื่อ LINE">
+        <button type="submit">ค้นหา</button>
+        {% if query %}<a href="{% url 'school:interview_schedule' %}">ล้างการค้นหา</a>{% endif %}
+    </form>
+    <form method="post" id="schedule-form">
+        {% csrf_token %}
+        {% if form.errors %}<div role="alert" class="errors">{{ form.errors }}</div>{% endif %}
+        <div class="schedule-fields">
+            <div>{{ form.date.label_tag }}{{ form.date }}</div>
+            <div>{{ form.time.label_tag }}{{ form.time }}</div>
+            <div class="details-field">{{ form.details.label_tag }}{{ form.details }}</div>
+        </div>
+        <div class="selection-bar"><strong>ผู้สมัครระหว่างดำเนินการ {{ page_obj.paginator.count }} คน</strong><span>เลือก <b id="selected-count">0</b> คน</span></div>
+        <div class="table-scroll">
+        <table>
+            <thead><tr><th><input type="checkbox" id="select-all" aria-label="เลือกทุกคนในหน้านี้"></th><th>ผู้สมัคร</th><th>LINE</th><th>นัดสัมภาษณ์ (เวลาไทย)</th><th>การแจ้งเตือน</th><th>การตอบรับ</th></tr></thead>
+            <tbody>{% timezone "Asia/Bangkok" %}{% for person in page_obj %}
+                <tr>
+                    <td><input type="checkbox" name="people" value="{{ person.pk }}" aria-label="เลือก {{ person.full_name }}" {% if person.pk|stringformat:"s" in selected_ids %}checked{% endif %}></td>
+                    <td><strong>{{ person.full_name }}</strong><small>{{ person.phone|default:"-" }}</small></td>
+                    <td>{{ person.line_display_name|default:"-" }}{% if not person.line_user_id %}<small class="warning">ยังไม่เชื่อม LINE</small>{% endif %}</td>
+                    <td>{% if person.interview_at %}{{ person.interview_at|date:"d/m/Y H:i" }}<small>{{ person.interview_details|truncatechars:100 }}</small>{% else %}-{% endif %}</td>
+                    <td><span data-status="{{ person.pk }}" class="state-{{ person.interview_notification_state }}">{{ person.get_interview_notification_state_display|default:"ยังไม่นัด" }}</span>
+                        {% if person.interview_at and person.interview_notification_state != "sent" %}<button class="retry" type="button" data-notify="{{ person.pk }}" data-at="{{ person.interview_at|date:'c' }}" data-url="{% url 'school:interview_notify' person.pk %}">ส่ง LINE</button>{% endif %}
+                    </td>
+                    <td data-confirmation="{{ person.pk }}">{% if person.interview_confirmed_at %}<strong class="state-sent">ยืนยันแล้ว</strong><small>{{ person.interview_confirmed_at|date:"d/m/Y H:i" }}</small>{% elif person.interview_at %}<span class="state-pending">รอผู้สมัครยืนยัน</span>{% else %}-{% endif %}</td>
+                </tr>
+            {% empty %}<tr><td colspan="6">ไม่พบผู้สมัคร</td></tr>{% endfor %}{% endtimezone %}</tbody>
+        </table>
+        </div>
+        <footer class="schedule-footer">
+            <span>หน้า {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+            <nav aria-label="หน้ารายชื่อ">{% if page_obj.has_previous %}<a href="?q={{ query|urlencode }}&page={{ page_obj.previous_page_number }}">ก่อนหน้า</a>{% endif %} {% if page_obj.has_next %}<a href="?q={{ query|urlencode }}&page={{ page_obj.next_page_number }}">ถัดไป</a>{% endif %}</nav>
+            <button type="submit" id="confirm-schedule" disabled>ยืนยันนัดและแจ้ง LINE</button>
+        </footer>
+    </form>
+</main>
+{{ send_queue|json_script:"interview-queue" }}
+<div hidden data-confirmation-status-url="{% url 'school:interview_confirmation_status' %}"></div>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'school/js/interviews.js' %}?v=20260912-2" defer></script>{% endblock %}

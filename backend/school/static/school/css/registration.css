@@ -133,7 +133,7 @@ svg {
     padding: max(20px, env(safe-area-inset-top)) 22px calc(22px + var(--safe-bottom));
     overflow-y: auto;
     color: #ffffff;
-    background: linear-gradient(180deg, var(--bri-forest) 0%, var(--bri-forest) 54%, var(--bri-forest) 100%);
+    background: #12271d;
     border-right: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: none;
     flex-direction: column;
@@ -914,7 +914,7 @@ svg {
     color: var(--color-ink);
     background: #fbfdfb;
     border: 1px solid #ccd8d0;
-    border-radius: 8px;
+    border-radius: 30px;
     outline: 0;
     font-size: 1rem;
     line-height: 1.45;
@@ -2420,7 +2420,7 @@ select.form-control {
 
     .registration-app .mobile-app-bar {
         color: #ffffff;
-        background: rgba(18, 39, 29, 0.96);
+        background: #12271d;
         border-bottom-color: rgba(255, 255, 255, 0.09);
         box-shadow: 0 1px 4px rgba(3, 24, 14, 0.08);
     }

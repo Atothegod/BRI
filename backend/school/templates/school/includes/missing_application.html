@@ -1,0 +1,16 @@
+{% load static %}
+<div class="success-mark empty-application-mark" aria-hidden="true">
+    <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#info"></use></svg>
+</div>
+<span class="eyebrow">สถานะใบสมัคร</span>
+<h1 id="{{ missing_title_id }}">ยังไม่พบใบสมัคร</h1>
+
+<div class="result-actions empty-application-actions">
+    <a class="button button--primary success-action" href="{% url 'school:registration' %}">
+        <span>สมัครเรียน</span>
+        <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
+    </a>
+    <a class="button button--secondary success-action" href="{{ line_return_url }}" data-liff-close>
+        <span>กลับไปยัง LINE</span>
+    </a>
+</div>

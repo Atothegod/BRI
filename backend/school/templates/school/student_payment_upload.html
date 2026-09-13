@@ -4,7 +4,7 @@
 {% block title %}อัปโหลดสลิป | BRI School of Fivefold{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20260913-font-3">
+<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20260913-empty-state-1">
 {% endblock %}
 
 {% block content %}
@@ -57,38 +57,8 @@
                 <span>กลับไปยัง LINE</span>
             </a>
         </div>
-        {% elif payment_state == "missing" %}
-        <div class="success-mark result-mark" aria-hidden="true">
-            <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#user"></use></svg>
-        </div>
-        <span class="eyebrow">ไม่พบข้อมูล</span>
-        <h1 id="payment-title">ไม่พบใบสมัครของ LINE นี้</h1>
-        <p class="success-lead">กรุณาสมัครเรียนก่อน หรือเปิดหน้านี้จาก LINE account ที่ใช้สมัคร</p>
-        <div class="result-actions">
-            <a class="button button--primary success-action" href="{% url 'school:registration' %}">
-                <span>ไปหน้าสมัครเรียน</span>
-                <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
-            </a>
-            <a class="button button--secondary success-action" href="{{ line_return_url }}" data-liff-close>
-                <span>กลับไปยัง LINE</span>
-            </a>
-        </div>
-        {% elif payment_state == "missing_line" %}
-        <div class="success-mark result-mark" aria-hidden="true">
-            <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#lock"></use></svg>
-        </div>
-        <span class="eyebrow">จ่ายเงินได้หลังสัมภาษณ์ผ่าน</span>
-        <h1 id="payment-title">กำลังตรวจสอบ LINE account</h1>
-        <p class="success-lead">กรุณาเปิดหน้านี้ผ่าน LINE เพื่อให้ระบบตรวจสอบผลสัมภาษณ์ก่อนแสดงช่องอัปโหลดสลิป</p>
-        <div class="receipt-block result-card">
-            <span>เงื่อนไขการชำระเงิน</span>
-            <strong>ผ่านสัมภาษณ์ก่อน</strong>
-            <small>เมื่อระบบพบว่าสถานะผ่านแล้ว ช่องอัปโหลดสลิปจะแสดงในหน้านี้</small>
-        </div>
-        <a class="button button--primary success-action payment-action" href="{{ line_return_url }}" data-liff-close>
-            <span>กลับไปยัง LINE</span>
-            <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
-        </a>
+        {% elif payment_state == "missing" or payment_state == "missing_line" %}
+        {% include "school/includes/missing_application.html" with missing_title_id="payment-title" %}
         {% elif payment_state == "ready" %}
         <span class="eyebrow">แจ้งชำระเงิน</span>
         <h1 id="payment-title">อัปโหลดสลิปการโอนเงิน</h1>

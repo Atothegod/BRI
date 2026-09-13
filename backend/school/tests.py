@@ -862,7 +862,10 @@ class TeacherFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, "รหัสนักศึกษา")
         self.assertNotContains(response, 'name="student_id"')
-        self.assertContains(response, "จ่ายเงินได้หลังสัมภาษณ์ผ่าน")
+        self.assertContains(response, "ยังไม่พบใบสมัคร")
+        self.assertContains(response, "สถานะใบสมัคร")
+        self.assertNotContains(response, "กรุณาสมัครเรียนก่อน")
+        self.assertNotContains(response, "กำลังตรวจสอบ LINE account")
         self.assertNotContains(response, "ส่งสลิปให้ตรวจสอบ")
         self.assertNotContains(response, 'name="payment_slip"')
 
@@ -879,7 +882,7 @@ class TeacherFlowTests(TestCase):
             {"line_user_id": "Uquerypayment"},
         )
 
-        self.assertContains(response, "กำลังตรวจสอบ LINE account")
+        self.assertContains(response, "ยังไม่พบใบสมัคร")
         self.assertNotContains(response, "ส่งสลิปให้ตรวจสอบ")
         self.assertNotContains(response, 'name="payment_slip"')
 
@@ -901,7 +904,7 @@ class TeacherFlowTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "กรุณาเปิดหน้านี้ผ่าน LINE")
+        self.assertContains(response, "ยังไม่พบใบสมัคร")
         self.assertNotContains(response, "ส่งสลิปให้ตรวจสอบ")
         student.refresh_from_db()
         self.assertFalse(student.payment_slip)
@@ -1092,9 +1095,12 @@ class AnnouncementResultTests(TestCase):
         response = self.client.get(reverse("school:announcement_result"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "ไม่พบข้อมูล LINE นี้")
+        self.assertContains(response, "ยังไม่พบใบสมัคร")
+        self.assertContains(response, "สถานะใบสมัคร")
+        self.assertNotContains(response, "กรุณาเปิดหน้านี้จาก LINE rich menu")
+        self.assertNotContains(response, "LINE account")
         self.assertContains(response, "กลับไปยัง LINE")
-        self.assertContains(response, "หน้าสมัครเรียน")
+        self.assertContains(response, "สมัครเรียน")
 
 
 @override_settings(

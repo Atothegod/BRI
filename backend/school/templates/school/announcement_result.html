@@ -4,7 +4,7 @@
 {% block title %}ประกาศผลสัมภาษณ์ | BRI School of Fivefold{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20260913-font-3">
+<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20260913-empty-state-1">
 {% endblock %}
 
 {% block content %}
@@ -14,17 +14,19 @@
             {% include "school/includes/brand_logo.html" with variant="success" %}
         </a>
 
+        {% if result_state != "missing" %}
         <div class="success-mark result-mark" aria-hidden="true">
             {% if result_state == "paid" or result_state == "passed" %}
             <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#check"></use></svg>
             {% elif result_state == "failed" %}
             <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#x"></use></svg>
-            {% else %}
-            <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#user"></use></svg>
             {% endif %}
         </div>
+        {% endif %}
 
+        {% if result_state != "missing" %}
         <span class="eyebrow">ผลสัมภาษณ์</span>
+        {% endif %}
 
         {% if result_state == "paid" %}
         <h1 id="result-title">ยินดีด้วย ชำระเงินเรียบร้อยแล้ว</h1>
@@ -63,13 +65,7 @@
             <small>กรุณากลับมาตรวจสอบอีกครั้งภายหลัง</small>
         </div>
         {% else %}
-        <h1 id="result-title">ไม่พบข้อมูล LINE นี้</h1>
-        <p class="success-lead">กรุณาเปิดหน้านี้จาก LINE rich menu หรือสมัครเรียนก่อนตรวจสอบผล</p>
-        <div class="receipt-block result-card">
-            <span>LINE account</span>
-            <strong>{% if line_user_id %}ไม่พบข้อมูล{% else %}ยังไม่ได้เชื่อมต่อ{% endif %}</strong>
-            <small>ระบบใช้ LINE user id เพื่อค้นหาผลประกาศ</small>
-        </div>
+        {% include "school/includes/missing_application.html" with missing_title_id="result-title" %}
         {% endif %}
 
         <div class="result-actions">
@@ -86,7 +82,7 @@
             <a class="button button--secondary success-action" href="{{ line_return_url }}" data-liff-close>
                 <span>กลับไปยัง LINE</span>
             </a>
-            {% else %}
+            {% elif result_state != "missing" %}
             <a class="button button--primary success-action" href="{{ line_return_url }}" data-liff-close>
                 <span>กลับไปยัง LINE</span>
                 <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>

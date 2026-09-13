@@ -2344,11 +2344,21 @@ select.form-control {
     box-shadow: 0 8px 24px rgba(159, 18, 57, 0.16);
 }
 
-.result-shell--pending .result-mark,
-.result-shell--missing .result-mark {
+.result-shell--pending .result-mark {
     background: var(--bri-warning-ink);
     border-color: #f8edc9;
     box-shadow: 0 8px 24px rgba(124, 90, 22, 0.16);
+}
+
+.empty-application-mark {
+    color: #ffffff;
+    background: var(--bri-forest);
+    border-color: var(--bri-ivory);
+    box-shadow: 0 8px 24px rgba(18, 39, 29, 0.16);
+}
+
+.empty-application-actions {
+    margin-top: 28px;
 }
 
 .result-card {

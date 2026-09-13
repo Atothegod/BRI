@@ -4,34 +4,26 @@
 {% block title %}สมัครเรียนแล้ว | BRI School of Fivefold{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20260913-empty-state-1">
+<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20260914-journey-1">
 {% endblock %}
 
 {% block content %}
 <main class="success-page">
-    <section class="success-shell already-registered-shell" aria-labelledby="already-title">
+    <section class="success-shell journey-shell already-registered-shell" aria-labelledby="already-title">
         <a class="mobile-brand success-brand" href="{% url 'school:registration' %}" aria-label="BRI School of Fivefold">
             {% include "school/includes/brand_logo.html" with variant="success" %}
         </a>
 
-        <div class="success-mark{% if student and student.is_paid %} success-mark--paid{% endif %}" aria-hidden="true">
-            <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#check"></use></svg>
-        </div>
         {% if student and student.is_paid %}
-        <span class="eyebrow">ยืนยันการเข้าเรียนแล้ว</span>
-        <h1 id="already-title">ยินดีด้วย คุณเป็นนักศึกษา BRI แล้ว</h1>
-        <p class="success-lead">ระบบยืนยันการชำระเงินของคุณ {{ person.full_name }} เรียบร้อยแล้ว</p>
-
-        <div class="receipt-block paid-card">
-            <span>รหัสนักศึกษา</span>
-            <strong>{{ student.student_id }}</strong>
-            {% if student.group %}
-            <small>{{ student.group }}{% if student.grade %} · {{ student.grade }}{% endif %}</small>
+        {% include "school/includes/paid_student_summary.html" with paid_title_id="already-title" %}
+        {% else %}
+        <div class="success-mark{% if person.status == 'passed' %} status-mark--success{% else %} status-mark--pending{% endif %}" aria-hidden="true">
+            {% if person.status == "passed" %}
+            <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#check"></use></svg>
             {% else %}
-            <small>ทีมงานจะอัปเดตกลุ่มเรียนให้ในระบบ</small>
+            <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#clock"></use></svg>
             {% endif %}
         </div>
-        {% else %}
         <span class="eyebrow">พบใบสมัครแล้ว</span>
         <h1 id="already-title">คุณสมัครเรียนแล้ว</h1>
         <p class="success-lead">ระบบพบใบสมัครของคุณ {{ person.full_name }} ที่ผูกกับ LINE account นี้แล้ว</p>
@@ -41,8 +33,6 @@
             <strong>{{ person.get_status_display }}</strong>
             {% if student %}
             <small>{% if student.payment_slip %}รอตรวจสอบการชำระเงิน{% else %}รอชำระเงิน{% endif %}</small>
-            {% else %}
-            <small>รหัสข้อมูล #{{ person.pk }}</small>
             {% endif %}
         </div>
         {% endif %}
@@ -57,10 +47,6 @@
             </a>
         </div>
 
-        <p class="success-security">
-            <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#shield-check"></use></svg>
-            ระบบใช้ LINE account นี้ตรวจสอบใบสมัครของคุณ
-        </p>
     </section>
 </main>
 {% endblock %}

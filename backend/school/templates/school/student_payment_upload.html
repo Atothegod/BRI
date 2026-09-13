@@ -4,41 +4,26 @@
 {% block title %}อัปโหลดสลิป | BRI School of Fivefold{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20260913-empty-state-1">
+<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20260914-journey-1">
 {% endblock %}
 
 {% block content %}
 <main class="success-page auth-page" data-registration-app>
-    <section class="success-shell auth-shell" aria-labelledby="payment-title">
+    <section class="success-shell journey-shell auth-shell" aria-labelledby="payment-title">
         <a class="mobile-brand success-brand" href="{% url 'school:registration' %}" aria-label="BRI School of Fivefold">
             {% include "school/includes/brand_logo.html" with variant="success" %}
         </a>
 
         {% if payment_state == "paid" %}
-        <div class="success-mark success-mark--paid" aria-hidden="true">
-            <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#check"></use></svg>
-        </div>
-        <span class="eyebrow">ยืนยันการเข้าเรียนแล้ว</span>
-        <h1 id="payment-title">ยินดีด้วย ชำระเงินเรียบร้อยแล้ว</h1>
-        <p class="success-lead">คุณ {{ person.full_name }} ได้รับการยืนยันเป็นนักศึกษา BRI อย่างสมบูรณ์แล้ว</p>
-
-        <div class="receipt-block paid-card">
-            <span>รหัสนักศึกษา</span>
-            <strong>{{ student.student_id }}</strong>
-            {% if student.group %}
-            <small>{{ student.group }}{% if student.grade %} · {{ student.grade }}{% endif %}</small>
-            {% else %}
-            <small>ทีมงานจะอัปเดตกลุ่มเรียนให้ในระบบ</small>
-            {% endif %}
-        </div>
+        {% include "school/includes/paid_student_summary.html" with paid_title_id="payment-title" %}
 
         <a class="button button--primary success-action payment-action" href="{{ line_return_url }}" data-liff-close>
             <span>กลับไปยัง LINE</span>
             <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
         </a>
         {% elif payment_state == "not_student" %}
-        <div class="success-mark result-mark" aria-hidden="true">
-            <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#lock"></use></svg>
+        <div class="success-mark status-mark--pending" aria-hidden="true">
+            <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#clock"></use></svg>
         </div>
         <span class="eyebrow">จ่ายเงินได้หลังสัมภาษณ์ผ่าน</span>
         <h1 id="payment-title">ยังไม่เปิดให้ชำระเงิน</h1>
@@ -60,6 +45,9 @@
         {% elif payment_state == "missing" or payment_state == "missing_line" %}
         {% include "school/includes/missing_application.html" with missing_title_id="payment-title" %}
         {% elif payment_state == "ready" %}
+        <div class="success-mark status-mark--success" aria-hidden="true">
+            <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#check"></use></svg>
+        </div>
         <span class="eyebrow">แจ้งชำระเงิน</span>
         <h1 id="payment-title">อัปโหลดสลิปการโอนเงิน</h1>
         <p class="success-lead">ระบบตรวจสอบแล้วว่าคุณผ่านสัมภาษณ์ สามารถส่งสลิปเพื่อยืนยันการเข้าเรียนได้</p>

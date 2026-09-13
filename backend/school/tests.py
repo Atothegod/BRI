@@ -116,7 +116,8 @@ class PersonViewTests(TestCase):
 
         success_response = self.client.get(reverse("school:registration_success"))
         self.assertContains(success_response, person.get_status_display())
-        self.assertContains(success_response, f"#{person.pk}")
+        self.assertNotContains(success_response, "รหัสข้อมูล")
+        self.assertContains(success_response, "#clock")
         self.assertContains(success_response, "รอตรวจสอบข้อมูลของคุณ")
         self.assertContains(
             success_response,
@@ -994,7 +995,8 @@ class TeacherFlowTests(TestCase):
 
         response = self.client.get(reverse("school:student_payment_upload"))
 
-        self.assertContains(response, "ยินดีด้วย ชำระเงินเรียบร้อยแล้ว")
+        self.assertContains(response, "ยินดีด้วย คุณเป็นนักศึกษา BRI แล้ว")
+        self.assertContains(response, "#check")
         self.assertContains(response, student.student_id)
         self.assertNotContains(response, "ส่งสลิปให้ตรวจสอบ")
 
@@ -1054,7 +1056,8 @@ class AnnouncementResultTests(TestCase):
             {"line_user_id": "Upaidresult"},
         )
 
-        self.assertContains(response, "ยินดีด้วย ชำระเงินเรียบร้อยแล้ว")
+        self.assertContains(response, "ยินดีด้วย คุณเป็นนักศึกษา BRI แล้ว")
+        self.assertContains(response, "#check")
         self.assertContains(response, student.student_id)
         self.assertNotContains(response, "ไปหน้าแจ้งชำระเงิน")
 
@@ -1201,6 +1204,8 @@ class LiffFlowTests(TestCase):
         self.assertTemplateUsed(response, "school/already_registered.html")
         self.assertContains(response, "คุณสมัครเรียนแล้ว")
         self.assertContains(response, person.get_status_display())
+        self.assertContains(response, "#clock")
+        self.assertNotContains(response, "รหัสข้อมูล")
         self.assertContains(response, 'href="https://line.me/R/nv/chat"')
         self.assertNotContains(response, "registration-form")
 

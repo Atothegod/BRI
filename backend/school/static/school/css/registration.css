@@ -2161,13 +2161,15 @@ select.form-control {
 
 .success-page.auth-page {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
 }
 
 .success-shell.auth-shell {
     width: calc(100vw - 32px);
     max-width: 480px;
+    margin-top: auto;
+    margin-bottom: auto;
     flex: 0 0 auto;
 }
 
@@ -2221,7 +2223,8 @@ select.form-control {
     stroke-width: 2.4;
 }
 
-.success-mark--paid {
+.success-mark--paid,
+.status-mark--success {
     background: linear-gradient(180deg, var(--bri-sage), var(--bri-forest));
     border-color: var(--bri-ivory);
     box-shadow: 0 10px 30px rgba(15, 81, 50, 0.22), 0 0 0 6px rgba(199, 165, 84, 0.14);
@@ -2338,16 +2341,21 @@ select.form-control {
     color: var(--color-brand-700);
 }
 
-.result-shell--failed .result-mark {
+.status-mark--failed {
     background: #9f1239;
     border-color: #ffe4e6;
     box-shadow: 0 8px 24px rgba(159, 18, 57, 0.16);
 }
 
-.result-shell--pending .result-mark {
+.status-mark--pending {
     background: var(--bri-warning-ink);
     border-color: #f8edc9;
     box-shadow: 0 8px 24px rgba(124, 90, 22, 0.16);
+}
+
+.success-shell.journey-shell {
+    width: min(calc(100vw - 32px), 520px);
+    max-width: 520px;
 }
 
 .empty-application-mark {

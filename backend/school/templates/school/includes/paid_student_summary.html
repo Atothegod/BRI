@@ -1,0 +1,17 @@
+{% load static %}
+<div class="success-mark status-mark--success" aria-hidden="true">
+    <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#check"></use></svg>
+</div>
+<span class="eyebrow">ยืนยันการเข้าเรียนแล้ว</span>
+<h1 id="{{ paid_title_id }}">ยินดีด้วย คุณเป็นนักศึกษา BRI แล้ว</h1>
+<p class="success-lead">ยืนยันการชำระเงินของคุณ {{ person.full_name }} เรียบร้อยแล้ว</p>
+
+<div class="receipt-block paid-card">
+    <span>รหัสนักศึกษา</span>
+    <strong>{{ student.student_id }}</strong>
+    {% if student.group %}
+    <small>{{ student.group }}{% if student.grade %} · {{ student.grade }}{% endif %}</small>
+    {% else %}
+    <small>ทีมงานจะอัปเดตกลุ่มเรียนให้ในระบบ</small>
+    {% endif %}
+</div>

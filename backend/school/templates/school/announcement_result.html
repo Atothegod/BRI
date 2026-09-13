@@ -4,42 +4,34 @@
 {% block title %}ประกาศผลสัมภาษณ์ | BRI School of Fivefold{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20260913-empty-state-1">
+<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20260914-journey-1">
 {% endblock %}
 
 {% block content %}
 <main class="success-page result-page">
-    <section class="success-shell result-shell result-shell--{{ result_state }}" aria-labelledby="result-title">
+    <section class="success-shell journey-shell result-shell result-shell--{{ result_state }}" aria-labelledby="result-title">
         <a class="mobile-brand success-brand" href="{% url 'school:registration' %}" aria-label="BRI School of Fivefold">
             {% include "school/includes/brand_logo.html" with variant="success" %}
         </a>
 
-        {% if result_state != "missing" %}
-        <div class="success-mark result-mark" aria-hidden="true">
-            {% if result_state == "paid" or result_state == "passed" %}
+        {% if result_state != "missing" and result_state != "paid" %}
+        <div class="success-mark result-mark{% if result_state == 'passed' %} status-mark--success{% elif result_state == 'failed' %} status-mark--failed{% else %} status-mark--pending{% endif %}" aria-hidden="true">
+            {% if result_state == "passed" %}
             <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#check"></use></svg>
             {% elif result_state == "failed" %}
             <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#x"></use></svg>
+            {% else %}
+            <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#clock"></use></svg>
             {% endif %}
         </div>
         {% endif %}
 
-        {% if result_state != "missing" %}
+        {% if result_state != "missing" and result_state != "paid" %}
         <span class="eyebrow">ผลสัมภาษณ์</span>
         {% endif %}
 
         {% if result_state == "paid" %}
-        <h1 id="result-title">ยินดีด้วย ชำระเงินเรียบร้อยแล้ว</h1>
-        <p class="success-lead">คุณ {{ person.full_name }} ได้รับการยืนยันเป็นนักศึกษา BRI อย่างสมบูรณ์แล้ว</p>
-        <div class="receipt-block result-card paid-card">
-            <span>รหัสนักศึกษา</span>
-            <strong>{{ student.student_id|default:person.student_code }}</strong>
-            {% if student.group %}
-            <small>{{ student.group }}{% if student.grade %} · {{ student.grade }}{% endif %}</small>
-            {% else %}
-            <small>ทีมงานจะอัปเดตกลุ่มเรียนให้ในระบบ</small>
-            {% endif %}
-        </div>
+        {% include "school/includes/paid_student_summary.html" with paid_title_id="result-title" %}
         {% elif result_state == "passed" %}
         <h1 id="result-title">ผ่านสัมภาษณ์{% if person.admission_type == "online" %} (ออนไลน์){% endif %}</h1>
         <p class="success-lead">ยินดีด้วยคุณ {{ person.full_name }} ผ่านการคัดเลือกแล้ว</p>

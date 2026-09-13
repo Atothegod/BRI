@@ -1,6 +1,6 @@
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-body { margin: 0; color: var(--bri-forest); background: #fff; font-family: var(--font-primary); }
+body { margin: 0; color: var(--bri-forest); background: #fff; font-family: var(--font-primary); font-size: 18px; line-height: 1.55; }
 .interviews { max-width: 1200px; margin: auto; padding: 24px; }
 .schedule-header, .search-bar, .selection-bar, .schedule-footer { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
 .schedule-header { justify-content: space-between; padding-bottom: 24px; border-bottom: 1px solid var(--bri-border); }
@@ -9,9 +9,9 @@ body { margin: 0; color: var(--bri-forest); background: #fff; font-family: var(-
 .schedule-header .brand-logo-frame { position: relative; display: block; width: 210px; height: 64px; overflow: hidden; }
 .schedule-header img { position: absolute; width: 286px; height: 286px; max-width: none; top: 50%; left: 50%; transform: translate(-50%, -50%); }
 a { color: var(--bri-sage); text-underline-offset: 3px; }
-h1 { font-size: 28px; margin: 24px 0; }
+h1 { font-size: 38px; margin: 24px 0; font-weight: 800; }
 .page-heading { display: flex; justify-content: space-between; align-items: end; padding-top: 28px; }
-.page-heading span { color: var(--bri-sage); font-size: 12px; font-weight: 700; }
+.page-heading span { color: var(--bri-sage); font-size: 15px; font-weight: 700; }
 .page-heading h1 { margin: 4px 0; }
 .page-heading p { margin: 0 0 20px; color: #5f6b63; }
 .type-tabs { display: inline-flex; gap: 4px; padding: 4px; margin-bottom: 24px; background: #eef1ed; border-radius: 6px; }
@@ -31,7 +31,7 @@ button:disabled { opacity: .5; cursor: default; }
 label { display: block; margin-bottom: 6px; font-weight: 600; }
 .selection-bar { justify-content: space-between; padding: 16px 0; }
 .table-scroll { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 16px; }
 th, td { padding: 14px 12px; border-bottom: 1px solid var(--bri-border); vertical-align: top; min-width: 130px; }
 th:first-child, td:first-child { min-width: 44px; width: 44px; }
 th { background: #f7f8f6; white-space: nowrap; }
@@ -48,8 +48,8 @@ td small { display: block; color: #5f6b63; margin-top: 4px; overflow-wrap: anywh
 .confirmation-brand { width: 226px; height: 66px; margin: 0 auto 24px; overflow: hidden; background: var(--bri-forest); border-radius: 8px; }
 .confirmation-brand .brand-logo-frame { position: relative; display: block; width: 100%; height: 100%; overflow: hidden; }
 .confirmation-brand img { position: absolute; width: 310px; height: 310px; max-width: none; top: 50%; left: 50%; transform: translate(-50%, -50%); }
-.confirmation-eyebrow { color: var(--bri-sage); font-size: 13px; font-weight: 700; text-transform: uppercase; }
-.confirmation-shell h1 { margin: 8px 0; font-size: 26px; }
+.confirmation-eyebrow { color: var(--bri-sage); font-size: 15px; font-weight: 700; text-transform: uppercase; }
+.confirmation-shell h1 { margin: 8px 0; font-size: 32px; font-weight: 800; }
 .confirmation-shell > p { margin: 0 0 22px; color: #5f6b63; }
 .appointment-summary { margin: 0 0 24px; text-align: left; border: 1px solid var(--bri-border); border-radius: 6px; overflow: hidden; }
 .appointment-summary div { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 12px; padding: 13px 15px; border-bottom: 1px solid var(--bri-border); }

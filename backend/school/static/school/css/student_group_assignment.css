@@ -20,13 +20,13 @@
 
 .assignment-stats span {
     color: #5f6b63;
-    font-size: 12px;
+    font-size: 15px;
 }
 
 .assignment-stats strong {
     margin-top: 3px;
     color: var(--bri-forest);
-    font-size: 24px;
+    font-size: 28px;
 }
 
 .assignment-filters {
@@ -48,17 +48,18 @@
 
 .group-picker span {
     color: var(--bri-sage);
-    font-size: 12px;
+    font-size: 15px;
     font-weight: 700;
 }
 
 .group-picker h2 {
     margin: 4px 0 0;
-    font-size: 20px;
+    font-size: 26px;
+    font-weight: 800;
 }
 
 .group-select-field label {
-    font-size: 13px;
+    font-size: 16px;
 }
 
 .assignment-action {
@@ -75,12 +76,12 @@
 
 .assignment-action strong {
     color: var(--bri-forest);
-    font-size: 14px;
+    font-size: 16px;
 }
 
 .assignment-action small {
     color: var(--bri-warning-ink);
-    font-size: 11px;
+    font-size: 14px;
     line-height: 1.35;
 }
 

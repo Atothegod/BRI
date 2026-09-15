@@ -1990,6 +1990,171 @@ select.form-control {
     }
 }
 
+.dashboard-page {
+    color: var(--color-brand-950);
+    background: #f8faf7;
+}
+
+.dashboard-shell .page-heading {
+    padding: 18px 20px;
+    color: var(--color-brand-950);
+    background: #ffffff;
+    border: 1px solid #c8d3c9;
+    border-radius: 8px;
+    box-shadow: 0 10px 26px rgba(18, 39, 29, 0.08);
+}
+
+.dashboard-shell .page-heading p,
+.summary-strip span,
+.metric-list span,
+.queue-row span,
+.group-row span,
+.data-table th {
+    color: #455349;
+}
+
+.summary-strip > div,
+.dashboard-panel,
+.metric-list > div,
+.queue-row,
+.group-row,
+.table-shell {
+    background: #ffffff;
+    border-color: #c8d3c9;
+    box-shadow: 0 8px 22px rgba(18, 39, 29, 0.06);
+}
+
+.summary-strip strong,
+.metric-list strong,
+.dashboard-panel-heading h2,
+.queue-row strong,
+.group-row strong,
+.data-table td {
+    color: var(--color-brand-950);
+}
+
+.dashboard-focus-tabs {
+    margin-top: 20px;
+    padding: 14px;
+    background: #eef4ef;
+    border: 1px solid #c8d3c9;
+    border-radius: 8px;
+}
+
+.dashboard-tab-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.dashboard-tab-list {
+    display: flex;
+    gap: 6px;
+    padding: 4px;
+    margin-bottom: 14px;
+    overflow-x: auto;
+    background: #dfe9e1;
+    border: 1px solid #c2cec4;
+    border-radius: 8px;
+}
+
+.dashboard-tab-list label {
+    display: inline-flex;
+    min-height: 42px;
+    padding: 10px 14px;
+    color: #26352b;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 800;
+    white-space: nowrap;
+    align-items: center;
+}
+
+.dashboard-tab-list label:hover,
+.dashboard-tab-list label:focus-visible {
+    color: var(--bri-forest);
+    background: #f8faf7;
+    border-color: #9caf9e;
+    outline: none;
+}
+
+#admin-tab-admissions:checked ~ .dashboard-tab-list label[for="admin-tab-admissions"],
+#admin-tab-people:checked ~ .dashboard-tab-list label[for="admin-tab-people"],
+#admin-tab-records:checked ~ .dashboard-tab-list label[for="admin-tab-records"] {
+    color: #ffffff;
+    background: var(--bri-forest);
+    border-color: var(--bri-forest);
+    box-shadow: 0 6px 16px rgba(18, 39, 29, 0.18);
+}
+
+.dashboard-tab-panel {
+    display: none;
+}
+
+#admin-tab-admissions:checked ~ .dashboard-tab-panels .dashboard-tab-panel--admissions,
+#admin-tab-people:checked ~ .dashboard-tab-panels .dashboard-tab-panel--people,
+#admin-tab-records:checked ~ .dashboard-tab-panels .dashboard-tab-panel--records {
+    display: block;
+}
+
+.dashboard-focus-tabs .dashboard-grid {
+    gap: 14px;
+}
+
+.dashboard-focus-tabs .queue-list,
+.dashboard-focus-tabs .group-list {
+    margin-top: 14px;
+}
+
+.data-table th {
+    color: #26352b;
+    background: #eef4ef;
+}
+
+.data-table td {
+    border-color: #d9e2da;
+}
+
+.status-badge--success {
+    color: #143f29;
+    background: #e1f3e7;
+    border-color: #9fc9ad;
+}
+
+.status-badge--warning {
+    color: #743016;
+    background: #fff2d4;
+    border-color: #d7b45f;
+}
+
+@media (max-width: 860px) {
+    .dashboard-focus-tabs .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .dashboard-shell .page-heading {
+        padding: 16px;
+    }
+
+    .dashboard-focus-tabs {
+        padding: 10px;
+    }
+
+    .dashboard-tab-list {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-tab-list label {
+        justify-content: center;
+        white-space: normal;
+    }
+}
+
 .bottom-sheet {
     position: fixed;
     right: 0;

@@ -1,0 +1,29 @@
+{% extends "admin/base.html" %}
+{% load i18n static %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_("BRI Admin") }}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'school/css/admin.css' %}?v=20260915-admin-1">
+{% endblock %}
+
+{% block branding %}
+<div class="bri-admin-brand">
+    <a href="{% url 'admin:index' %}" aria-label="{{ site_header|default:_('BRI School Admin') }}">
+        <img src="{% static 'school/images/logo_white.png' %}" alt="" width="40" height="40">
+        <span>
+            <strong>{{ site_header|default:_("BRI School Admin") }}</strong>
+            <small>School of Fivefold</small>
+        </span>
+    </a>
+</div>
+{% endblock %}
+
+{% block nav-global %}
+<nav class="bri-admin-nav" aria-label="BRI admin shortcuts">
+    <a href="{% url 'school:admin_overview_dashboard' %}">ภาพรวม</a>
+    <a href="{% url 'school:student_group_assignment' %}">จัดกลุ่ม</a>
+    <a href="{% url 'school:appointment_schedule' %}">นัดหมาย</a>
+</nav>
+{% endblock %}

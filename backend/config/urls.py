@@ -4,8 +4,11 @@ from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import RedirectView
 
+from school.sitemap import sitemap_xml
+
 
 urlpatterns = [
+    path("sitemap.xml", sitemap_xml, name="sitemap_xml"),
     path("admin/", admin.site.urls),
     path(
         "accounts/login/",

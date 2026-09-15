@@ -1,0 +1,323 @@
+:root {
+    --primary: #173c2b;
+    --secondary: #2f6d4f;
+    --accent: #c89b3c;
+    --primary-fg: #ffffff;
+    --body-bg: #f5f3eb;
+    --body-fg: #17211b;
+    --body-quiet-color: #607064;
+    --body-loud-color: #0e1b14;
+    --breadcrumbs-bg: #224d37;
+    --breadcrumbs-fg: #dcefe3;
+    --link-fg: #1e6040;
+    --link-hover-color: #0f3f28;
+    --header-bg: #102f22;
+    --header-color: #ffffff;
+    --selected-bg: #edf5ee;
+    --hairline-color: #d9dfd8;
+    --border-color: #cfd8cf;
+    --button-bg: #225a3d;
+    --button-hover-bg: #173c2b;
+    --default-button-bg: #c89b3c;
+    --default-button-hover-bg: #ad8029;
+    --delete-button-bg: #9a3412;
+    --delete-button-hover-bg: #7c2d12;
+    --font-family-primary: "Noto Sans Thai", "Noto Sans", Arial, sans-serif;
+    --font-family-monospace: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+html[data-theme="light"],
+html[data-theme="dark"] {
+    --primary: #173c2b;
+    --secondary: #2f6d4f;
+    --accent: #c89b3c;
+    --primary-fg: #ffffff;
+    --body-bg: #f5f3eb;
+    --body-fg: #17211b;
+    --body-quiet-color: #607064;
+    --body-loud-color: #0e1b14;
+    --breadcrumbs-bg: #224d37;
+    --breadcrumbs-fg: #dcefe3;
+    --link-fg: #1e6040;
+    --link-hover-color: #0f3f28;
+    --header-bg: #102f22;
+    --header-color: #ffffff;
+    --selected-bg: #edf5ee;
+    --hairline-color: #d9dfd8;
+    --border-color: #cfd8cf;
+}
+
+body {
+    background:
+        linear-gradient(180deg, rgba(23, 60, 43, 0.08), rgba(245, 243, 235, 0) 240px),
+        var(--body-bg);
+    color: var(--body-fg);
+}
+
+#container {
+    min-height: 100vh;
+}
+
+#header {
+    min-height: 72px;
+    padding: 12px clamp(18px, 3vw, 36px);
+    background:
+        linear-gradient(135deg, rgba(200, 155, 60, 0.18), rgba(255, 255, 255, 0) 34%),
+        var(--header-bg);
+    box-shadow: 0 14px 32px rgba(14, 27, 20, 0.18);
+}
+
+.bri-admin-brand a {
+    display: inline-flex;
+    gap: 12px;
+    align-items: center;
+    color: #ffffff;
+    text-decoration: none;
+}
+
+.bri-admin-brand img {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    object-fit: contain;
+}
+
+.bri-admin-brand strong {
+    display: block;
+    font-size: 1.08rem;
+    line-height: 1.1;
+}
+
+.bri-admin-brand small {
+    display: block;
+    margin-top: 2px;
+    color: #d8c28b;
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0;
+}
+
+.bri-admin-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.bri-admin-nav a,
+#user-tools a {
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 999px;
+    padding: 7px 12px;
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.08);
+    text-decoration: none;
+}
+
+.bri-admin-nav a:hover,
+#user-tools a:hover {
+    background: rgba(255, 255, 255, 0.16);
+}
+
+div.breadcrumbs {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 12px clamp(18px, 3vw, 36px);
+    background: var(--breadcrumbs-bg);
+}
+
+#content {
+    padding: 28px clamp(16px, 3vw, 36px) 40px;
+}
+
+#content h1 {
+    margin: 0 0 18px;
+    color: #102f22;
+    font-size: clamp(1.55rem, 2vw, 2.15rem);
+    font-weight: 800;
+}
+
+.bri-admin-dashboard {
+    margin: 0 0 24px;
+}
+
+.bri-admin-hero {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    border: 1px solid rgba(23, 60, 43, 0.12);
+    border-radius: 8px;
+    padding: clamp(18px, 3vw, 28px);
+    color: #ffffff;
+    background:
+        linear-gradient(135deg, rgba(200, 155, 60, 0.34), rgba(255, 255, 255, 0) 38%),
+        linear-gradient(135deg, #123725, #276447);
+    box-shadow: 0 16px 36px rgba(23, 60, 43, 0.18);
+}
+
+.bri-admin-eyebrow {
+    display: inline-block;
+    margin-bottom: 8px;
+    color: #f0d99d;
+    font-size: 0.75rem;
+    font-weight: 800;
+}
+
+.bri-admin-hero h2 {
+    margin: 0;
+    color: #ffffff;
+    font-size: clamp(1.25rem, 2vw, 1.75rem);
+}
+
+.bri-admin-hero p {
+    margin: 6px 0 0;
+    max-width: 680px;
+    color: #e9f4ec;
+}
+
+.bri-admin-hero__action {
+    flex: 0 0 auto;
+    border-radius: 999px;
+    padding: 10px 16px;
+    color: #12291e !important;
+    background: #f0d99d;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.bri-admin-hero__action:hover {
+    background: #ffffff;
+}
+
+.bri-admin-quicklinks {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.bri-admin-card {
+    display: grid;
+    gap: 8px;
+    min-height: 132px;
+    border: 1px solid #dde4dc;
+    border-radius: 8px;
+    padding: 16px;
+    color: #17211b !important;
+    background: rgba(255, 255, 255, 0.78);
+    box-shadow: 0 10px 24px rgba(39, 58, 44, 0.07);
+    text-decoration: none;
+}
+
+.bri-admin-card:hover {
+    border-color: #a8bbaa;
+    transform: translateY(-1px);
+}
+
+.bri-admin-card__icon {
+    display: grid;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    color: #ffffff;
+    background: #225a3d;
+    font-size: 0.8rem;
+    font-weight: 900;
+    place-items: center;
+}
+
+.bri-admin-card--appointments .bri-admin-card__icon {
+    background: #365f7f;
+}
+
+.bri-admin-card--overview .bri-admin-card__icon {
+    background: #b27b22;
+}
+
+.bri-admin-card strong {
+    font-size: 1.05rem;
+}
+
+.bri-admin-card span:last-child {
+    color: #5d6f62;
+}
+
+.module,
+#content-related,
+fieldset.module,
+.inline-group,
+.submit-row,
+.paginator,
+#changelist,
+#changelist-filter,
+.results {
+    border-color: #dde4dc;
+    border-radius: 8px;
+    box-shadow: 0 10px 28px rgba(39, 58, 44, 0.06);
+}
+
+.module h2,
+.module caption,
+.inline-group h2 {
+    border-radius: 8px 8px 0 0;
+    background: #234b36;
+}
+
+table {
+    border-radius: 0 0 8px 8px;
+    overflow: hidden;
+}
+
+thead th {
+    background: #edf3ee;
+}
+
+tr:nth-child(even) {
+    background: #fbfcfa;
+}
+
+input[type="submit"],
+button,
+.button,
+a.button,
+input[type="button"],
+input[type="reset"] {
+    border-radius: 8px;
+}
+
+input,
+textarea,
+select,
+.vTextField {
+    border-radius: 7px;
+}
+
+#changelist-filter h2 {
+    border-radius: 8px 8px 0 0;
+    background: #102f22;
+}
+
+#changelist .actions {
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.72);
+}
+
+@media (max-width: 900px) {
+    #header {
+        align-items: flex-start;
+    }
+
+    .bri-admin-hero {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .bri-admin-hero__action {
+        text-align: center;
+    }
+
+    .bri-admin-quicklinks {
+        grid-template-columns: 1fr;
+    }
+}

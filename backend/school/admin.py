@@ -19,6 +19,9 @@ from .models import (
 
 
 admin.site.index_template = "school/admin_index.html"
+admin.site.site_header = "BRI School Admin"
+admin.site.site_title = "BRI Admin"
+admin.site.index_title = "ภาพรวมระบบโรงเรียน"
 
 
 @admin.register(Appointment)

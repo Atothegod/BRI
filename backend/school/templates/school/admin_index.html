@@ -1,6 +1,11 @@
 {% extends "admin/index.html" %}
 {% load static %}
 
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'school/css/admin.css' %}?v=20260915-contrast-2">
+{% endblock %}
+
 {% block content %}
 {% if request.user.is_superuser %}
 <div class="bri-admin-dashboard">

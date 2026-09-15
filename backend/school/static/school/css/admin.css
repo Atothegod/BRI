@@ -1,140 +1,155 @@
 :root {
-    --primary: #173c2b;
-    --secondary: #2f6d4f;
-    --accent: #c89b3c;
-    --primary-fg: #ffffff;
-    --body-bg: #f5f3eb;
-    --body-fg: #17211b;
-    --body-quiet-color: #607064;
-    --body-loud-color: #0e1b14;
-    --breadcrumbs-bg: #224d37;
-    --breadcrumbs-fg: #dcefe3;
-    --link-fg: #1e6040;
-    --link-hover-color: #0f3f28;
-    --header-bg: #102f22;
-    --header-color: #ffffff;
-    --selected-bg: #edf5ee;
-    --hairline-color: #d9dfd8;
-    --border-color: #cfd8cf;
-    --button-bg: #225a3d;
-    --button-hover-bg: #173c2b;
-    --default-button-bg: #c89b3c;
-    --default-button-hover-bg: #ad8029;
-    --delete-button-bg: #9a3412;
-    --delete-button-hover-bg: #7c2d12;
-    --font-family-primary: "Noto Sans Thai", "Noto Sans", Arial, sans-serif;
-    --font-family-monospace: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --bri-admin-ink: #0b1710;
+    --bri-admin-muted: #526257;
+    --bri-admin-bg: #f8faf7;
+    --bri-admin-surface: #ffffff;
+    --bri-admin-border: #dbe5da;
+    --bri-admin-primary: #195434;
+    --bri-admin-primary-hover: #102f22;
+    --bri-admin-gold: #b27b22;
+    --bri-admin-gold-soft: #fff3d2;
+    --bri-admin-focus: rgba(25, 84, 52, 0.28);
 }
 
-html[data-theme="light"],
-html[data-theme="dark"] {
-    --primary: #173c2b;
-    --secondary: #2f6d4f;
-    --accent: #c89b3c;
-    --primary-fg: #ffffff;
-    --body-bg: #f5f3eb;
-    --body-fg: #17211b;
-    --body-quiet-color: #607064;
-    --body-loud-color: #0e1b14;
-    --breadcrumbs-bg: #224d37;
-    --breadcrumbs-fg: #dcefe3;
-    --link-fg: #1e6040;
-    --link-hover-color: #0f3f28;
-    --header-bg: #102f22;
-    --header-color: #ffffff;
-    --selected-bg: #edf5ee;
-    --hairline-color: #d9dfd8;
-    --border-color: #cfd8cf;
+html,
+body,
+#page,
+#main {
+    color: var(--bri-admin-ink) !important;
+    background: var(--bri-admin-bg) !important;
 }
 
 body {
+    color-scheme: light;
+}
+
+a,
+a:link,
+a:visited,
+[class*="text-primary-"] {
+    color: var(--bri-admin-primary) !important;
+}
+
+a:hover,
+a:focus-visible {
+    color: var(--bri-admin-primary-hover) !important;
+}
+
+[class*="bg-primary-"],
+button[type="submit"],
+input[type="submit"],
+.submit-row input,
+.submit-row button {
+    color: #ffffff !important;
+    background-color: var(--bri-admin-primary) !important;
+}
+
+[class*="bg-primary-"]:hover,
+button[type="submit"]:hover,
+input[type="submit"]:hover,
+.submit-row input:hover,
+.submit-row button:hover {
+    background-color: var(--bri-admin-primary-hover) !important;
+}
+
+[class*="border-primary-"] {
+    border-color: var(--bri-admin-primary) !important;
+}
+
+input,
+textarea,
+select,
+.vTextField {
+    width: 100%;
+    min-height: 42px;
+    border: 1px solid #aebdaf !important;
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--bri-admin-ink) !important;
+    background-color: #ffffff !important;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+    border-color: var(--bri-admin-primary) !important;
+    box-shadow: 0 0 0 3px var(--bri-admin-focus) !important;
+    outline: none !important;
+}
+
+::placeholder {
+    color: #6a786e !important;
+    opacity: 1 !important;
+}
+
+.material-symbols-outlined {
+    color: currentColor !important;
+}
+
+body.login #page {
     background:
-        linear-gradient(180deg, rgba(23, 60, 43, 0.08), rgba(245, 243, 235, 0) 240px),
-        var(--body-bg);
-    color: var(--body-fg);
+        radial-gradient(circle at 18% 15%, rgba(178, 123, 34, 0.18), transparent 30%),
+        linear-gradient(135deg, #f8faf7 0%, #eef5ef 55%, #f6f0df 100%) !important;
 }
 
-#container {
-    min-height: 100vh;
+body.login div[class*="sm:w-96"] {
+    border: 1px solid var(--bri-admin-border) !important;
+    border-radius: 8px !important;
+    padding: 32px !important;
+    background: rgba(255, 255, 255, 0.96) !important;
+    box-shadow: 0 24px 60px rgba(16, 47, 34, 0.16) !important;
 }
 
-#header {
-    min-height: 72px;
-    padding: 12px clamp(18px, 3vw, 36px);
-    background:
-        linear-gradient(135deg, rgba(200, 155, 60, 0.18), rgba(255, 255, 255, 0) 34%),
-        var(--header-bg);
-    box-shadow: 0 14px 32px rgba(14, 27, 20, 0.18);
+body.login h1,
+body.login h2,
+body.login h3,
+body.login label,
+body.login strong {
+    color: var(--bri-admin-ink) !important;
 }
 
-.bri-admin-brand a {
-    display: inline-flex;
-    gap: 12px;
-    align-items: center;
-    color: #ffffff;
-    text-decoration: none;
+body.login [class*="text-font-default"],
+body.login [class*="text-font-subtle"] {
+    color: var(--bri-admin-muted) !important;
 }
 
-.bri-admin-brand img {
-    width: 42px;
-    height: 42px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.1);
-    object-fit: contain;
+body.login [class*="text-font-important"],
+body.login [class*="text-primary-"] {
+    color: var(--bri-admin-primary) !important;
 }
 
-.bri-admin-brand strong {
-    display: block;
-    font-size: 1.08rem;
-    line-height: 1.1;
+body.login .border-base-200,
+body.login [class*="border-base-"] {
+    border-color: var(--bri-admin-border) !important;
 }
 
-.bri-admin-brand small {
-    display: block;
-    margin-top: 2px;
-    color: #d8c28b;
-    font-size: 0.76rem;
-    font-weight: 700;
-    letter-spacing: 0;
+body.login input {
+    width: 100%;
+    min-height: 44px;
+    border: 1px solid #8fa191 !important;
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--bri-admin-ink) !important;
+    background-color: #ffffff !important;
 }
 
-.bri-admin-nav {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
+body.login #login-form button,
+body.login #login-form .submit-row {
+    min-height: 44px;
+    color: #ffffff !important;
+    background: var(--bri-admin-primary) !important;
+    box-shadow: 0 10px 22px rgba(25, 84, 52, 0.18) !important;
 }
 
-.bri-admin-nav a,
-#user-tools a {
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    border-radius: 999px;
-    padding: 7px 12px;
-    color: #ffffff;
-    background: rgba(255, 255, 255, 0.08);
-    text-decoration: none;
+body.login #login-form button:hover,
+body.login #login-form .submit-row:hover {
+    background: var(--bri-admin-primary-hover) !important;
 }
 
-.bri-admin-nav a:hover,
-#user-tools a:hover {
-    background: rgba(255, 255, 255, 0.16);
-}
-
-div.breadcrumbs {
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    padding: 12px clamp(18px, 3vw, 36px);
-    background: var(--breadcrumbs-bg);
-}
-
-#content {
-    padding: 28px clamp(16px, 3vw, 36px) 40px;
-}
-
-#content h1 {
-    margin: 0 0 18px;
-    color: #102f22;
-    font-size: clamp(1.55rem, 2vw, 2.15rem);
-    font-weight: 800;
+body.login a[href="/"],
+body.login a[href="/"]:visited {
+    color: var(--bri-admin-primary) !important;
+    font-weight: 700 !important;
 }
 
 .bri-admin-dashboard {
@@ -147,48 +162,50 @@ div.breadcrumbs {
     align-items: center;
     justify-content: space-between;
     margin-bottom: 14px;
-    border: 1px solid rgba(23, 60, 43, 0.12);
+    border: 1px solid rgba(16, 47, 34, 0.16);
     border-radius: 8px;
     padding: clamp(18px, 3vw, 28px);
     color: #ffffff;
     background:
-        linear-gradient(135deg, rgba(200, 155, 60, 0.34), rgba(255, 255, 255, 0) 38%),
-        linear-gradient(135deg, #123725, #276447);
-    box-shadow: 0 16px 36px rgba(23, 60, 43, 0.18);
+        linear-gradient(135deg, rgba(178, 123, 34, 0.38), rgba(255, 255, 255, 0) 38%),
+        linear-gradient(135deg, #102f22, #226b42);
+    box-shadow: 0 16px 36px rgba(16, 47, 34, 0.18);
 }
 
 .bri-admin-eyebrow {
     display: inline-block;
     margin-bottom: 8px;
-    color: #f0d99d;
+    color: #ffefbd;
     font-size: 0.75rem;
     font-weight: 800;
 }
 
 .bri-admin-hero h2 {
     margin: 0;
-    color: #ffffff;
+    color: #ffffff !important;
     font-size: clamp(1.25rem, 2vw, 1.75rem);
+    font-weight: 800;
 }
 
 .bri-admin-hero p {
     margin: 6px 0 0;
     max-width: 680px;
-    color: #e9f4ec;
+    color: #eef8f1 !important;
 }
 
 .bri-admin-hero__action {
     flex: 0 0 auto;
     border-radius: 999px;
     padding: 10px 16px;
-    color: #12291e !important;
-    background: #f0d99d;
+    color: #0b1710 !important;
+    background: #ffefbd !important;
     font-weight: 800;
     text-decoration: none;
 }
 
 .bri-admin-hero__action:hover {
-    background: #ffffff;
+    color: #0b1710 !important;
+    background: #ffffff !important;
 }
 
 .bri-admin-quicklinks {
@@ -201,17 +218,17 @@ div.breadcrumbs {
     display: grid;
     gap: 8px;
     min-height: 132px;
-    border: 1px solid #dde4dc;
+    border: 1px solid var(--bri-admin-border);
     border-radius: 8px;
     padding: 16px;
-    color: #17211b !important;
-    background: rgba(255, 255, 255, 0.78);
+    color: var(--bri-admin-ink) !important;
+    background: var(--bri-admin-surface);
     box-shadow: 0 10px 24px rgba(39, 58, 44, 0.07);
     text-decoration: none;
 }
 
 .bri-admin-card:hover {
-    border-color: #a8bbaa;
+    border-color: #93aa96;
     transform: translateY(-1px);
 }
 
@@ -221,7 +238,7 @@ div.breadcrumbs {
     height: 36px;
     border-radius: 50%;
     color: #ffffff;
-    background: #225a3d;
+    background: var(--bri-admin-primary);
     font-size: 0.8rem;
     font-weight: 900;
     place-items: center;
@@ -232,82 +249,21 @@ div.breadcrumbs {
 }
 
 .bri-admin-card--overview .bri-admin-card__icon {
-    background: #b27b22;
+    color: #0b1710;
+    background: var(--bri-admin-gold-soft);
+    box-shadow: inset 0 0 0 1px #e8c77d;
 }
 
 .bri-admin-card strong {
+    color: var(--bri-admin-ink);
     font-size: 1.05rem;
 }
 
 .bri-admin-card span:last-child {
-    color: #5d6f62;
-}
-
-.module,
-#content-related,
-fieldset.module,
-.inline-group,
-.submit-row,
-.paginator,
-#changelist,
-#changelist-filter,
-.results {
-    border-color: #dde4dc;
-    border-radius: 8px;
-    box-shadow: 0 10px 28px rgba(39, 58, 44, 0.06);
-}
-
-.module h2,
-.module caption,
-.inline-group h2 {
-    border-radius: 8px 8px 0 0;
-    background: #234b36;
-}
-
-table {
-    border-radius: 0 0 8px 8px;
-    overflow: hidden;
-}
-
-thead th {
-    background: #edf3ee;
-}
-
-tr:nth-child(even) {
-    background: #fbfcfa;
-}
-
-input[type="submit"],
-button,
-.button,
-a.button,
-input[type="button"],
-input[type="reset"] {
-    border-radius: 8px;
-}
-
-input,
-textarea,
-select,
-.vTextField {
-    border-radius: 7px;
-}
-
-#changelist-filter h2 {
-    border-radius: 8px 8px 0 0;
-    background: #102f22;
-}
-
-#changelist .actions {
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.72);
+    color: var(--bri-admin-muted);
 }
 
 @media (max-width: 900px) {
-    #header {
-        align-items: flex-start;
-    }
-
     .bri-admin-hero {
         align-items: stretch;
         flex-direction: column;

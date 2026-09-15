@@ -1,8 +1,6 @@
 import os
 from pathlib import Path
 
-from django.templatetags.static import static
-
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -65,12 +63,46 @@ UNFOLD = {
     "SITE_SUBHEADER": "School of Fivefold",
     "SITE_URL": "/",
     "SITE_SYMBOL": "BRI",
+    "THEME": "light",
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": True,
     "SHOW_BACK_BUTTON": True,
-    "STYLES": [
-        lambda request: static("school/css/admin.css"),
-    ],
+    "COLORS": {
+        "base": {
+            "50": "#f8faf7",
+            "100": "#eef3ed",
+            "200": "#dbe5da",
+            "300": "#bfccbf",
+            "400": "#8fa18f",
+            "500": "#667766",
+            "600": "#4d5d4f",
+            "700": "#344238",
+            "800": "#1d2b22",
+            "900": "#101c15",
+            "950": "#07110b",
+        },
+        "primary": {
+            "50": "#eef8f1",
+            "100": "#d8efdf",
+            "200": "#b4ddc2",
+            "300": "#86c49c",
+            "400": "#55a472",
+            "500": "#318452",
+            "600": "#226b42",
+            "700": "#195434",
+            "800": "#143f29",
+            "900": "#102f22",
+            "950": "#081b13",
+        },
+        "font": {
+            "subtle-light": "#526257",
+            "subtle-dark": "#d3ddd4",
+            "default-light": "#26352b",
+            "default-dark": "#eef6ef",
+            "important-light": "#0b1710",
+            "important-dark": "#ffffff",
+        },
+    },
     "SIDEBAR": {
         "show_search": True,
         "show_all_applications": True,
@@ -142,7 +174,7 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [

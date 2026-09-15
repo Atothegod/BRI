@@ -84,7 +84,7 @@
             date_hint: "พิมพ์ตัวเลข 8 หลัก เช่น 15012533",
             date_of_birth: "วันเดือนปีเกิด",
             district: "อำเภอ / เขต",
-            district_invalid: "กรุณาเลือกอำเภอ / เขตจากรายการ",
+            district_invalid: "กรุณากรอกอำเภอ / เขต",
             district_placeholder: "พิมพ์ชื่ออำเภอ / เขต",
             email: "อีเมล",
             email_placeholder: "name@example.com",
@@ -130,7 +130,7 @@
             privacy_consent: "ข้าพเจ้ารับรองว่าข้อมูลถูกต้อง และยินยอมให้ BRI ใช้ข้อมูลนี้เพื่อดำเนินการรับสมัครและติดต่อเกี่ยวกับการเรียน",
             progress_aria: "ความคืบหน้าการสมัคร",
             province: "จังหวัด",
-            province_invalid: "กรุณาเลือกจังหวัดจากรายการ",
+            province_invalid: "กรุณากรอกจังหวัด",
             province_placeholder: "พิมพ์ชื่อจังหวัด",
             region: "ภูมิภาค",
             region_central: "กลาง",
@@ -163,10 +163,10 @@
             submit: "ส่งใบสมัคร",
             submitting: "กำลังส่ง...",
             sub_district: "ตำบล / แขวง",
-            subdistrict_invalid: "กรุณาเลือกตำบล / แขวงจากรายการ",
+            subdistrict_invalid: "กรุณากรอกตำบล / แขวง",
             subdistrict_placeholder: "พิมพ์ชื่อตำบล / แขวง",
             thai_address: "ที่อยู่ปัจจุบัน",
-            thai_address_hint: "ใช้ชื่อจังหวัด อำเภอ และตำบลภาษาไทยตามรายการทางการ",
+            thai_address_hint: "เลือกจากรายการแนะนำได้ หรือพิมพ์เองหากไม่พบพื้นที่ของคุณ",
             thai_address_placeholder: "บ้านเลขที่ ถนน และรายละเอียดที่อยู่",
             type_mismatch: "รูปแบบข้อมูลไม่ถูกต้อง",
             required: "กรุณากรอกข้อมูลส่วนนี้",
@@ -200,7 +200,7 @@
             date_hint: "Type 8 digits, for example 15011990",
             date_of_birth: "Date of birth",
             district: "District",
-            district_invalid: "Please select a district from the list",
+            district_invalid: "Please enter a district",
             district_placeholder: "Type district name",
             email: "Email",
             email_placeholder: "name@example.com",
@@ -246,7 +246,7 @@
             privacy_consent: "I confirm that this information is accurate and allow BRI to use it for registration and study-related contact.",
             progress_aria: "Application progress",
             province: "Province",
-            province_invalid: "Please select a province from the list",
+            province_invalid: "Please enter a province",
             province_placeholder: "Type province name",
             region: "Region",
             region_central: "Central",
@@ -279,10 +279,10 @@
             submit: "Submit application",
             submitting: "Submitting...",
             sub_district: "Subdistrict",
-            subdistrict_invalid: "Please select a subdistrict from the list",
+            subdistrict_invalid: "Please enter a subdistrict",
             subdistrict_placeholder: "Type subdistrict name",
             thai_address: "Current address",
-            thai_address_hint: "For Thailand, please use official Thai province, district, and subdistrict names.",
+            thai_address_hint: "Use the suggestions when available, or type your area if it is missing.",
             thai_address_placeholder: "House number, street, and address details",
             type_mismatch: "This format is not valid",
             required: "Please complete this field",
@@ -885,9 +885,9 @@
             suggestions,
             idPrefix,
             getValues,
-            invalidMessageKey,
             onSelect,
             onInvalid,
+            onFreeText = () => {},
         }) => {
             let matches = [];
             let activeIndex = -1;
@@ -938,7 +938,7 @@
                     input.setCustomValidity("");
                     return exactValue;
                 }
-                input.setCustomValidity(translate(invalidMessageKey));
+                input.setCustomValidity("");
                 return "";
             };
 
@@ -1003,7 +1003,7 @@
                     return;
                 }
                 if (input.value.trim()) {
-                    onInvalid();
+                    onFreeText();
                     render();
                 } else {
                     hide();
@@ -1046,9 +1046,9 @@
             suggestions: provinceSuggestions,
             idPrefix: "province",
             getValues: () => provinceNames,
-            invalidMessageKey: "province_invalid",
             onSelect: handleProvinceSelected,
             onInvalid: disableDistrict,
+            onFreeText: () => enableInput(districtInput, districtPlaceholder()),
         });
 
         districtAutocomplete = createAddressAutocomplete({
@@ -1056,9 +1056,9 @@
             suggestions: districtSuggestions,
             idPrefix: "district",
             getValues: getDistrictNames,
-            invalidMessageKey: "district_invalid",
             onSelect: handleDistrictSelected,
             onInvalid: disableSubdistrict,
+            onFreeText: () => enableInput(subdistrictInput, subdistrictPlaceholder()),
         });
 
         subdistrictAutocomplete = createAddressAutocomplete({
@@ -1066,7 +1066,6 @@
             suggestions: subdistrictSuggestions,
             idPrefix: "subdistrict",
             getValues: getSubdistrictNames,
-            invalidMessageKey: "subdistrict_invalid",
             onSelect: handleSubdistrictSelected,
             onInvalid: () => {},
         });
@@ -1082,6 +1081,13 @@
                 handleDistrictSelected(exactDistrict, { resetChildren: false });
                 subdistrictInput.value = initialSubdistrict;
                 subdistrictAutocomplete.validate();
+            }
+        } else if (initialProvince) {
+            enableInput(districtInput, districtPlaceholder());
+            districtInput.value = initialDistrict;
+            if (initialDistrict) {
+                enableInput(subdistrictInput, subdistrictPlaceholder());
+                subdistrictInput.value = initialSubdistrict;
             }
         }
         syncAddressMode();

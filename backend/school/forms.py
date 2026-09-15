@@ -34,12 +34,12 @@ REGION_OPTIONS = (
     {
         "value": "eastern",
         "label": "ตะวันออก",
-        "initial": "ตอ.",
+        "icon": "school/images/regions/eastern.png",
     },
     {
         "value": "western",
         "label": "ตะวันตก",
-        "initial": "ตก.",
+        "icon": "school/images/regions/western.png",
     },
     {
         "value": "northeastern",
@@ -529,11 +529,11 @@ class PersonForm(forms.Form):
         if not region:
             self.add_error("region", "กรุณาเลือกภูมิภาค")
         if not province_name:
-            self.add_error("province", "กรุณาเลือกจังหวัดจากรายการ")
+            self.add_error("province", "กรุณากรอกจังหวัด")
         if not district_name:
-            self.add_error("district", "กรุณาเลือกอำเภอ / เขตจากรายการ")
+            self.add_error("district", "กรุณากรอกอำเภอ / เขต")
         if not subdistrict_name:
-            self.add_error("sub_district", "กรุณาเลือกตำบล / แขวงจากรายการ")
+            self.add_error("sub_district", "กรุณากรอกตำบล / แขวง")
         if not address:
             self.add_error("address", "กรุณากรอกที่อยู่ปัจจุบัน")
         if not region or not province_name or not district_name or not subdistrict_name or not address:
@@ -552,7 +552,6 @@ class PersonForm(forms.Form):
             None,
         )
         if not province:
-            self.add_error("province", "กรุณาเลือกจังหวัดจากรายการ")
             return cleaned_data
         cleaned_data["province"] = province["province"]
 
@@ -565,7 +564,6 @@ class PersonForm(forms.Form):
             None,
         )
         if not district:
-            self.add_error("district", "กรุณาเลือกอำเภอ / เขตจากรายการ")
             return cleaned_data
         cleaned_data["district"] = district["district"]
 
@@ -578,7 +576,6 @@ class PersonForm(forms.Form):
             "",
         )
         if not subdistrict:
-            self.add_error("sub_district", "กรุณาเลือกตำบล / แขวงจากรายการ")
             return cleaned_data
         cleaned_data["sub_district"] = subdistrict
         return cleaned_data

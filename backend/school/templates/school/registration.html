@@ -260,7 +260,7 @@
                     <div class="field-group{% if form.address.errors %} has-error{% endif %}">
                         <label class="field-label" for="{{ form.address.id_for_label }}"><span data-i18n="thai_address">ที่อยู่ปัจจุบัน</span> <span aria-hidden="true">*</span></label>
                         {{ form.address }}
-                        <p class="field-hint" data-i18n="thai_address_hint">ใช้ชื่อจังหวัด อำเภอ และตำบลภาษาไทยตามรายการทางการ</p>
+                        <p class="field-hint" data-i18n="thai_address_hint">เลือกจากรายการแนะนำได้ หรือพิมพ์เองหากไม่พบพื้นที่ของคุณ</p>
                         {{ form.address.errors }}
                     </div>
                     </div>
@@ -425,5 +425,5 @@
 
 {% block extra_js %}
 {% include "school/includes/liff_bridge.html" %}
-<script src="{% static 'school/js/registration.js' %}?v=20260910-countryfix-2" defer></script>
+<script src="{% static 'school/js/registration.js' %}?v=20260915-addressfree-1" defer></script>
 {% endblock %}

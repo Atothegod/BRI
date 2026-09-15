@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 
+from django.templatetags.static import static
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -41,6 +43,7 @@ SESSION_COOKIE_SECURE = env_bool("DJANGO_SESSION_COOKIE_SECURE", not DEBUG)
 CSRF_COOKIE_SECURE = env_bool("DJANGO_CSRF_COOKIE_SECURE", not DEBUG)
 
 INSTALLED_APPS = [
+    "unfold",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -55,6 +58,73 @@ INSTALLED_APPS = [
     "accounts",
     "school",
 ]
+
+UNFOLD = {
+    "SITE_TITLE": "BRI Admin",
+    "SITE_HEADER": "BRI School Admin",
+    "SITE_SUBHEADER": "School of Fivefold",
+    "SITE_URL": "/",
+    "SITE_SYMBOL": "BRI",
+    "SHOW_HISTORY": True,
+    "SHOW_VIEW_ON_SITE": True,
+    "SHOW_BACK_BUTTON": True,
+    "STYLES": [
+        lambda request: static("school/css/admin.css"),
+    ],
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": True,
+        "navigation": [
+            {
+                "title": "BRI Operations",
+                "separator": True,
+                "items": [
+                    {
+                        "title": "ภาพรวมโรงเรียน",
+                        "icon": "dashboard",
+                        "link": "/school-admin/dashboard/",
+                    },
+                    {
+                        "title": "จัดกลุ่มผู้เรียน",
+                        "icon": "groups",
+                        "link": "/school-admin/student-groups/",
+                    },
+                    {
+                        "title": "นัดหมายและ LINE",
+                        "icon": "event",
+                        "link": "/school-admin/appointments/",
+                    },
+                ],
+            },
+            {
+                "title": "ข้อมูลหลัก",
+                "separator": True,
+                "items": [
+                    {
+                        "title": "ผู้สมัคร",
+                        "icon": "person",
+                        "link": "/admin/school/person/",
+                    },
+                    {
+                        "title": "นักเรียน",
+                        "icon": "school",
+                        "link": "/admin/school/student/",
+                    },
+                    {
+                        "title": "กลุ่มผู้สอน",
+                        "icon": "supervisor_account",
+                        "link": "/admin/school/teachergroup/",
+                    },
+                    {
+                        "title": "ผู้ใช้งาน",
+                        "icon": "manage_accounts",
+                        "link": "/admin/accounts/user/",
+                    },
+                ],
+            },
+        ],
+    },
+}
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",

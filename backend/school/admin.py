@@ -1,5 +1,6 @@
 from django.contrib import admin, messages
 from django.utils.translation import gettext_lazy as _
+from unfold.admin import ModelAdmin as UnfoldModelAdmin
 
 from .forms import load_country_data
 from .line import line_push_unavailable_reason, notify_interview_passed
@@ -25,7 +26,7 @@ admin.site.index_title = "ภาพรวมระบบโรงเรียน
 
 
 @admin.register(Appointment)
-class AppointmentAdmin(admin.ModelAdmin):
+class AppointmentAdmin(UnfoldModelAdmin):
     list_display = ("title", "appointment_type", "starts_at", "status", "participant_total", "created_by")
     list_filter = ("appointment_type", "status", "starts_at")
     search_fields = ("title", "location", "details")
@@ -37,7 +38,7 @@ class AppointmentAdmin(admin.ModelAdmin):
 
 
 @admin.register(AppointmentParticipant)
-class AppointmentParticipantAdmin(admin.ModelAdmin):
+class AppointmentParticipantAdmin(UnfoldModelAdmin):
     list_display = ("appointment", "person", "notification_status", "response_status", "notified_at", "confirmed_at")
     list_filter = ("appointment__appointment_type", "notification_status", "response_status")
     search_fields = ("appointment__title", "person__first_name", "person__last_name", "person__phone")
@@ -68,7 +69,7 @@ class CountryCodeFilter(admin.SimpleListFilter):
 
 
 @admin.register(Person)
-class PersonAdmin(admin.ModelAdmin):
+class PersonAdmin(UnfoldModelAdmin):
     list_display = (
         "full_name",
         "phone",
@@ -234,7 +235,7 @@ class PersonAdmin(admin.ModelAdmin):
 
 
 @admin.register(Student)
-class StudentAdmin(admin.ModelAdmin):
+class StudentAdmin(UnfoldModelAdmin):
     list_display = (
         "student_id",
         "person",
@@ -256,21 +257,21 @@ class StudentAdmin(admin.ModelAdmin):
 
 
 @admin.register(TeacherGroup)
-class TeacherGroupAdmin(admin.ModelAdmin):
+class TeacherGroupAdmin(UnfoldModelAdmin):
     list_display = ("group_name", "teacher", "grade_level", "is_active")
     list_filter = ("teacher", "grade_level", "is_active")
     search_fields = ("group_name", "grade_level", "teacher__username", "teacher__first_name", "teacher__last_name")
 
 
 @admin.register(AttendanceSession)
-class AttendanceSessionAdmin(admin.ModelAdmin):
+class AttendanceSessionAdmin(UnfoldModelAdmin):
     list_display = ("group", "date")
     list_filter = ("group", "date")
     search_fields = ("group__group_name",)
 
 
 @admin.register(AttendanceRecord)
-class AttendanceRecordAdmin(admin.ModelAdmin):
+class AttendanceRecordAdmin(UnfoldModelAdmin):
     list_display = ("attendance_session", "student", "status")
     list_filter = ("status", "attendance_session__group")
     search_fields = (
@@ -281,14 +282,14 @@ class AttendanceRecordAdmin(admin.ModelAdmin):
 
 
 @admin.register(HomeworkAssignment)
-class HomeworkAssignmentAdmin(admin.ModelAdmin):
+class HomeworkAssignmentAdmin(UnfoldModelAdmin):
     list_display = ("title", "group", "due_date")
     list_filter = ("group", "due_date")
     search_fields = ("title", "group__group_name")
 
 
 @admin.register(HomeworkSubmission)
-class HomeworkSubmissionAdmin(admin.ModelAdmin):
+class HomeworkSubmissionAdmin(UnfoldModelAdmin):
     list_display = ("homework_assignment", "student", "status", "score", "submitted_at")
     list_filter = ("status", "homework_assignment__group")
     search_fields = (

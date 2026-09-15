@@ -12,6 +12,23 @@
 }
 
 html,
+html.light,
+html.dark {
+    --color-base-50: #f8faf7 !important;
+    --color-base-100: #eef3ed !important;
+    --color-base-200: #cfdccd !important;
+    --color-base-300: #9caf9e !important;
+    --color-base-700: #344238 !important;
+    --color-base-800: #1d2b22 !important;
+    --color-base-900: #101c15 !important;
+    --color-font-subtle-light: #526257 !important;
+    --color-font-default-light: #26352b !important;
+    --color-font-important-light: #0b1710 !important;
+    --color-primary-600: #195434 !important;
+    --color-primary-700: #102f22 !important;
+}
+
+html,
 body,
 #page,
 #main {
@@ -33,6 +50,39 @@ a:visited,
 a:hover,
 a:focus-visible {
     color: var(--bri-admin-primary-hover) !important;
+}
+
+[class*="text-font-important"],
+[class*="text-font-default"],
+.text-important {
+    color: var(--bri-admin-ink) !important;
+}
+
+[class*="text-font-subtle"] {
+    color: var(--bri-admin-muted) !important;
+}
+
+[class*="bg-base-50"],
+[class*="bg-base-100"],
+[class*="dark:bg-base-"],
+#content-main,
+.module {
+    background-color: var(--bri-admin-bg) !important;
+}
+
+[class*="bg-white"],
+[class*="bg-base-200"],
+[class*="bg-base-300"] {
+    background-color: var(--bri-admin-surface) !important;
+}
+
+[class*="border-base-"],
+.border,
+.module,
+table,
+thead th,
+tbody td {
+    border-color: #9caf9e !important;
 }
 
 [class*="bg-primary-"],
@@ -62,7 +112,7 @@ select,
 .vTextField {
     width: 100%;
     min-height: 42px;
-    border: 1px solid #aebdaf !important;
+    border: 1.5px solid #516858 !important;
     border-radius: 8px;
     padding: 10px 12px;
     color: var(--bri-admin-ink) !important;
@@ -75,6 +125,59 @@ select:focus {
     border-color: var(--bri-admin-primary) !important;
     box-shadow: 0 0 0 3px var(--bri-admin-focus) !important;
     outline: none !important;
+}
+
+label,
+legend,
+th,
+td,
+p,
+li,
+dt,
+dd {
+    color: var(--bri-admin-ink) !important;
+}
+
+body:not(.login) #nav-sidebar,
+body:not(.login) header,
+body:not(.login) main,
+body:not(.login) #content {
+    color: var(--bri-admin-ink) !important;
+}
+
+body:not(.login) #nav-sidebar {
+    border-right: 1px solid #9caf9e !important;
+    background: #f3f7f2 !important;
+}
+
+body:not(.login) #nav-sidebar a,
+body:not(.login) #nav-sidebar button {
+    color: var(--bri-admin-ink) !important;
+}
+
+body:not(.login) #nav-sidebar a:hover,
+body:not(.login) #nav-sidebar button:hover {
+    color: var(--bri-admin-primary-hover) !important;
+    background-color: #e2ece3 !important;
+}
+
+body:not(.login) table,
+body:not(.login) .results,
+body:not(.login) fieldset,
+body:not(.login) form .form-row,
+body:not(.login) [class*="shadow"] {
+    border-color: #9caf9e !important;
+    background-color: #ffffff !important;
+}
+
+body:not(.login) thead th,
+body:not(.login) caption {
+    color: var(--bri-admin-ink) !important;
+    background-color: #e7efe6 !important;
+}
+
+body:not(.login) tbody tr:hover {
+    background-color: #f1f7f1 !important;
 }
 
 ::placeholder {
@@ -93,7 +196,7 @@ body.login #page {
 }
 
 body.login div[class*="sm:w-96"] {
-    border: 1px solid var(--bri-admin-border) !important;
+    border: 1.5px solid #8fa191 !important;
     border-radius: 8px !important;
     padding: 32px !important;
     background: rgba(255, 255, 255, 0.96) !important;
@@ -126,7 +229,7 @@ body.login [class*="border-base-"] {
 body.login input {
     width: 100%;
     min-height: 44px;
-    border: 1px solid #8fa191 !important;
+    border: 1.5px solid #516858 !important;
     border-radius: 8px;
     padding: 10px 12px;
     color: var(--bri-admin-ink) !important;

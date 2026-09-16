@@ -785,3 +785,20 @@ body.login div[class*="sm:w-96"] {
     background: rgba(253, 251, 246, 0.98) !important;
     box-shadow: 0 24px 60px rgba(18, 39, 29, 0.2) !important;
 }
+
+body:not(.login) [class*="bg-primary-"],
+body:not(.login) [class*="bg-primary-"] :is(a, button, span, label, strong, small, p, svg, .material-symbols-outlined) {
+    color: #ffffff !important;
+}
+
+body:not(.login) #nav-sidebar .bg-primary-600,
+body:not(.login) #nav-sidebar .bg-primary-600 * {
+    color: #12271d !important;
+    background: var(--bri-admin-gold) !important;
+}
+
+body:not(.login) #changelist-actions button[type="submit"],
+body:not(.login) #changelist-actions button[type="submit"] * {
+    color: #12271d !important;
+    background: var(--bri-admin-gold) !important;
+}

@@ -4,7 +4,7 @@
 {% block title %}{% block dashboard_title %}Dashboard ผู้สอน{% endblock %} | BRI School of Fivefold{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/teacher_dashboard.css' %}?v=20260915-tabs-1">
+<link rel="stylesheet" href="{% static 'school/css/teacher_dashboard.css' %}?v=20260916-dashboard-2">
 {% endblock %}
 
 {% block content %}
@@ -14,19 +14,19 @@
             {% include "school/includes/brand_logo.html" with variant="nav" %}
         </a>
 
-        <div class="teacher-sidebar-label">Teacher workspace</div>
+        <div class="teacher-sidebar-label">พื้นที่ผู้สอน</div>
         <nav class="teacher-navigation" aria-label="เมนูผู้สอน">
-            <a class="is-active" href="#overview">
+            <a class="is-active" href="#dashboard-top" data-dashboard-link="overview">
                 <svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#landmark"></use></svg>
-                <span>ภาพรวม</span>
+                <span>แดชบอร์ด</span>
             </a>
-            <a href="#students">
+            <a href="#students" data-dashboard-link="students">
                 <svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#user"></use></svg>
-                <span>นักเรียน</span>
+                <span>รายชื่อนักศึกษา</span>
             </a>
-            <a href="#learning">
+            <a href="#learning" data-dashboard-link="learning">
                 <svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#calendar-days"></use></svg>
-                <span>การเรียน</span>
+                <span>งานและการเข้าเรียน</span>
             </a>
         </nav>
 
@@ -54,9 +54,9 @@
             </form>
         </header>
         <nav class="teacher-mobile-nav" aria-label="เมนูผู้สอนบนมือถือ">
-            <a href="#overview">ภาพรวม</a>
-            <a href="#students">นักเรียน</a>
-            <a href="#learning">การเรียน</a>
+            <a class="is-active" href="#dashboard-top" data-dashboard-link="overview">ภาพรวม</a>
+            <a href="#students" data-dashboard-link="students">นักศึกษา</a>
+            <a href="#learning" data-dashboard-link="learning">การเรียน</a>
         </nav>
 
         {% block dashboard_content %}{% endblock %}

@@ -760,6 +760,13 @@ class TeacherFlowTests(TestCase):
         self.assertTrue(dashboard_student.needs_attention)
         self.assertEqual(response.context["average_attendance"], 50)
         self.assertEqual(response.context["average_homework"], 50)
+        self.assertTrue(response.context["has_learning_data"])
+        self.assertEqual(response.context["attention_students"][0].pk, student.pk)
+        self.assertEqual(response.context["dashboard_groups"][0].dashboard_attendance, 50)
+        self.assertEqual(response.context["dashboard_groups"][0].dashboard_homework, 50)
+        self.assertEqual(response.context["dashboard_groups"][0].dashboard_attention_count, 1)
+        self.assertContains(response, 'id="teacher-tab-overview"')
+        self.assertContains(response, 'class="teacher-health-track"')
 
     def test_teacher_group_filter_cannot_select_another_teachers_group(self):
         User = get_user_model()

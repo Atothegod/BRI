@@ -46,6 +46,9 @@ class StudentGroupAssignmentTests(TestCase):
         self.assertNotContains(response, assigned_student.student_id)
         self.assertNotContains(response, self.unpaid_student.student_id)
         self.assertContains(response, "Approved Teacher")
+        self.assertContains(response, 'class="assignment-steps"')
+        self.assertContains(response, 'class="destination-group-option"')
+        self.assertContains(response, 'id="assignment-review-dialog"')
 
     def test_superuser_can_assign_multiple_students_to_teacher_group(self):
         response = self.client.post(self.url, {

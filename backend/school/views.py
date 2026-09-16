@@ -515,6 +515,7 @@ def teacher_dashboard(request):
         student.attendance_percent = None
         student.homework_percent = None
         student.needs_attention = False
+        student.attention_reasons = []
 
         if student.attendance_total:
             student.attendance_percent = round(
@@ -523,6 +524,7 @@ def teacher_dashboard(request):
             attendance_percentages.append(student.attendance_percent)
             if student.attendance_percent < 75:
                 student.needs_attention = True
+                student.attention_reasons.append("การเข้าเรียน")
 
         if student.homework_total:
             student.homework_percent = round(
@@ -531,6 +533,7 @@ def teacher_dashboard(request):
             homework_percentages.append(student.homework_percent)
             if student.homework_percent < 70:
                 student.needs_attention = True
+                student.attention_reasons.append("การส่งงาน")
 
         if student.needs_attention:
             needs_attention_count += 1
@@ -551,6 +554,36 @@ def teacher_dashboard(request):
         if homework_percentages
         else None
     )
+
+    dashboard_groups = []
+    for group in scope_groups:
+        group_students = [student for student in students if student.group_id == group.pk]
+        group_attendance = [
+            student.attendance_percent
+            for student in group_students
+            if student.attendance_percent is not None
+        ]
+        group_homework = [
+            student.homework_percent
+            for student in group_students
+            if student.homework_percent is not None
+        ]
+        group.dashboard_attendance = (
+            round(sum(group_attendance) / len(group_attendance))
+            if group_attendance
+            else None
+        )
+        group.dashboard_homework = (
+            round(sum(group_homework) / len(group_homework))
+            if group_homework
+            else None
+        )
+        group.dashboard_attention_count = sum(
+            student.needs_attention for student in group_students
+        )
+        dashboard_groups.append(group)
+
+    attention_students = [student for student in students if student.needs_attention][:5]
 
     upcoming_assignments = (
         HomeworkAssignment.objects.select_related("group")
@@ -603,7 +636,10 @@ def teacher_dashboard(request):
         "validation_pending_count": validation_pending_count,
         "average_attendance": average_attendance,
         "average_homework": average_homework,
+        "has_learning_data": bool(attendance_percentages or homework_percentages),
         "needs_attention_count": needs_attention_count,
+        "attention_students": attention_students,
+        "dashboard_groups": dashboard_groups,
         "upcoming_assignments": upcoming_assignments,
         "recent_attendance_sessions": recent_attendance_sessions,
     }

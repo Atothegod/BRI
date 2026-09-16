@@ -2,9 +2,9 @@ from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count, Q
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
@@ -63,11 +63,72 @@ class StudentGroupAssignmentForm(forms.Form):
         return students
 
 
+def move_student_between_groups(request):
+    student_id = request.POST.get("student", "").strip()
+    group_id = request.POST.get("group", "").strip()
+    if not student_id.isdigit() or (group_id and not group_id.isdigit()):
+        return JsonResponse({"ok": False, "message": "ข้อมูลการย้ายกลุ่มไม่ถูกต้อง"}, status=400)
+
+    with transaction.atomic():
+        student = (
+            assignable_students()
+            .select_for_update()
+            .select_related("person")
+            .filter(pk=int(student_id))
+            .first()
+        )
+        if student is None:
+            return JsonResponse(
+                {"ok": False, "message": "นักศึกษาคนนี้ไม่อยู่ในเงื่อนไขการจัดกลุ่มแล้ว"},
+                status=400,
+            )
+
+        group = None
+        if group_id:
+            group = (
+                assignable_groups()
+                .select_for_update()
+                .select_related("teacher")
+                .filter(pk=int(group_id))
+                .first()
+            )
+            if group is None:
+                return JsonResponse(
+                    {"ok": False, "message": "กลุ่มปลายทางไม่พร้อมใช้งานแล้ว"},
+                    status=400,
+                )
+
+        previous_group_id = student.group_id
+        if previous_group_id != (group.pk if group else None):
+            Student.objects.filter(pk=student.pk).update(
+                group=group,
+                updated_at=timezone.now(),
+            )
+
+    if group:
+        teacher_name = group.teacher.get_full_name() or group.teacher.username
+        destination = f"{group.group_name} โดย {teacher_name}"
+    else:
+        destination = "ยังไม่มีกลุ่ม"
+
+    return JsonResponse({
+        "ok": True,
+        "student_id": student.pk,
+        "previous_group_id": previous_group_id,
+        "group_id": group.pk if group else None,
+        "group_name": group.group_name if group else "ยังไม่มีกลุ่ม",
+        "message": f"ย้าย {student.person.full_name} ไปยัง {destination} เรียบร้อยแล้ว",
+    })
+
+
 @login_required(login_url="admin:login")
 @never_cache
 def student_group_assignment(request):
     if not is_school_admin(request.user):
         raise PermissionDenied
+
+    if request.method == "POST" and request.headers.get("x-requested-with") == "XMLHttpRequest":
+        return move_student_between_groups(request)
 
     form = StudentGroupAssignmentForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
@@ -97,30 +158,11 @@ def student_group_assignment(request):
             )
             return redirect("school:student_group_assignment")
 
-    query = request.GET.get("q", "").strip()
-    assignment = request.GET.get("assignment", "unassigned")
-    teacher_id = request.GET.get("teacher", "").strip()
-    group_id = request.GET.get("group", "").strip()
-    if teacher_id.isdigit() or group_id.isdigit():
-        assignment = "assigned"
-    students = assignable_students().select_related("person", "group", "group__teacher")
-    if query:
-        students = students.filter(
-            Q(student_id__icontains=query)
-            | Q(person__first_name__icontains=query)
-            | Q(person__last_name__icontains=query)
-            | Q(person__nickname__icontains=query)
-            | Q(person__phone__icontains=query)
-        )
-    if assignment == "unassigned":
-        students = students.filter(group__isnull=True)
-    elif assignment == "assigned":
-        students = students.filter(group__isnull=False)
-    if teacher_id.isdigit():
-        students = students.filter(group__teacher_id=int(teacher_id))
-    if group_id.isdigit():
-        students = students.filter(group_id=int(group_id))
-    students = students.order_by("student_id", "pk")
+    students = list(
+        assignable_students()
+        .select_related("person", "group", "group__teacher")
+        .order_by("student_id", "pk")
+    )
 
     groups = list(
         assignable_groups().select_related("teacher").annotate(
@@ -130,36 +172,31 @@ def student_group_assignment(request):
             )
         ).order_by("teacher__first_name", "teacher__last_name", "teacher__username", "group_name")
     )
-    teachers = []
-    teacher_ids = set()
-    for group in groups:
-        if group.teacher_id not in teacher_ids:
-            teachers.append(group.teacher)
-            teacher_ids.add(group.teacher_id)
+    students_by_group = {group.pk: [] for group in groups}
+    unassigned_students = []
+    other_group_students = []
+    for student in students:
+        if student.group_id is None:
+            unassigned_students.append(student)
+        elif student.group_id in students_by_group:
+            students_by_group[student.group_id].append(student)
+        else:
+            other_group_students.append(student)
 
-    page = Paginator(students, 50).get_page(request.GET.get("page"))
-    query_params = request.GET.copy()
-    query_params.pop("page", None)
-    page_query = query_params.urlencode()
-    base_students = assignable_students()
+    for group in groups:
+        group.board_students = students_by_group[group.pk]
+
+    assigned_count = sum(student.group_id is not None for student in students)
     return render(request, "school/student_group_assignment.html", {
         "form": form,
-        "page_obj": page,
+        "students": students,
+        "unassigned_students": unassigned_students,
+        "other_group_students": other_group_students,
         "groups": groups,
-        "teachers": teachers,
-        "query": query,
-        "filters": {
-            "assignment": assignment,
-            "teacher": teacher_id,
-            "group": group_id,
-        },
-        "has_filters": bool(query or assignment != "unassigned" or teacher_id or group_id),
-        "page_query_prefix": f"?{page_query}&" if page_query else "?",
-        "selected_ids": request.POST.getlist("students"),
         "stats": {
-            "total": base_students.count(),
-            "unassigned": base_students.filter(group__isnull=True).count(),
-            "assigned": base_students.filter(group__isnull=False).count(),
+            "total": len(students),
+            "unassigned": len(unassigned_students),
+            "assigned": assigned_count,
             "groups": len(groups),
         },
     })

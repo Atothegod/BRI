@@ -33,7 +33,7 @@ class StudentGroupAssignmentTests(TestCase):
         student.save(update_fields=["is_paid"])
         return student
 
-    def test_page_defaults_to_unassigned_paid_students_with_student_ids(self):
+    def test_page_shows_all_assignable_students_in_board_lanes(self):
         assigned_student = self.students[1]
         assigned_student.group = self.group
         assigned_student.save(update_fields=["group"])
@@ -43,12 +43,13 @@ class StudentGroupAssignmentTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "school/student_group_assignment.html")
         self.assertContains(response, self.students[0].student_id)
-        self.assertNotContains(response, assigned_student.student_id)
+        self.assertContains(response, assigned_student.student_id)
         self.assertNotContains(response, self.unpaid_student.student_id)
         self.assertContains(response, "Approved Teacher")
-        self.assertContains(response, 'class="assignment-steps"')
-        self.assertContains(response, 'class="destination-group-option"')
-        self.assertContains(response, 'id="assignment-review-dialog"')
+        self.assertContains(response, 'data-assignment-board')
+        self.assertContains(response, 'data-student-card', count=2)
+        self.assertContains(response, 'id="student-move-dialog"')
+        self.assertNotContains(response, 'name="q"')
 
     def test_superuser_can_assign_multiple_students_to_teacher_group(self):
         response = self.client.post(self.url, {
@@ -91,19 +92,45 @@ class StudentGroupAssignmentTests(TestCase):
         self.students[0].refresh_from_db()
         self.assertIsNone(self.students[0].group)
 
-    def test_filters_can_show_assigned_students(self):
+    def test_ajax_move_assigns_student_and_returns_destination(self):
+        response = self.client.post(
+            self.url,
+            {"student": self.students[0].pk, "group": self.group.pk},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["ok"])
+        self.assertEqual(response.json()["group_id"], self.group.pk)
+        self.students[0].refresh_from_db()
+        self.assertEqual(self.students[0].group, self.group)
+
+    def test_ajax_move_can_return_student_to_unassigned_lane(self):
         self.students[0].group = self.group
         self.students[0].save(update_fields=["group"])
 
-        response = self.client.get(self.url, {
-            "assignment": "assigned",
-            "teacher": self.teacher.pk,
-            "group": self.group.pk,
-            "q": self.students[0].student_id,
-        })
+        response = self.client.post(
+            self.url,
+            {"student": self.students[0].pk, "group": ""},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
 
-        self.assertContains(response, self.students[0].student_id)
-        self.assertNotContains(response, self.students[1].student_id)
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.json()["group_id"])
+        self.students[0].refresh_from_db()
+        self.assertIsNone(self.students[0].group)
+
+    def test_ajax_move_rejects_ineligible_student(self):
+        response = self.client.post(
+            self.url,
+            {"student": self.unpaid_student.pk, "group": self.group.pk},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(response.json()["ok"])
+        self.unpaid_student.refresh_from_db()
+        self.assertIsNone(self.unpaid_student.group)
 
     def test_requires_superuser_and_uses_django_admin_login(self):
         User = get_user_model()

@@ -1,144 +1,169 @@
 (() => {
-    const form = document.querySelector("#assignment-form");
-    if (!form) return;
+    const form = document.querySelector("#assignment-board-form");
+    const board = form?.querySelector("[data-assignment-board]");
+    if (!form || !board) return;
 
-    const checkboxes = Array.from(form.querySelectorAll('input[name="students"]'));
-    const rows = Array.from(form.querySelectorAll("[data-student-row]"));
-    const selectAll = form.querySelector("#select-all");
-    const selectedCount = form.querySelector("#selected-count");
-    const selectedPreview = form.querySelector("#selected-preview");
-    const groupOptions = Array.from(form.querySelectorAll('input[name="group"]'));
-    const submit = form.querySelector("#confirm-assignment");
-    const warning = form.querySelector("#reassignment-warning");
-    const hint = form.querySelector("#assignment-hint");
-    const reviewDialog = form.querySelector("#assignment-review-dialog");
-    const reviewStudentCount = form.querySelector("#review-student-count");
-    const reviewGroupName = form.querySelector("#review-group-name");
-    const reviewTeacherName = form.querySelector("#review-teacher-name");
-    const reviewWarning = form.querySelector("#review-warning");
-    const cancelAssignment = form.querySelector("#cancel-assignment");
-    const finalConfirm = form.querySelector("#final-confirm-assignment");
+    const lanes = Array.from(board.querySelectorAll("[data-assignment-lane]"));
+    const status = board.querySelector("[data-board-status]");
+    const statusText = board.querySelector("[data-board-status-text]");
+    const totalStat = document.querySelector("[data-stat-total]");
+    const unassignedStat = document.querySelector("[data-stat-unassigned]");
+    const assignedStat = document.querySelector("[data-stat-assigned]");
+    const dialog = form.querySelector("#student-move-dialog");
+    const dialogStudentName = dialog?.querySelector("[data-dialog-student-name]");
+    const moveTargets = Array.from(dialog?.querySelectorAll("[data-move-target]") || []);
+    const closeDialog = dialog?.querySelector("[data-close-move-dialog]");
 
-    const selectedStudents = () => checkboxes.filter((checkbox) => checkbox.checked);
-    const selectedGroup = () => groupOptions.find((option) => option.checked);
+    let draggedCard = null;
+    let dialogCard = null;
+    let isMoving = false;
 
-    const refresh = () => {
-        const selected = selectedStudents();
-        const group = selectedGroup();
-        const count = selected.length;
-        const reassignmentCount = selected.filter((checkbox) => (
-            checkbox.closest("[data-student-row]")?.dataset.hasGroup === "true"
-        )).length;
-        const names = selected.map((checkbox) => (
-            checkbox.closest("[data-student-row]")?.dataset.studentName || ""
-        )).filter(Boolean);
+    const cards = () => Array.from(board.querySelectorAll("[data-student-card]"));
 
-        selectedCount.textContent = String(count);
-        submit.disabled = count === 0 || !group;
-        rows.forEach((row) => {
-            const checkbox = row.querySelector('input[name="students"]');
-            row.classList.toggle("is-selected", Boolean(checkbox?.checked));
-            row.setAttribute("aria-selected", checkbox?.checked ? "true" : "false");
-        });
+    const setStatus = (message, state = "idle") => {
+        statusText.textContent = message;
+        status.dataset.state = state;
+    };
 
-        if (count === 0) {
-            selectedPreview.textContent = "ยังไม่ได้เลือกนักศึกษา";
-        } else {
-            const visibleNames = names.slice(0, 3).join(", ");
-            const remaining = count - 3;
-            selectedPreview.textContent = remaining > 0
-                ? `${visibleNames} และอีก ${remaining} คน`
-                : visibleNames;
+    const updateLane = (lane) => {
+        const list = lane.querySelector("[data-lane-list]");
+        if (!list) return;
+        const count = list.querySelectorAll(":scope > [data-student-card]").length;
+        const counter = lane.querySelector("[data-lane-count]");
+        const empty = list.querySelector(":scope > [data-lane-empty]");
+        if (counter) counter.textContent = String(count);
+        if (empty) empty.hidden = count > 0;
+    };
+
+    const updateStats = () => {
+        const allCards = cards();
+        const unassigned = allCards.filter((card) => card.dataset.groupId === "").length;
+        if (totalStat) totalStat.textContent = String(allCards.length);
+        if (unassignedStat) unassignedStat.textContent = String(unassigned);
+        if (assignedStat) assignedStat.textContent = String(allCards.length - unassigned);
+        lanes.forEach(updateLane);
+    };
+
+    const findLane = (groupId) => lanes.find((lane) => lane.dataset.groupId === groupId);
+
+    const moveStudent = async (card, destinationLane) => {
+        if (!card || !destinationLane || isMoving) return;
+        const destinationGroupId = destinationLane.dataset.groupId;
+        if (card.dataset.groupId === destinationGroupId) {
+            setStatus(`${card.dataset.studentName} อยู่ใน ${destinationLane.dataset.groupName} แล้ว`);
+            return;
         }
 
-        warning.hidden = reassignmentCount === 0;
-        warning.textContent = reassignmentCount
-            ? `${reassignmentCount} คนมีกลุ่มอยู่แล้วและจะถูกย้ายมายังกลุ่มใหม่`
-            : "";
+        const sourceLane = card.closest(".assignment-lane");
+        const destinationList = destinationLane.querySelector("[data-lane-list]");
+        const csrfToken = form.querySelector('input[name="csrfmiddlewaretoken"]')?.value;
+        const payload = new FormData();
+        payload.set("student", card.dataset.studentId);
+        payload.set("group", destinationGroupId);
+        if (csrfToken) payload.set("csrfmiddlewaretoken", csrfToken);
 
-        if (count === 0) {
-            hint.textContent = "เลือกนักศึกษาเพื่อเริ่มจัดกลุ่ม";
-        } else if (!group) {
-            hint.textContent = "เลือกกลุ่มปลายทาง";
-        } else {
-            hint.textContent = `พร้อมจัด ${count} คนเข้า ${group.dataset.groupLabel}`;
-        }
+        isMoving = true;
+        card.classList.add("is-saving");
+        destinationLane.classList.add("is-receiving");
+        setStatus(`กำลังย้าย ${card.dataset.studentName}...`, "saving");
 
-        if (selectAll) {
-            selectAll.checked = checkboxes.length > 0 && count === checkboxes.length;
-            selectAll.indeterminate = count > 0 && count < checkboxes.length;
+        try {
+            const response = await fetch(window.location.pathname, {
+                method: "POST",
+                body: payload,
+                headers: { "X-Requested-With": "XMLHttpRequest" },
+                credentials: "same-origin",
+            });
+            let result;
+            try {
+                result = await response.json();
+            } catch {
+                throw new Error("ระบบตอบกลับไม่ถูกต้อง กรุณาลองใหม่");
+            }
+            if (!response.ok || !result.ok) {
+                throw new Error(result.message || "ไม่สามารถย้ายกลุ่มได้");
+            }
+
+            destinationList.insertBefore(card, destinationList.querySelector("[data-lane-empty]"));
+            card.dataset.groupId = destinationGroupId;
+            card.classList.add("is-just-moved");
+            window.setTimeout(() => card.classList.remove("is-just-moved"), 900);
+            if (sourceLane) updateLane(sourceLane);
+            updateLane(destinationLane);
+            updateStats();
+            setStatus(result.message, "success");
+        } catch (error) {
+            setStatus(error.message || "ไม่สามารถย้ายกลุ่มได้ กรุณาลองใหม่", "error");
+        } finally {
+            isMoving = false;
+            card.classList.remove("is-saving");
+            destinationLane.classList.remove("is-receiving");
         }
     };
 
-    const toggleRow = (row) => {
-        const checkbox = row.querySelector('input[name="students"]');
-        if (!checkbox) return;
-        checkbox.checked = !checkbox.checked;
-        checkbox.dispatchEvent(new Event("change", { bubbles: true }));
-    };
-
-    checkboxes.forEach((checkbox) => checkbox.addEventListener("change", refresh));
-    groupOptions.forEach((option) => option.addEventListener("change", refresh));
-    rows.forEach((row) => {
-        row.addEventListener("click", (event) => {
-            if (event.target.closest("input, button, a, label, select")) return;
-            toggleRow(row);
-        });
-        row.addEventListener("keydown", (event) => {
-            if (event.key !== "Enter" && event.key !== " ") return;
-            if (event.target.closest("input, button, a, label, select")) return;
+    board.addEventListener("dragstart", (event) => {
+        const card = event.target.closest("[data-student-card]");
+        if (!card || isMoving) {
             event.preventDefault();
-            toggleRow(row);
+            return;
+        }
+        draggedCard = card;
+        card.classList.add("is-dragging");
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", card.dataset.studentId);
+    });
+
+    board.addEventListener("dragover", (event) => {
+        const lane = event.target.closest("[data-assignment-lane]");
+        if (!lane || !draggedCard) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        lanes.forEach((item) => item.classList.toggle("is-drag-over", item === lane));
+    });
+
+    board.addEventListener("drop", (event) => {
+        const lane = event.target.closest("[data-assignment-lane]");
+        if (!lane || !draggedCard) return;
+        event.preventDefault();
+        lanes.forEach((item) => item.classList.remove("is-drag-over"));
+        moveStudent(draggedCard, lane);
+    });
+
+    board.addEventListener("dragend", () => {
+        draggedCard?.classList.remove("is-dragging");
+        draggedCard = null;
+        lanes.forEach((lane) => lane.classList.remove("is-drag-over"));
+    });
+
+    board.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-open-move-dialog]");
+        if (!button || isMoving) return;
+        dialogCard = button.closest("[data-student-card]");
+        if (!dialogCard || !dialog) return;
+
+        dialogStudentName.textContent = dialogCard.dataset.studentName;
+        moveTargets.forEach((target) => {
+            const isCurrent = target.dataset.groupId === dialogCard.dataset.groupId;
+            target.disabled = isCurrent;
+            target.classList.toggle("is-current", isCurrent);
+        });
+        if (typeof dialog.showModal === "function") dialog.showModal();
+    });
+
+    moveTargets.forEach((target) => {
+        target.addEventListener("click", async () => {
+            const destinationLane = findLane(target.dataset.groupId);
+            if (!dialogCard || !destinationLane) return;
+            dialog.close();
+            await moveStudent(dialogCard, destinationLane);
+            dialogCard = null;
         });
     });
-    selectAll?.addEventListener("change", () => {
-        checkboxes.forEach((checkbox) => { checkbox.checked = selectAll.checked; });
-        refresh();
+
+    closeDialog?.addEventListener("click", () => dialog?.close());
+    dialog?.addEventListener("click", (event) => {
+        if (event.target === dialog) dialog.close();
     });
 
-    form.addEventListener("submit", (event) => {
-        const selected = selectedStudents();
-        const group = selectedGroup();
-        if (form.dataset.confirmed === "true") return;
-
-        event.preventDefault();
-        if (!selected.length || !group) {
-            refresh();
-            return;
-        }
-
-        const reassignmentCount = selected.filter((checkbox) => (
-            checkbox.closest("[data-student-row]")?.dataset.hasGroup === "true"
-        )).length;
-        reviewStudentCount.textContent = `${selected.length} คน`;
-        reviewGroupName.textContent = group.dataset.groupLabel || "-";
-        reviewTeacherName.textContent = group.dataset.groupTeacher || "-";
-        reviewWarning.hidden = reassignmentCount === 0;
-        reviewWarning.textContent = reassignmentCount
-            ? `${reassignmentCount} คนจะถูกย้ายออกจากกลุ่มเดิม`
-            : "";
-
-        if (typeof reviewDialog?.showModal === "function") {
-            reviewDialog.showModal();
-            return;
-        }
-
-        const message = `ยืนยันจัดนักศึกษา ${selected.length} คนเข้า ${group.dataset.groupLabel}?`;
-        if (window.confirm(message)) {
-            form.dataset.confirmed = "true";
-            form.requestSubmit(submit);
-        }
-    });
-
-    cancelAssignment?.addEventListener("click", () => reviewDialog?.close());
-    finalConfirm?.addEventListener("click", () => {
-        form.dataset.confirmed = "true";
-        reviewDialog?.close();
-        form.requestSubmit(submit);
-    });
-    reviewDialog?.addEventListener("click", (event) => {
-        if (event.target === reviewDialog) reviewDialog.close();
-    });
-
-    refresh();
+    updateStats();
 })();

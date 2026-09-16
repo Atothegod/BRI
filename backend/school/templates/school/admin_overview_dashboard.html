@@ -5,7 +5,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20260915-admin-tabs-1">
-<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20260916-school-admin-2">
+<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20260916-school-admin-3">
 {% endblock %}
 
 {% block content %}
@@ -26,16 +26,16 @@
                 <strong>{{ stats.applicants_total }}</strong>
             </div>
             <div>
-                <span>นักเรียน active</span>
-                <strong>{{ stats.students_active }}</strong>
+                <span>นักเรียนทั้งหมด</span>
+                <strong>{{ stats.students_total }}</strong>
             </div>
             <div>
-                <span>ผู้สอนรออนุมัติ</span>
-                <strong>{{ stats.teachers_pending }}</strong>
+                <span>ผู้สอนทั้งหมด</span>
+                <strong>{{ stats.teachers_total }}</strong>
             </div>
             <div>
-                <span>กลุ่ม active</span>
-                <strong>{{ stats.groups_active }}</strong>
+                <span>กลุ่ม</span>
+                <strong>{{ stats.groups_total }}</strong>
             </div>
         </div>
 
@@ -43,11 +43,13 @@
             <input class="dashboard-tab-input" type="radio" name="admin-dashboard-tab" id="admin-tab-admissions" checked>
             <input class="dashboard-tab-input" type="radio" name="admin-dashboard-tab" id="admin-tab-people">
             <input class="dashboard-tab-input" type="radio" name="admin-dashboard-tab" id="admin-tab-records">
+            <input class="dashboard-tab-input" type="radio" name="admin-dashboard-tab" id="admin-tab-geo">
 
             <div class="dashboard-tab-list" role="tablist" aria-label="เลือกหมวดข้อมูล">
                 <label for="admin-tab-admissions" id="admin-tab-admissions-label" role="tab" tabindex="0">สมัครเรียนและชำระเงิน</label>
                 <label for="admin-tab-people" id="admin-tab-people-label" role="tab" tabindex="0">ผู้สอนและกลุ่มเรียน</label>
                 <label for="admin-tab-records" id="admin-tab-records-label" role="tab" tabindex="0">นักเรียนล่าสุด</label>
+                <label for="admin-tab-geo" id="admin-tab-geo-label" role="tab" tabindex="0">พื้นที่และภูมิภาค</label>
             </div>
 
             <div class="dashboard-tab-panels">
@@ -70,8 +72,8 @@
                                     <strong>{{ stats.applicants_passed }}</strong>
                                 </div>
                                 <div>
-                                    <span>นักเรียนทั้งหมด</span>
-                                    <strong>{{ stats.students_total }}</strong>
+                                    <span>ผู้สมัครทั้งหมด</span>
+                                    <strong>{{ stats.applicants_total }}</strong>
                                 </div>
                             </div>
                         </section>
@@ -83,18 +85,14 @@
                                     <h2 id="payments-title">การชำระเงิน</h2>
                                 </div>
                             </div>
-                            <div class="metric-list">
+                            <div class="metric-list metric-list--two">
                                 <div>
                                     <span>ชำระแล้ว</span>
                                     <strong>{{ stats.students_paid }}</strong>
                                 </div>
                                 <div>
-                                    <span>รอตรวจสลิป</span>
-                                    <strong>{{ stats.students_payment_pending }}</strong>
-                                </div>
-                                <div>
-                                    <span>ข้อมูลรอตรวจ</span>
-                                    <strong>{{ stats.students_validation_pending }}</strong>
+                                    <span>ยังไม่ชำระ</span>
+                                    <strong>{{ stats.students_unpaid }}</strong>
                                 </div>
                             </div>
                         </section>
@@ -107,7 +105,7 @@
                             <div class="dashboard-panel-heading">
                                 <div>
                                     <span class="eyebrow">Teachers</span>
-                                    <h2 id="teachers-title">สิทธิ์ผู้สอน</h2>
+                                    <h2 id="teachers-title">ผู้สอน</h2>
                                 </div>
                                 {% if request.user.is_staff or request.user.is_superuser %}
                                 <a class="button button--secondary button--small" href="{% url 'admin:accounts_user_changelist' %}">
@@ -115,35 +113,21 @@
                                 </a>
                                 {% endif %}
                             </div>
-                            <div class="metric-list">
-                                <div>
-                                    <span>ผู้สอนทั้งหมด</span>
-                                    <strong>{{ stats.teachers_total }}</strong>
-                                </div>
-                                <div>
-                                    <span>อนุมัติแล้ว</span>
-                                    <strong>{{ stats.teachers_approved }}</strong>
-                                </div>
-                                <div>
-                                    <span>รออนุมัติ</span>
-                                    <strong>{{ stats.teachers_pending }}</strong>
-                                </div>
-                            </div>
                             <div class="queue-list">
-                                {% for teacher in pending_teachers %}
+                                {% for teacher in teacher_summaries %}
                                 <article class="queue-row">
                                     <div>
                                         <strong>{{ teacher.get_full_name|default:teacher.username }}</strong>
-                                        <span>{{ teacher.email|default:teacher.username }}</span>
+                                        <span>{% if teacher.nickname %}{{ teacher.nickname }} · {% endif %}{{ teacher.email|default:teacher.username }}</span>
                                     </div>
-                                    <span class="status-badge status-badge--warning">รออนุมัติ</span>
+                                    <span class="teacher-group-count">{{ teacher.teacher_groups.count }} กลุ่ม</span>
                                 </article>
                                 {% empty %}
                                 <div class="empty-state empty-state--compact">
-                                    <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#check-circle"></use></svg>
+                                    <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#info"></use></svg>
                                     <div>
-                                        <strong>ไม่มีผู้สอนรออนุมัติ</strong>
-                                        <span>คิวอนุมัติว่าง</span>
+                                        <strong>ยังไม่มีผู้สอน</strong>
+                                        <span>ข้อมูลผู้สอนจะแสดงที่นี่</span>
                                     </div>
                                 </div>
                                 {% endfor %}
@@ -165,7 +149,7 @@
                                         <span>{{ group.teacher.get_full_name|default:group.teacher.username }}</span>
                                     </div>
                                     <div class="group-row-stats">
-                                        <span>{{ group.active_student_count }} คน</span>
+                                        <span>{{ group.student_count }} คน</span>
                                         <span>{{ group.paid_student_count }} ชำระแล้ว</span>
                                     </div>
                                 </article>
@@ -199,7 +183,6 @@
                                         <th>ชื่อ</th>
                                         <th>กลุ่ม</th>
                                         <th>ชำระเงิน</th>
-                                        <th>ตรวจข้อมูล</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -212,18 +195,61 @@
                                             {% if student.is_paid %}
                                             <span class="status-badge status-badge--success">จ่ายแล้ว</span>
                                             {% else %}
-                                            <span class="status-badge status-badge--warning">รอตรวจสอบ</span>
+                                            <span class="status-badge status-badge--neutral">ยังไม่ชำระ</span>
                                             {% endif %}
                                         </td>
-                                        <td>{{ student.get_admin_validation_status_display }}</td>
                                     </tr>
                                     {% empty %}
                                     <tr>
-                                        <td colspan="5">ยังไม่มีข้อมูลนักเรียน</td>
+                                        <td colspan="4">ยังไม่มีข้อมูลนักเรียน</td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
                             </table>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="dashboard-tab-panel dashboard-tab-panel--geo" role="tabpanel" aria-labelledby="admin-tab-geo-label">
+                    <section class="dashboard-panel dashboard-panel--wide" aria-labelledby="geo-title">
+                        <div class="dashboard-panel-heading">
+                            <div>
+                                <span class="eyebrow">Geographic overview</span>
+                                <h2 id="geo-title">ผู้สมัครมาจากที่ไหน</h2>
+                            </div>
+                        </div>
+
+                        <div class="geo-summary" aria-label="สรุปประเทศของผู้สมัคร">
+                            <div><span>ประเทศไทย</span><strong>{{ geo_stats.thai }}</strong></div>
+                            <div><span>ต่างประเทศ</span><strong>{{ geo_stats.international }}</strong></div>
+                            <div><span>ไม่ระบุ</span><strong>{{ geo_stats.unspecified }}</strong></div>
+                        </div>
+
+                        <div class="geo-grid">
+                            <section aria-labelledby="regions-title">
+                                <h3 id="regions-title">ภูมิภาค</h3>
+                                <div class="geo-list">
+                                    {% for item in region_summaries %}
+                                    <div class="geo-row"><span>{{ item.label }}</span><strong>{{ item.count }}</strong></div>
+                                    {% endfor %}
+                                </div>
+                            </section>
+                            <section aria-labelledby="provinces-title">
+                                <h3 id="provinces-title">จังหวัดที่พบมาก</h3>
+                                <div class="geo-list">
+                                    {% for item in province_summaries %}
+                                    <div class="geo-row"><span>{{ item.label }}</span><strong>{{ item.count }}</strong></div>
+                                    {% empty %}<p class="geo-empty">ยังไม่มีข้อมูลจังหวัด</p>{% endfor %}
+                                </div>
+                            </section>
+                            <section aria-labelledby="countries-title">
+                                <h3 id="countries-title">ประเทศ</h3>
+                                <div class="geo-list">
+                                    {% for item in country_summaries %}
+                                    <div class="geo-row"><span>{{ item.label }}</span><strong>{{ item.count }}</strong></div>
+                                    {% empty %}<p class="geo-empty">ยังไม่มีข้อมูลประเทศ</p>{% endfor %}
+                                </div>
+                            </section>
                         </div>
                     </section>
                 </div>

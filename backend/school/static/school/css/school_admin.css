@@ -267,7 +267,8 @@
 
 #admin-tab-admissions:checked ~ .dashboard-tab-list label[for="admin-tab-admissions"],
 #admin-tab-people:checked ~ .dashboard-tab-list label[for="admin-tab-people"],
-#admin-tab-records:checked ~ .dashboard-tab-list label[for="admin-tab-records"] {
+#admin-tab-records:checked ~ .dashboard-tab-list label[for="admin-tab-records"],
+#admin-tab-geo:checked ~ .dashboard-tab-list label[for="admin-tab-geo"] {
     color: var(--school-admin-forest);
     background: #ffffff;
     border: 0;
@@ -276,6 +277,10 @@
 
 .dashboard-tab-panels {
     padding: 18px;
+}
+
+#admin-tab-geo:checked ~ .dashboard-tab-panels .dashboard-tab-panel--geo {
+    display: block;
 }
 
 .dashboard-panel {
@@ -312,6 +317,115 @@
 
 .metric-list > div {
     border-left: 3px solid var(--school-admin-gold);
+}
+
+.metric-list--two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.teacher-group-count {
+    display: inline-flex !important;
+    min-height: 28px;
+    padding: 4px 9px;
+    color: var(--school-admin-forest) !important;
+    background: #f5e8bf;
+    border: 1px solid #d8bd73;
+    border-radius: 999px;
+    align-items: center;
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+.status-badge--neutral {
+    color: #38473d;
+    background: #edf1ed;
+    border: 1px solid #c7d2c8;
+}
+
+.geo-summary {
+    display: grid;
+    margin-bottom: 20px;
+    gap: 10px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.geo-summary > div {
+    padding: 14px 16px;
+    background: #f7f9f7;
+    border: 1px solid #d5dfd6;
+    border-left: 3px solid var(--school-admin-gold);
+    border-radius: 8px;
+}
+
+.geo-summary span,
+.geo-summary strong {
+    display: block;
+}
+
+.geo-summary span {
+    color: var(--school-admin-muted);
+    font-size: 0.76rem;
+}
+
+.geo-summary strong {
+    margin-top: 4px;
+    color: var(--school-admin-forest);
+    font-size: 1.35rem;
+}
+
+.geo-grid {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.geo-grid > section {
+    min-width: 0;
+}
+
+.geo-grid h3 {
+    margin: 0 0 9px;
+    color: var(--school-admin-forest);
+    font-size: 0.9rem;
+}
+
+.geo-list {
+    overflow: hidden;
+    border: 1px solid #d5dfd6;
+    border-radius: 8px;
+}
+
+.geo-row {
+    display: flex;
+    min-height: 42px;
+    padding: 9px 12px;
+    color: #3f4f44;
+    background: #ffffff;
+    border-bottom: 1px solid #e1e7e2;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 0.8rem;
+}
+
+.geo-row:nth-child(even) {
+    background: #f7f9f7;
+}
+
+.geo-row:last-child {
+    border-bottom: 0;
+}
+
+.geo-row strong {
+    color: var(--school-admin-forest);
+    font-size: 0.9rem;
+}
+
+.geo-empty {
+    margin: 0;
+    padding: 14px;
+    color: var(--school-admin-muted);
+    font-size: 0.8rem;
 }
 
 .table-shell {
@@ -445,6 +559,12 @@
 
     .dashboard-tab-panels {
         padding: 10px;
+    }
+
+    .metric-list--two,
+    .geo-summary,
+    .geo-grid {
+        grid-template-columns: 1fr;
     }
 
     .interviews {

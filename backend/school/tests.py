@@ -820,6 +820,11 @@ class TeacherFlowTests(TestCase):
             first_name="Recent",
             last_name="Student",
             status=Person.Status.PASSED,
+            extra_data={
+                "country_code": "TH",
+                "region": "central",
+                "province": "กรุงเทพมหานคร",
+            },
         )
         student = Student.objects.get(person=person)
         student.group = group
@@ -834,6 +839,13 @@ class TeacherFlowTests(TestCase):
         self.assertContains(response, "ภาพรวมโรงเรียน")
         self.assertContains(response, "pending@example.com")
         self.assertContains(response, "Recent Student")
+        self.assertContains(response, "พื้นที่และภูมิภาค")
+        self.assertContains(response, "กรุงเทพมหานคร")
+        self.assertNotContains(response, "ผู้สอนรออนุมัติ")
+        self.assertEqual(response.context["stats"]["students_paid"], 1)
+        self.assertEqual(response.context["stats"]["students_unpaid"], 0)
+        self.assertEqual(response.context["stats"]["groups_total"], 1)
+        self.assertEqual(response.context["geo_stats"]["thai"], 1)
 
     def test_legacy_admin_role_without_superuser_cannot_access_admin_overview(self):
         User = get_user_model()

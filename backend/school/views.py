@@ -1,4 +1,5 @@
 import json
+from collections import Counter
 
 from django.conf import settings
 from django.contrib import messages
@@ -620,40 +621,101 @@ def admin_overview_dashboard(request):
         Student.objects.select_related("person", "group")
         .order_by("-created_at", "-id")[:8]
     )
-    pending_teachers = teacher_queryset.filter(is_teacher_approved=False).order_by(
-        "date_joined"
+    teacher_summaries = teacher_queryset.prefetch_related("teacher_groups").order_by(
+        "first_name", "last_name", "username"
     )[:8]
     group_summaries = (
         TeacherGroup.objects.select_related("teacher")
         .annotate(
-            active_student_count=Count("students", filter=Q(students__is_active=True)),
+            student_count=Count("students"),
             paid_student_count=Count(
                 "students",
-                filter=Q(students__is_active=True, students__is_paid=True),
+                filter=Q(students__is_paid=True),
             ),
         )
         .order_by("group_name")[:8]
     )
+
+    region_counts = Counter()
+    province_counts = Counter()
+    country_counts = Counter()
+    thai_count = 0
+    international_count = 0
+    unspecified_count = 0
+
+    for extra_data in Person.objects.values_list("extra_data", flat=True):
+        extra_data = extra_data or {}
+        thai_address = extra_data.get("address_th") or {}
+        region = extra_data.get("region") or thai_address.get("region") or ""
+        province = extra_data.get("province") or thai_address.get("province") or ""
+        country_code = str(extra_data.get("country_code") or "").strip().upper()
+
+        if not country_code and (region or province):
+            country_code = "TH"
+
+        if country_code == "TH":
+            thai_count += 1
+            country_counts["ประเทศไทย"] += 1
+            region_counts[region or "unspecified"] += 1
+            if province:
+                province_counts[province] += 1
+        elif country_code:
+            international_count += 1
+            country_name = (
+                extra_data.get("country_name_th")
+                or extra_data.get("country_name_en")
+                or country_code
+            )
+            country_counts[str(country_name).strip()] += 1
+        else:
+            unspecified_count += 1
+            country_counts["ไม่ระบุประเทศ"] += 1
+
+    region_summaries = [
+        {
+            "label": item["label"],
+            "value": item["value"],
+            "count": region_counts[item["value"]],
+        }
+        for item in REGION_OPTIONS
+    ]
+    if region_counts["unspecified"]:
+        region_summaries.append(
+            {
+                "label": "ไม่ระบุภูมิภาค",
+                "value": "unspecified",
+                "count": region_counts["unspecified"],
+            }
+        )
+
     context = {
         "stats": {
             "applicants_total": Person.objects.count(),
             "applicants_pending": Person.objects.filter(status=Person.Status.IN_PROGRESS).count(),
             "applicants_passed": Person.objects.filter(status=Person.Status.PASSED).count(),
             "students_total": Student.objects.count(),
-            "students_active": Student.objects.filter(is_active=True).count(),
             "students_paid": Student.objects.filter(is_paid=True).count(),
-            "students_payment_pending": Student.objects.filter(is_paid=False).count(),
-            "students_validation_pending": Student.objects.filter(
-                admin_validation_status=Student.AdminValidationStatus.PENDING
-            ).count(),
+            "students_unpaid": Student.objects.filter(is_paid=False).count(),
             "teachers_total": teacher_queryset.count(),
-            "teachers_approved": teacher_queryset.filter(is_teacher_approved=True).count(),
-            "teachers_pending": teacher_queryset.filter(is_teacher_approved=False).count(),
-            "groups_active": TeacherGroup.objects.filter(is_active=True).count(),
+            "groups_total": TeacherGroup.objects.count(),
         },
         "recent_students": recent_students,
-        "pending_teachers": pending_teachers,
+        "teacher_summaries": teacher_summaries,
         "group_summaries": group_summaries,
+        "geo_stats": {
+            "thai": thai_count,
+            "international": international_count,
+            "unspecified": unspecified_count,
+        },
+        "region_summaries": region_summaries,
+        "province_summaries": [
+            {"label": label, "count": count}
+            for label, count in province_counts.most_common(10)
+        ],
+        "country_summaries": [
+            {"label": label, "count": count}
+            for label, count in country_counts.most_common(10)
+        ],
     }
     return render(request, "school/admin_overview_dashboard.html", context)
 

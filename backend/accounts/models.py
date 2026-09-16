@@ -14,6 +14,7 @@ class User(AbstractUser):
         default=Role.STUDENT,
         help_text="App role for teacher/student flows. Django admin access is controlled by superuser status.",
     )
+    nickname = models.CharField(max_length=100, blank=True)
     google_email = models.EmailField(blank=True)
     google_connected_at = models.DateTimeField(null=True, blank=True)
     is_teacher_approved = models.BooleanField(

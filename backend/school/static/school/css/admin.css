@@ -180,6 +180,58 @@ body:not(.login) tbody tr:hover {
     background-color: #f1f7f1 !important;
 }
 
+body:not(.login) input[type="checkbox"],
+body:not(.login) input[type="radio"],
+body:not(.login) .action-select {
+    width: 18px;
+    min-height: 18px;
+    accent-color: var(--bri-admin-primary);
+    border-color: #516858 !important;
+    cursor: pointer;
+}
+
+body:not(.login) input[type="checkbox"]:focus-visible,
+body:not(.login) input[type="radio"]:focus-visible,
+body:not(.login) .action-select:focus-visible {
+    outline: 3px solid var(--bri-admin-focus) !important;
+    outline-offset: 2px;
+}
+
+body:not(.login) tbody tr.selected,
+body:not(.login) tr.selected,
+body:not(.login) .selected {
+    color: var(--bri-admin-ink) !important;
+    background: #dff0e4 !important;
+    box-shadow: inset 5px 0 0 var(--bri-admin-primary) !important;
+}
+
+body:not(.login) tbody tr.selected:hover,
+body:not(.login) tr.selected:hover {
+    background: #d2e8d9 !important;
+}
+
+body:not(.login) tbody tr.selected td,
+body:not(.login) tr.selected td,
+body:not(.login) .selected td {
+    border-color: #7ea58b !important;
+    background: transparent !important;
+}
+
+body:not(.login) .actions,
+body:not(.login) #changelist-form .actions {
+    border: 1px solid #9caf9e !important;
+    border-radius: 8px;
+    padding: 10px 12px !important;
+    background: #eef4ef !important;
+}
+
+body:not(.login) .actions label,
+body:not(.login) .actions span,
+body:not(.login) .actions select {
+    color: var(--bri-admin-ink) !important;
+    font-weight: 700;
+}
+
 ::placeholder {
     color: #6a786e !important;
     opacity: 1 !important;

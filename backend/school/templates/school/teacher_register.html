@@ -57,6 +57,12 @@
                 {{ form.email.errors }}
             </div>
 
+            <div class="field-group{% if form.nickname.errors %} has-error{% endif %}">
+                <label class="field-label" for="{{ form.nickname.id_for_label }}">ชื่อเล่น</label>
+                {{ form.nickname }}
+                {{ form.nickname.errors }}
+            </div>
+
             <div class="field-group{% if form.username.errors %} has-error{% endif %}">
                 <label class="field-label" for="{{ form.username.id_for_label }}">ชื่อผู้ใช้</label>
                 {{ form.username }}

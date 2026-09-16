@@ -412,6 +412,8 @@ class TeacherFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Continue with Google")
         self.assertContains(response, reverse("google_login"))
+        self.assertContains(response, "ชื่อเล่น")
+        self.assertContains(response, 'autocomplete="nickname"')
         self.assertContains(response, 'width="18" height="18"')
         self.assertContains(response, "school/css/teacher_auth.css")
 
@@ -492,6 +494,7 @@ class TeacherFlowTests(TestCase):
             {
                 "username": "teacher1",
                 "email": "teacher@example.com",
+                "nickname": "อ.เอก",
                 "password1": "StrongPass12345",
                 "password2": "StrongPass12345",
             },
@@ -504,11 +507,14 @@ class TeacherFlowTests(TestCase):
         user = get_user_model().objects.get(username="teacher1")
         self.assertEqual(user.role, user.Role.TEACHER)
         self.assertEqual(user.email, "teacher@example.com")
+        self.assertEqual(user.nickname, "อ.เอก")
         self.assertEqual(user.google_email, "")
         self.assertIsNone(user.google_connected_at)
         self.assertFalse(user.is_teacher_approved)
         self.assertIsNone(user.teacher_approved_at)
-        self.assertFalse(TeacherGroup.objects.filter(teacher=user).exists())
+        self.assertTrue(
+            TeacherGroup.objects.filter(teacher=user, group_name="อ.เอก", is_active=True).exists()
+        )
 
     def test_registered_pending_teacher_sees_login_notice(self):
         User = get_user_model()

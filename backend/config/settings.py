@@ -148,6 +148,11 @@ UNFOLD = {
                         "link": "/admin/school/teachergroup/",
                     },
                     {
+                        "title": "ผู้สอน",
+                        "icon": "co_present",
+                        "link": "/admin/accounts/teacher/",
+                    },
+                    {
                         "title": "ผู้ใช้งาน",
                         "icon": "manage_accounts",
                         "link": "/admin/accounts/user/",

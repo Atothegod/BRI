@@ -8,7 +8,7 @@ from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.db import transaction
 from django.utils import timezone
 
-from .models import Person, Student
+from .models import Person, Student, TeacherGroup
 
 
 CONTROL_CLASS = "form-control"
@@ -666,6 +666,17 @@ class TeacherLoginForm(AuthenticationForm):
 
 
 class TeacherSignupForm(UserCreationForm):
+    nickname = forms.CharField(
+        max_length=100,
+        label="ชื่อเล่น",
+        widget=forms.TextInput(
+            attrs={
+                "class": CONTROL_CLASS,
+                "autocomplete": "nickname",
+                "placeholder": "เช่น อ.เอก",
+            }
+        ),
+    )
     email = forms.EmailField(
         widget=forms.EmailInput(
             attrs={
@@ -678,7 +689,7 @@ class TeacherSignupForm(UserCreationForm):
 
     class Meta(UserCreationForm.Meta):
         model = get_user_model()
-        fields = ("username", "email")
+        fields = ("username", "nickname", "email")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -700,10 +711,16 @@ class TeacherSignupForm(UserCreationForm):
     def save(self, commit=True):
         user = super().save(commit=False)
         user.role = user.Role.TEACHER
+        user.nickname = self.cleaned_data["nickname"].strip()
         user.email = self.cleaned_data["email"]
 
         if commit:
             user.save()
+            TeacherGroup.objects.get_or_create(
+                teacher=user,
+                group_name=user.nickname,
+                defaults={"is_active": True},
+            )
         return user
 
 

@@ -4,18 +4,11 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20260913-font-3">
 <link rel="stylesheet" href="{% static 'school/css/student_group_assignment.css' %}?v=20260913-font-3">
+<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20260916-school-admin-2">
 {% endblock %}
 {% block content %}
+{% include "school/includes/school_admin_nav.html" %}
 <main class="interviews student-group-page">
-    <header class="schedule-header">
-        <a href="{% url 'school:admin_overview_dashboard' %}">{% include "school/includes/brand_logo.html" with variant="nav" %}</a>
-        <nav aria-label="เมนูผู้ดูแล">
-            <a href="{% url 'admin:index' %}">Django Admin</a>
-            <a href="{% url 'school:admin_overview_dashboard' %}">ภาพรวมโรงเรียน</a>
-            <a href="{% url 'school:appointment_schedule' %}">จัดการนัดหมาย</a>
-        </nav>
-    </header>
-
     <div class="page-heading">
         <div>
             <span>BRI STUDENT GROUPS</span>

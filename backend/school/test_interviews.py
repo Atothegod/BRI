@@ -204,4 +204,7 @@ class AppointmentScheduleTests(TestCase):
         self.assertRedirects(self.client.get(self.url), f"{reverse('admin:login')}?next={self.url}")
 
     def test_admin_index_has_appointment_entry(self):
-        self.assertContains(self.client.get(reverse("admin:index")), "จัดการนัดหมายและแจ้ง LINE")
+        response = self.client.get(reverse("admin:index"))
+
+        self.assertContains(response, "นัดหมายและ LINE")
+        self.assertContains(response, self.url)

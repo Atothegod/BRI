@@ -1,0 +1,34 @@
+{% load static %}
+<header class="school-admin-navbar">
+    <div class="school-admin-navbar__inner">
+        <a class="school-admin-navbar__brand" href="{% url 'school:admin_overview_dashboard' %}" aria-label="BRI School of Fivefold">
+            {% include "school/includes/brand_logo.html" with variant="nav" %}
+        </a>
+
+        <nav class="school-admin-navbar__links" aria-label="เมนูผู้ดูแลโรงเรียน">
+            <a href="{% url 'school:admin_overview_dashboard' %}"{% if request.resolver_match.url_name == "admin_overview_dashboard" %} class="is-active" aria-current="page"{% endif %}>
+                <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#landmark"></use></svg>
+                <span>ภาพรวม</span>
+            </a>
+            <a href="{% url 'school:student_group_assignment' %}"{% if request.resolver_match.url_name == "student_group_assignment" %} class="is-active" aria-current="page"{% endif %}>
+                <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#user"></use></svg>
+                <span>จัดกลุ่มนักศึกษา</span>
+            </a>
+            <a href="{% url 'school:appointment_schedule' %}"{% if request.resolver_match.url_name == "appointment_schedule" %} class="is-active" aria-current="page"{% endif %}>
+                <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#calendar-days"></use></svg>
+                <span>จัดการนัดหมาย</span>
+            </a>
+            {% if request.user.is_staff or request.user.is_superuser %}
+            <a href="{% url 'admin:index' %}">
+                <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#shield-check"></use></svg>
+                <span>Django Admin</span>
+            </a>
+            {% endif %}
+        </nav>
+
+        <form class="school-admin-navbar__logout" method="post" action="{% url 'school:logout' %}">
+            {% csrf_token %}
+            <button type="submit">ออกจากระบบ</button>
+        </form>
+    </div>
+</header>

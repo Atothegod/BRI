@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% load static tz %}
 {% block title %}จัดการนัดหมาย | BRI{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20260913-font-3">{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20260913-font-3">
+<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20260916-school-admin-2">
+{% endblock %}
 {% block content %}
+{% include "school/includes/school_admin_nav.html" %}
 <main class="interviews">
-    <header class="schedule-header">
-        <a href="{% url 'school:admin_overview_dashboard' %}">{% include "school/includes/brand_logo.html" with variant="nav" %}</a>
-        <nav aria-label="เมนูผู้ดูแล"><a href="{% url 'admin:index' %}">Django Admin</a><a href="{% url 'school:admin_overview_dashboard' %}">ภาพรวมโรงเรียน</a><a href="{% url 'school:student_group_assignment' %}">จัดกลุ่มนักศึกษา</a></nav>
-    </header>
     <div class="page-heading"><div><span>BRI APPOINTMENTS</span><h1>จัดการนัดหมาย</h1><p>{{ candidate_description }}</p></div></div>
     <nav class="type-tabs" aria-label="ประเภทนัดหมาย">
         {% for value, label in appointment_types %}<a href="?type={{ value }}" class="{% if appointment_type == value %}active{% endif %}"{% if appointment_type == value %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}

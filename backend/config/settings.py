@@ -62,7 +62,7 @@ UNFOLD = {
     "SITE_HEADER": "BRI School Admin",
     "SITE_SUBHEADER": "School of Fivefold",
     "SITE_URL": "/",
-    "SITE_SYMBOL": "BRI",
+    "SITE_LOGO": "/static/school/images/logo_white.png",
     "THEME": "light",
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": True,
@@ -105,17 +105,28 @@ UNFOLD = {
     },
     "SIDEBAR": {
         "show_search": True,
-        "show_all_applications": True,
+        "show_all_applications": False,
         "navigation": [
             {
-                "title": "BRI Operations",
-                "separator": True,
+                "title": "ศูนย์ควบคุม",
+                "separator": False,
                 "items": [
+                    {
+                        "title": "หน้าแอดมิน",
+                        "icon": "home",
+                        "link": "/admin/",
+                    },
                     {
                         "title": "ภาพรวมโรงเรียน",
                         "icon": "dashboard",
                         "link": "/school-admin/dashboard/",
                     },
+                ],
+            },
+            {
+                "title": "งานโรงเรียน",
+                "separator": True,
+                "items": [
                     {
                         "title": "จัดกลุ่มผู้เรียน",
                         "icon": "groups",
@@ -129,7 +140,7 @@ UNFOLD = {
                 ],
             },
             {
-                "title": "ข้อมูลหลัก",
+                "title": "ฐานข้อมูล",
                 "separator": True,
                 "items": [
                     {

@@ -771,7 +771,7 @@ body:not(.login) .inline-flex.text-green-700 {
 body:not(.login) .inline-flex.bg-red-100,
 body:not(.login) .inline-flex.text-red-700 {
     color: #ffffff !important;
-    background: var(--bri-admin-clay) !important;
+    background: #ad4e30 !important;
 }
 
 body.login #page {
@@ -801,4 +801,153 @@ body:not(.login) #changelist-actions button[type="submit"],
 body:not(.login) #changelist-actions button[type="submit"] * {
     color: #12271d !important;
     background: var(--bri-admin-gold) !important;
+}
+
+/* Admin navigation and contrast pass. */
+body:not(.login) #nav-sidebar > #nav-sidebar-inner > :first-child {
+    min-height: 78px;
+    margin-bottom: 14px;
+    padding: 6px 16px;
+    border-color: rgba(243, 240, 232, 0.24) !important;
+    background: rgba(7, 21, 15, 0.34) !important;
+}
+
+.bri-admin-brand {
+    display: inline-flex;
+    width: 100%;
+    min-width: 0;
+    align-items: center;
+}
+
+.bri-admin-brand__frame {
+    position: relative;
+    display: block;
+    width: 196px;
+    height: 48px;
+    overflow: hidden;
+    flex: 0 0 auto;
+}
+
+.bri-admin-brand__frame img {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    display: block;
+    width: 278px;
+    height: 278px;
+    max-width: none;
+    transform: translate(-50%, -50%);
+}
+
+body:not(.login) #nav-sidebar-apps {
+    padding: 2px 0 18px;
+}
+
+body:not(.login) #nav-sidebar-apps > div {
+    margin-bottom: 8px;
+}
+
+body:not(.login) #nav-sidebar-apps hr {
+    margin: 10px 20px 8px;
+    border-color: rgba(194, 162, 86, 0.4) !important;
+}
+
+body:not(.login) #nav-sidebar-apps h2 {
+    margin: 0 12px 4px;
+    padding: 8px 12px 4px;
+    color: #e9d99f !important;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0 !important;
+}
+
+body:not(.login) #nav-sidebar-apps ol {
+    gap: 4px;
+    padding-right: 12px;
+    padding-left: 12px;
+}
+
+body:not(.login) #nav-sidebar-apps li > a {
+    min-height: 42px;
+    margin: 0;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 8px 11px;
+    color: #f3f0e8 !important;
+    font-weight: 600;
+}
+
+body:not(.login) #nav-sidebar-apps li > a:hover {
+    border-color: rgba(243, 240, 232, 0.22) !important;
+    color: #ffffff !important;
+    background: rgba(243, 240, 232, 0.1) !important;
+}
+
+body:not(.login) #nav-sidebar-apps li > a.active {
+    border-color: #d7be7b !important;
+    color: #12271d !important;
+    background: #f5e8bf !important;
+    box-shadow: inset 4px 0 0 #c25d37 !important;
+}
+
+body:not(.login) #nav-sidebar-apps li > a.active * {
+    color: #12271d !important;
+}
+
+body:not(.login) #nav-sidebar-inner > div:last-child {
+    border-color: rgba(243, 240, 232, 0.22) !important;
+    color: #ffffff !important;
+    background: #0b2016 !important;
+}
+
+body:not(.login) #nav-sidebar-inner > div:last-child > div:last-child,
+body:not(.login) #nav-sidebar-inner > div:last-child > div:last-child:hover {
+    color: #ffffff !important;
+    background: #0b2016 !important;
+}
+
+body:not(.login) #nav-sidebar-inner > div:last-child > div:last-child:hover {
+    background: #1d3a2a !important;
+}
+
+body:not(.login) #nav-sidebar-inner > div:last-child > nav {
+    border-color: var(--bri-admin-border) !important;
+    color: var(--bri-admin-ink) !important;
+    background: #fffdf8 !important;
+}
+
+body:not(.login) #nav-sidebar-inner > div:last-child > nav * {
+    color: var(--bri-admin-ink) !important;
+}
+
+body:not(.login) #nav-sidebar-inner > div:last-child > nav a:hover,
+body:not(.login) #nav-sidebar-inner > div:last-child > nav button:hover {
+    color: var(--bri-admin-ink) !important;
+    background: var(--bri-admin-gold-soft) !important;
+}
+
+body:not(.login) .bri-admin-hero h2,
+body:not(.login) .bri-admin-hero p {
+    color: #ffffff !important;
+}
+
+body:not(.login) .bri-admin-hero .bri-admin-eyebrow {
+    color: #ffefbd !important;
+}
+
+body:not(.login) #content .module caption,
+body:not(.login) #content .module caption a,
+body:not(.login) #content .module caption .section {
+    color: #ffffff !important;
+}
+
+body:not(.login) #content .module caption a:hover {
+    color: #ffffff !important;
+    text-decoration: underline;
+}
+
+@media (max-width: 1279px) {
+    .bri-admin-brand__frame {
+        width: 174px;
+    }
 }

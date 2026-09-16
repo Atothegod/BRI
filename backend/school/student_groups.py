@@ -9,16 +9,14 @@ from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
 
-from .models import Person, Student, TeacherGroup
+from .models import Student, TeacherGroup
 from .views import is_school_admin
 
 
 def assignable_students():
-    return Student.objects.filter(
-        person__status=Person.Status.PASSED,
-        is_paid=True,
-        is_active=True,
-    ).exclude(student_id="")
+    # Payment is an informational status. Every active student must remain
+    # available to school admins when arranging teaching groups.
+    return Student.objects.filter(is_active=True)
 
 
 def assignable_groups():
@@ -168,7 +166,7 @@ def student_group_assignment(request):
         assignable_groups().select_related("teacher").annotate(
             student_count=Count(
                 "students",
-                filter=Q(students__is_active=True, students__is_paid=True),
+                filter=Q(students__is_active=True),
             )
         ).order_by("teacher__first_name", "teacher__last_name", "teacher__username", "group_name")
     )

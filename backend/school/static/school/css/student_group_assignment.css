@@ -423,6 +423,28 @@
     white-space: nowrap;
 }
 
+.student-payment-status {
+    display: inline-flex;
+    min-height: 22px;
+    padding: 3px 7px;
+    border: 1px solid;
+    border-radius: 4px;
+    align-items: center;
+    font-weight: 800;
+}
+
+.student-payment-status--paid {
+    color: #174329;
+    background: #e8f3eb;
+    border-color: #a9c9b2;
+}
+
+.student-payment-status--unpaid {
+    color: #704f0a;
+    background: #fff6dc;
+    border-color: #d9bd6d;
+}
+
 .assignment-lane-empty {
     display: grid;
     min-height: 140px;

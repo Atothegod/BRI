@@ -33,7 +33,7 @@ class StudentGroupAssignmentTests(TestCase):
         student.save(update_fields=["is_paid"])
         return student
 
-    def test_page_shows_all_assignable_students_in_board_lanes(self):
+    def test_page_shows_all_active_students_in_board_lanes(self):
         assigned_student = self.students[1]
         assigned_student.group = self.group
         assigned_student.save(update_fields=["group"])
@@ -44,10 +44,11 @@ class StudentGroupAssignmentTests(TestCase):
         self.assertTemplateUsed(response, "school/student_group_assignment.html")
         self.assertContains(response, self.students[0].student_id)
         self.assertContains(response, assigned_student.student_id)
-        self.assertNotContains(response, self.unpaid_student.student_id)
+        self.assertContains(response, self.unpaid_student.student_id)
+        self.assertContains(response, "ยังไม่ชำระ")
         self.assertContains(response, "Approved Teacher")
         self.assertContains(response, 'data-assignment-board')
-        self.assertContains(response, 'data-student-card', count=2)
+        self.assertContains(response, 'data-student-card', count=3)
         self.assertContains(response, 'id="student-move-dialog"')
         self.assertNotContains(response, 'name="q"')
 
@@ -63,16 +64,15 @@ class StudentGroupAssignmentTests(TestCase):
             2,
         )
 
-    def test_spoofed_ineligible_student_is_rejected(self):
+    def test_unpaid_student_can_be_assigned(self):
         response = self.client.post(self.url, {
             "students": [self.unpaid_student.pk],
             "group": self.group.pk,
         })
 
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "มีนักศึกษาที่ไม่ตรงเงื่อนไข")
+        self.assertRedirects(response, self.url)
         self.unpaid_student.refresh_from_db()
-        self.assertIsNone(self.unpaid_student.group)
+        self.assertEqual(self.unpaid_student.group, self.group)
 
     def test_group_without_approved_teacher_is_not_assignable(self):
         User = get_user_model()
@@ -120,7 +120,10 @@ class StudentGroupAssignmentTests(TestCase):
         self.students[0].refresh_from_db()
         self.assertIsNone(self.students[0].group)
 
-    def test_ajax_move_rejects_ineligible_student(self):
+    def test_ajax_move_rejects_inactive_student(self):
+        self.unpaid_student.is_active = False
+        self.unpaid_student.save(update_fields=["is_active"])
+
         response = self.client.post(
             self.url,
             {"student": self.unpaid_student.pk, "group": self.group.pk},

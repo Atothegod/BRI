@@ -8,7 +8,8 @@ from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.db import transaction
 from django.utils import timezone
 
-from .models import Person, Student, TeacherGroup
+from .models import Person, Student
+from .teacher_groups import ensure_default_teacher_group
 
 
 CONTROL_CLASS = "form-control"
@@ -716,11 +717,7 @@ class TeacherSignupForm(UserCreationForm):
 
         if commit:
             user.save()
-            TeacherGroup.objects.get_or_create(
-                teacher=user,
-                group_name=user.nickname,
-                defaults={"is_active": True},
-            )
+            ensure_default_teacher_group(user)
         return user
 
 

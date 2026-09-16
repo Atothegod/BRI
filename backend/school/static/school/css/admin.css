@@ -432,3 +432,356 @@ body.login a[href="/"]:visited {
         grid-template-columns: 1fr;
     }
 }
+
+/* BRI brand pass: colors from color_theme.jpg with stronger admin contrast. */
+:root {
+    --bri-admin-ink: #12271d;
+    --bri-admin-text: #2f2b24;
+    --bri-admin-muted: #425b46;
+    --bri-admin-bg: #f3f0e8;
+    --bri-admin-bg-soft: #fdfbf6;
+    --bri-admin-surface: #ffffff;
+    --bri-admin-border: #cfc4ae;
+    --bri-admin-border-strong: #425b46;
+    --bri-admin-primary: #12271d;
+    --bri-admin-primary-hover: #07150f;
+    --bri-admin-secondary: #425b46;
+    --bri-admin-gold: #c2a256;
+    --bri-admin-gold-soft: #f5e8bf;
+    --bri-admin-clay: #c25d37;
+    --bri-admin-focus: rgba(194, 162, 86, 0.45);
+}
+
+html,
+html.light,
+html.dark {
+    --color-base-50: #fdfbf6 !important;
+    --color-base-100: #f3f0e8 !important;
+    --color-base-200: #e4ded0 !important;
+    --color-base-300: #cfc4ae !important;
+    --color-base-400: #a99d88 !important;
+    --color-base-500: #7f7565 !important;
+    --color-base-600: #5f584c !important;
+    --color-base-700: #464036 !important;
+    --color-base-800: #2f2b24 !important;
+    --color-base-900: #1f1c18 !important;
+    --color-primary-500: #425b46 !important;
+    --color-primary-600: #12271d !important;
+    --color-primary-700: #12271d !important;
+    --color-primary-800: #07150f !important;
+    --color-primary-900: #07150f !important;
+    --color-font-subtle-light: #425b46 !important;
+    --color-font-default-light: #2f2b24 !important;
+    --color-font-important-light: #12271d !important;
+}
+
+body:not(.login) {
+    background:
+        linear-gradient(180deg, rgba(194, 162, 86, 0.12), transparent 190px),
+        var(--bri-admin-bg) !important;
+}
+
+body:not(.login) #main,
+body:not(.login) #content-main,
+body:not(.login) .module,
+body:not(.login) [class*="bg-base-50"] {
+    background-color: transparent !important;
+}
+
+body:not(.login) #main > .border-b,
+body:not(.login) header,
+body:not(.login) .breadcrumbs,
+body:not(.login) [class*="bg-white"] {
+    color: var(--bri-admin-text) !important;
+    background-color: var(--bri-admin-bg-soft) !important;
+}
+
+body:not(.login) #nav-sidebar {
+    border-right: 1px solid rgba(243, 240, 232, 0.22) !important;
+    color: #f3f0e8 !important;
+    background:
+        linear-gradient(180deg, rgba(194, 162, 86, 0.13), transparent 220px),
+        var(--bri-admin-primary) !important;
+}
+
+body:not(.login) #nav-sidebar *,
+body:not(.login) #nav-sidebar .material-symbols-outlined {
+    color: inherit !important;
+}
+
+body:not(.login) #nav-sidebar-inner,
+body:not(.login) #nav-sidebar [class*="bg-base-50"],
+body:not(.login) #nav-sidebar [class*="dark:bg-base"] {
+    background: transparent !important;
+}
+
+body:not(.login) #nav-sidebar [class*="border-base-"],
+body:not(.login) #nav-sidebar .border-b,
+body:not(.login) #nav-sidebar .border-t,
+body:not(.login) #nav-sidebar hr {
+    border-color: rgba(243, 240, 232, 0.22) !important;
+}
+
+body:not(.login) #nav-sidebar a,
+body:not(.login) #nav-sidebar button {
+    color: #f3f0e8 !important;
+}
+
+body:not(.login) #nav-sidebar a:hover,
+body:not(.login) #nav-sidebar button:hover,
+body:not(.login) #nav-sidebar .hover\:bg-base-100:hover {
+    color: #ffffff !important;
+    background-color: rgba(243, 240, 232, 0.11) !important;
+}
+
+body:not(.login) #nav-sidebar a.active,
+body:not(.login) #nav-sidebar a[class*="active"],
+body:not(.login) #nav-sidebar a[class*="bg-base-100"] {
+    border: 1px solid rgba(194, 162, 86, 0.55) !important;
+    color: #12271d !important;
+    background: var(--bri-admin-gold-soft) !important;
+    box-shadow: inset 4px 0 0 var(--bri-admin-gold) !important;
+}
+
+body:not(.login) #nav-sidebar h2,
+body:not(.login) #nav-sidebar .text-important,
+body:not(.login) #nav-sidebar [class*="text-font-important"] {
+    color: #ffffff !important;
+}
+
+body:not(.login) #nav-sidebar [class*="text-subtle"],
+body:not(.login) #nav-sidebar [class*="text-font-subtle"] {
+    color: #ded6c5 !important;
+}
+
+body:not(.login) #nav-sidebar .bg-primary-600 {
+    border: 1px solid rgba(194, 162, 86, 0.7) !important;
+    color: #12271d !important;
+    background: var(--bri-admin-gold) !important;
+}
+
+body:not(.login) #main > .border-b {
+    border-color: var(--bri-admin-border) !important;
+    box-shadow: 0 1px 0 rgba(18, 39, 29, 0.08) !important;
+}
+
+body:not(.login) h1,
+body:not(.login) h2,
+body:not(.login) h3,
+body:not(.login) .text-important,
+body:not(.login) [class*="text-font-important"] {
+    color: var(--bri-admin-ink) !important;
+}
+
+body:not(.login) a,
+body:not(.login) a:visited,
+body:not(.login) [class*="text-primary-"] {
+    color: var(--bri-admin-primary) !important;
+    font-weight: 700;
+}
+
+body:not(.login) a:hover {
+    color: var(--bri-admin-clay) !important;
+}
+
+body:not(.login) .result-list-wrapper > div,
+body:not(.login) .results,
+body:not(.login) .rounded-default.overflow-x-auto,
+body:not(.login) fieldset,
+body:not(.login) .module {
+    border-color: var(--bri-admin-border) !important;
+    background: var(--bri-admin-surface) !important;
+    box-shadow: 0 12px 28px rgba(18, 39, 29, 0.08) !important;
+}
+
+body:not(.login) .result-list thead,
+body:not(.login) .result-list thead th,
+body:not(.login) table thead th,
+body:not(.login) caption {
+    border-color: var(--bri-admin-border-strong) !important;
+    color: #ffffff !important;
+    background: var(--bri-admin-secondary) !important;
+}
+
+body:not(.login) .result-list thead a,
+body:not(.login) table thead a,
+body:not(.login) thead .material-symbols-outlined {
+    color: #ffffff !important;
+}
+
+body:not(.login) tbody {
+    background: var(--bri-admin-surface) !important;
+}
+
+body:not(.login) tbody tr:nth-child(even) {
+    background: #faf6ea !important;
+}
+
+body:not(.login) tbody tr:hover,
+body:not(.login) tbody tr:nth-child(even):hover {
+    background: #f5e8bf !important;
+}
+
+body:not(.login) tbody th,
+body:not(.login) tbody td {
+    border-color: #ddd3bf !important;
+    color: var(--bri-admin-text) !important;
+}
+
+body:not(.login) tbody th a,
+body:not(.login) tbody td a {
+    color: var(--bri-admin-ink) !important;
+}
+
+body:not(.login) tbody tr:has(input.action-select:checked),
+body:not(.login) tbody tr.selected,
+body:not(.login) tr.selected {
+    background: #efe0b4 !important;
+    box-shadow: inset 6px 0 0 var(--bri-admin-clay) !important;
+}
+
+body:not(.login) tbody tr:has(input.action-select:checked) td,
+body:not(.login) tbody tr:has(input.action-select:checked) th,
+body:not(.login) tbody tr.selected td,
+body:not(.login) tbody tr.selected th {
+    border-color: #c2a256 !important;
+    color: var(--bri-admin-ink) !important;
+    background: transparent !important;
+}
+
+body:not(.login) input[type="checkbox"],
+body:not(.login) input[type="radio"],
+body:not(.login) .action-select,
+body:not(.login) .action-toggle {
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    min-height: 20px !important;
+    border: 2px solid var(--bri-admin-secondary) !important;
+    border-radius: 5px !important;
+    background-color: #ffffff !important;
+    box-shadow: 0 0 0 2px rgba(243, 240, 232, 0.85) !important;
+}
+
+body:not(.login) input[type="checkbox"]:checked,
+body:not(.login) input[type="radio"]:checked,
+body:not(.login) .action-select:checked,
+body:not(.login) .action-toggle:checked {
+    border-color: var(--bri-admin-primary) !important;
+    background-color: var(--bri-admin-clay) !important;
+}
+
+body:not(.login) input[type="checkbox"]:checked::after,
+body:not(.login) input[type="radio"]:checked::after,
+body:not(.login) .action-select:checked::after,
+body:not(.login) .action-toggle:checked::after {
+    color: #ffffff !important;
+}
+
+body:not(.login) input:focus,
+body:not(.login) textarea:focus,
+body:not(.login) select:focus,
+body:not(.login) button:focus-visible,
+body:not(.login) a:focus-visible {
+    outline: 3px solid var(--bri-admin-focus) !important;
+    outline-offset: 2px !important;
+    box-shadow: 0 0 0 4px rgba(18, 39, 29, 0.08) !important;
+}
+
+body:not(.login) input:not([type="checkbox"]):not([type="radio"]),
+body:not(.login) textarea,
+body:not(.login) select {
+    border: 1.5px solid var(--bri-admin-border-strong) !important;
+    color: var(--bri-admin-ink) !important;
+    background: #fffdf8 !important;
+}
+
+body:not(.login) #toolbar > form > div,
+body:not(.login) .filter-open-button,
+body:not(.login) .selector-available,
+body:not(.login) .selector-chosen {
+    border-color: var(--bri-admin-border) !important;
+    background: #fffdf8 !important;
+}
+
+body:not(.login) #changelist-actions.actions,
+body:not(.login) #changelist-actions-wrapper .actions {
+    border: 1px solid rgba(243, 240, 232, 0.5) !important;
+    color: #ffffff !important;
+    background: var(--bri-admin-primary) !important;
+    box-shadow: 0 18px 36px rgba(18, 39, 29, 0.28) !important;
+}
+
+body:not(.login) #changelist-actions .bg-primary-600,
+body:not(.login) #changelist-actions [class*="bg-primary-"] {
+    color: #ffffff !important;
+    background: var(--bri-admin-primary) !important;
+}
+
+body:not(.login) #changelist-actions select {
+    border-color: rgba(255, 255, 255, 0.45) !important;
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.14) !important;
+}
+
+body:not(.login) #changelist-actions option {
+    color: var(--bri-admin-ink) !important;
+    background: #ffffff !important;
+}
+
+body:not(.login) #changelist-actions button[type="submit"],
+body:not(.login) .submit-row input,
+body:not(.login) .submit-row button,
+body:not(.login) button[type="submit"],
+body:not(.login) input[type="submit"],
+body:not(.login) .addlink {
+    color: #ffffff !important;
+    background: var(--bri-admin-primary) !important;
+}
+
+body:not(.login) #changelist-actions button[type="submit"] {
+    border: 1px solid rgba(255, 255, 255, 0.32) !important;
+    color: #12271d !important;
+    background: var(--bri-admin-gold) !important;
+}
+
+body:not(.login) #changelist-filter > div:last-child,
+body:not(.login) [id="changelist-filter"] .bg-white {
+    color: var(--bri-admin-text) !important;
+    background: var(--bri-admin-bg-soft) !important;
+}
+
+body:not(.login) #changelist-filter ul,
+body:not(.login) #changelist-filter li {
+    border-color: var(--bri-admin-border) !important;
+}
+
+body:not(.login) #changelist-filter li.font-semibold,
+body:not(.login) #changelist-filter li[class*="text-primary"] {
+    color: #12271d !important;
+    background: var(--bri-admin-gold-soft) !important;
+}
+
+body:not(.login) .inline-flex.bg-green-100,
+body:not(.login) .inline-flex.text-green-700 {
+    color: #ffffff !important;
+    background: var(--bri-admin-secondary) !important;
+}
+
+body:not(.login) .inline-flex.bg-red-100,
+body:not(.login) .inline-flex.text-red-700 {
+    color: #ffffff !important;
+    background: var(--bri-admin-clay) !important;
+}
+
+body.login #page {
+    background:
+        linear-gradient(135deg, rgba(194, 162, 86, 0.2), transparent 34%),
+        linear-gradient(135deg, #f3f0e8 0%, #fdfbf6 52%, #e4ded0 100%) !important;
+}
+
+body.login div[class*="sm:w-96"] {
+    border-color: var(--bri-admin-border) !important;
+    background: rgba(253, 251, 246, 0.98) !important;
+    box-shadow: 0 24px 60px rgba(18, 39, 29, 0.2) !important;
+}

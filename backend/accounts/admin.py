@@ -5,6 +5,7 @@ from unfold.admin import ModelAdmin as UnfoldModelAdmin
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 
 from .models import Teacher, User
+from school.teacher_groups import ensure_default_teacher_group
 
 
 @admin.register(User)
@@ -62,6 +63,8 @@ class UserAdmin(DjangoUserAdmin, UnfoldModelAdmin):
         elif not obj.is_teacher_approved:
             obj.teacher_approved_at = None
         super().save_model(request, obj, form, change)
+        if obj.role == User.Role.TEACHER:
+            ensure_default_teacher_group(obj)
 
     @admin.action(description="Approve selected teacher dashboard access")
     def approve_selected_teachers(self, request, queryset):
@@ -69,6 +72,8 @@ class UserAdmin(DjangoUserAdmin, UnfoldModelAdmin):
             is_teacher_approved=True,
             teacher_approved_at=timezone.now(),
         )
+        for teacher in queryset.filter(role=User.Role.TEACHER):
+            ensure_default_teacher_group(teacher)
 
     @admin.action(description="Revoke selected teacher dashboard access")
     def revoke_selected_teacher_approval(self, request, queryset):
@@ -131,6 +136,7 @@ class TeacherAdmin(DjangoUserAdmin, UnfoldModelAdmin):
         elif not obj.is_teacher_approved:
             obj.teacher_approved_at = None
         super().save_model(request, obj, form, change)
+        ensure_default_teacher_group(obj)
 
     @admin.action(description="Approve selected teacher dashboard access")
     def approve_selected_teachers(self, request, queryset):
@@ -138,6 +144,8 @@ class TeacherAdmin(DjangoUserAdmin, UnfoldModelAdmin):
             is_teacher_approved=True,
             teacher_approved_at=timezone.now(),
         )
+        for teacher in queryset:
+            ensure_default_teacher_group(teacher)
 
     @admin.action(description="Revoke selected teacher dashboard access")
     def revoke_selected_teacher_approval(self, request, queryset):

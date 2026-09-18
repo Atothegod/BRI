@@ -368,9 +368,22 @@ def build_appointment_invitation_flex_message(participant):
     date = local_start.strftime("%d/%m/%Y")
     time = local_start.strftime("%H:%M")
     is_orientation = appointment.appointment_type == appointment.Type.ORIENTATION
-    heading = "ขอเชิญเข้าร่วมปฐมนิเทศ" if is_orientation else "แจ้งนัดสัมภาษณ์"
-    event_name = "BRI Orientation" if is_orientation else "BRI Interview"
-    alt_event = "ปฐมนิเทศ" if is_orientation else "นัดสัมภาษณ์"
+    is_class = appointment.appointment_type == appointment.Type.CLASS
+    heading = (
+        "ขอเชิญเข้าร่วมปฐมนิเทศ"
+        if is_orientation
+        else "แจ้งนัดเรียน"
+        if is_class
+        else "แจ้งนัดสัมภาษณ์"
+    )
+    event_name = (
+        "BRI Orientation"
+        if is_orientation
+        else "BRI Class Appointment"
+        if is_class
+        else "BRI Interview"
+    )
+    alt_event = "ปฐมนิเทศ" if is_orientation else "นัดเรียน" if is_class else "นัดสัมภาษณ์"
     confirmation_token = signing.dumps(
         {"participant_id": participant.pk, "starts_at": appointment.starts_at.isoformat()},
         salt="school.appointment-confirmation",

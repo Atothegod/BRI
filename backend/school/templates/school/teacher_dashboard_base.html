@@ -16,17 +16,21 @@
 
         <div class="teacher-sidebar-label">พื้นที่ผู้สอน</div>
         <nav class="teacher-navigation" aria-label="เมนูผู้สอน">
-            <a class="is-active" href="#dashboard-top" data-dashboard-link="overview">
+            <a class="{% if active_teacher_page|default:'dashboard' == 'dashboard' %}is-active{% endif %}" href="{% url 'school:teacher_dashboard' %}#dashboard-top" data-dashboard-link="overview">
                 <svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#landmark"></use></svg>
                 <span>แดชบอร์ด</span>
             </a>
-            <a href="#students" data-dashboard-link="students">
+            <a href="{% url 'school:teacher_dashboard' %}#students" data-dashboard-link="students">
                 <svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#user"></use></svg>
                 <span>รายชื่อนักศึกษา</span>
             </a>
-            <a href="#learning" data-dashboard-link="learning">
+            <a href="{% url 'school:teacher_dashboard' %}#learning" data-dashboard-link="learning">
                 <svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#calendar-days"></use></svg>
                 <span>งานและการเข้าเรียน</span>
+            </a>
+            <a class="{% if active_teacher_page == 'calendar' %}is-active{% endif %}" href="{% url 'school:teacher_calendar' %}">
+                <svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#calendar-days"></use></svg>
+                <span>ปฏิทินนัดเรียน</span>
             </a>
         </nav>
 
@@ -54,9 +58,10 @@
             </form>
         </header>
         <nav class="teacher-mobile-nav" aria-label="เมนูผู้สอนบนมือถือ">
-            <a class="is-active" href="#dashboard-top" data-dashboard-link="overview">ภาพรวม</a>
-            <a href="#students" data-dashboard-link="students">นักศึกษา</a>
-            <a href="#learning" data-dashboard-link="learning">การเรียน</a>
+            <a class="{% if active_teacher_page|default:'dashboard' == 'dashboard' %}is-active{% endif %}" href="{% url 'school:teacher_dashboard' %}#dashboard-top" data-dashboard-link="overview">ภาพรวม</a>
+            <a href="{% url 'school:teacher_dashboard' %}#students" data-dashboard-link="students">นักศึกษา</a>
+            <a href="{% url 'school:teacher_dashboard' %}#learning" data-dashboard-link="learning">การเรียน</a>
+            <a class="{% if active_teacher_page == 'calendar' %}is-active{% endif %}" href="{% url 'school:teacher_calendar' %}">ปฏิทิน</a>
         </nav>
 
         {% block dashboard_content %}{% endblock %}

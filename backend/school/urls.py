@@ -35,6 +35,7 @@ urlpatterns = [
     path("liff/profile/", views.liff_profile_sync, name="liff_profile_sync"),
     path("line/results/", views.liff_results_launch, name="liff_results_launch"),
     path("line/payment/", views.liff_payment_launch, name="liff_payment_launch"),
+    path("line/students/", views.liff_student_dashboard_launch, name="liff_student_dashboard_launch"),
     path(
         "agent/notifications/<str:user_key>/",
         views.agent_notifications,
@@ -62,5 +63,9 @@ urlpatterns = [
     path("teachers/register/", views.teacher_register, name="teacher_register"),
     path("teachers/pending/", views.teacher_pending_approval, name="teacher_pending_approval"),
     path("teachers/dashboard/", views.teacher_dashboard, name="teacher_dashboard"),
+    path("teachers/calendar/", views.teacher_calendar, name="teacher_calendar"),
+    path("teachers/calendar/participants/<int:pk>/notify/", views.teacher_calendar_notify, name="teacher_calendar_notify"),
+    path("students/dashboard/", views.student_dashboard, name="student_dashboard"),
+    path("students/homework/", views.student_homework_upload, name="student_homework_upload"),
     path("students/payment/", views.student_payment_upload, name="student_payment_upload"),
 ]

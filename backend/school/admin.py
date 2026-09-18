@@ -290,7 +290,7 @@ class HomeworkAssignmentAdmin(UnfoldModelAdmin):
 
 @admin.register(HomeworkSubmission)
 class HomeworkSubmissionAdmin(UnfoldModelAdmin):
-    list_display = ("homework_assignment", "student", "status", "score", "submitted_at")
+    list_display = ("homework_assignment", "student", "status", "score", "submitted_at", "submission_file")
     list_filter = ("status", "homework_assignment__group")
     search_fields = (
         "homework_assignment__title",

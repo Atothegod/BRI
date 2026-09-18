@@ -144,6 +144,7 @@ class Appointment(TimeStampedModel):
     class Type(models.TextChoices):
         INTERVIEW = "interview", "สัมภาษณ์"
         ORIENTATION = "orientation", "ปฐมนิเทศ"
+        CLASS = "class", "นัดเรียน"
 
     class Status(models.TextChoices):
         SCHEDULED = "scheduled", "กำหนดนัดแล้ว"
@@ -445,6 +446,12 @@ class HomeworkSubmission(TimeStampedModel):
         default=Status.PENDING,
     )
     score = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    submission_file = models.FileField(
+        upload_to="homework_submissions/",
+        null=True,
+        blank=True,
+    )
+    student_note = models.TextField(blank=True)
     submitted_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:

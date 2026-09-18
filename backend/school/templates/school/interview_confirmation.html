@@ -17,7 +17,7 @@
             {% if appointment.details %}<div><dt>รายละเอียด</dt><dd>{{ appointment.details|linebreaksbr }}</dd></div>{% endif %}
         {% endtimezone %}</dl>
         {% if confirmation_state == "ready" %}<form method="post">{% csrf_token %}<input type="hidden" name="token" value="{{ token }}"><button class="confirm-button" type="submit">ยืนยันเข้าร่วม</button></form>
-        {% else %}<div class="confirmation-success" role="status">ทีมงานได้รับการยืนยันของคุณแล้ว</div>{% endif %}
+        {% else %}<div class="confirmation-success" role="status">ทีมงานได้รับการยืนยันของคุณแล้ว</div><a class="meeting-link" href="{{ line_return_url }}">กลับไปยัง LINE</a>{% endif %}
         {% if appointment.meeting_url %}<a class="meeting-link" href="{{ appointment.meeting_url }}" rel="noopener noreferrer">เปิดลิงก์เข้าร่วม</a>{% endif %}
     {% elif confirmation_state == "stale" %}<span class="confirmation-eyebrow">BRI Appointment</span><h1 id="confirmation-title">นัดนี้มีการเปลี่ยนแปลง</h1><p>กรุณาใช้ข้อความนัดหมายล่าสุด หรือติดต่อทีมงาน BRI</p>
     {% else %}<span class="confirmation-eyebrow">BRI Appointment</span><h1 id="confirmation-title">ไม่สามารถเปิดนัดนี้ได้</h1><p>ลิงก์ไม่ถูกต้อง กรุณากลับไปเปิดจากข้อความ LINE ที่ทีมงานส่งให้</p>{% endif %}

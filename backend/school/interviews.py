@@ -2,6 +2,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from django import forms
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core import signing
@@ -22,10 +23,16 @@ from .models import Appointment, AppointmentParticipant, Person
 from .views import is_school_admin
 
 THAI_TIMEZONE = ZoneInfo("Asia/Bangkok")
+ADMIN_APPOINTMENT_TYPES = (
+    Appointment.Type.INTERVIEW,
+    Appointment.Type.ORIENTATION,
+)
 
 
 def appointment_candidates(appointment_type):
     queryset = Person.objects.all()
+    if appointment_type == Appointment.Type.CLASS:
+        return queryset.filter(status=Person.Status.PASSED, student__is_active=True)
     if appointment_type == Appointment.Type.ORIENTATION:
         return queryset.filter(status=Person.Status.PASSED, student__is_paid=True)
     return queryset.filter(status=Person.Status.IN_PROGRESS)
@@ -46,8 +53,13 @@ class AppointmentScheduleForm(forms.Form):
 
     def __init__(self, *args, appointment_type=Appointment.Type.INTERVIEW, **kwargs):
         super().__init__(*args, **kwargs)
-        if appointment_type not in Appointment.Type.values:
+        if appointment_type not in ADMIN_APPOINTMENT_TYPES:
             appointment_type = Appointment.Type.INTERVIEW
+        self.fields["appointment_type"].choices = [
+            choice
+            for choice in Appointment.Type.choices
+            if choice[0] in ADMIN_APPOINTMENT_TYPES
+        ]
         self.fields["appointment_type"].initial = appointment_type
         self.fields["people"].queryset = appointment_candidates(appointment_type)
         self.fields["title"].initial = dict(Appointment.Type.choices)[appointment_type]
@@ -66,7 +78,7 @@ class AppointmentScheduleForm(forms.Form):
 
 def selected_appointment_type(request):
     value = request.POST.get("appointment_type") or request.GET.get("type")
-    return value if value in Appointment.Type.values else Appointment.Type.INTERVIEW
+    return value if value in ADMIN_APPOINTMENT_TYPES else Appointment.Type.INTERVIEW
 
 
 @login_required(login_url="admin:login")
@@ -148,7 +160,12 @@ def interview_schedule(request):
         "page_query_prefix": f"?{filter_query}&" if filter_query else "?",
         "selected_ids": request.POST.getlist("people"),
         "send_queue": request.session.pop("appointment_send_queue", []),
-        "appointment_type": appointment_type, "appointment_types": Appointment.Type.choices,
+        "appointment_type": appointment_type,
+        "appointment_types": [
+            choice
+            for choice in Appointment.Type.choices
+            if choice[0] in ADMIN_APPOINTMENT_TYPES
+        ],
         "candidate_description": "นักศึกษาที่ผ่านการคัดเลือกและชำระเงินแล้ว" if appointment_type == Appointment.Type.ORIENTATION else "ผู้สมัครที่อยู่ระหว่างดำเนินการ",
         "appointments": appointments,
     })
@@ -228,7 +245,12 @@ def interview_confirmation(request):
     token = request.GET.get("token", "") or request.POST.get("token", "")
     participant_id, expected_at = resolve_confirmation_token(token)
     if not participant_id:
-        return render(request, "school/interview_confirmation.html", {"confirmation_state": "invalid"}, status=400)
+        return render(
+            request,
+            "school/interview_confirmation.html",
+            {"confirmation_state": "invalid"},
+            status=400,
+        )
     with transaction.atomic():
         participant = AppointmentParticipant.objects.select_for_update().select_related("appointment", "person").filter(pk=participant_id).first()
         valid = (
@@ -239,7 +261,12 @@ def interview_confirmation(request):
             and appointment_candidates(participant.appointment.appointment_type).filter(pk=participant.person_id).exists()
         )
         if not valid:
-            return render(request, "school/interview_confirmation.html", {"confirmation_state": "stale"}, status=409)
+            return render(
+                request,
+                "school/interview_confirmation.html",
+                {"confirmation_state": "stale"},
+                status=409,
+            )
         if request.method == "POST" and participant.response_status != AppointmentParticipant.ResponseStatus.CONFIRMED:
             participant.response_status = AppointmentParticipant.ResponseStatus.CONFIRMED
             participant.confirmed_at = timezone.now()
@@ -247,10 +274,12 @@ def interview_confirmation(request):
             if participant.appointment.appointment_type == Appointment.Type.INTERVIEW:
                 Person.objects.filter(pk=participant.person_id).update(interview_confirmed_at=participant.confirmed_at)
     is_orientation = participant.appointment.appointment_type == Appointment.Type.ORIENTATION
+    is_class = participant.appointment.appointment_type == Appointment.Type.CLASS
     return render(request, "school/interview_confirmation.html", {
         "confirmation_state": "confirmed" if participant.response_status == AppointmentParticipant.ResponseStatus.CONFIRMED else "ready",
         "person": participant.person, "appointment": participant.appointment, "token": token,
-        "event_eyebrow": "BRI Orientation" if is_orientation else "BRI Interview",
-        "event_heading": "ยืนยันเข้าร่วมปฐมนิเทศ" if is_orientation else "ยืนยันนัดสัมภาษณ์",
-        "event_confirmed_heading": "ยืนยันเข้าร่วมปฐมนิเทศแล้ว" if is_orientation else "ยืนยันนัดสัมภาษณ์แล้ว",
+        "event_eyebrow": "BRI Orientation" if is_orientation else "BRI Class" if is_class else "BRI Interview",
+        "event_heading": "ยืนยันเข้าร่วมปฐมนิเทศ" if is_orientation else "ยืนยันนัดเรียน" if is_class else "ยืนยันนัดสัมภาษณ์",
+        "event_confirmed_heading": "ยืนยันเข้าร่วมปฐมนิเทศแล้ว" if is_orientation else "ยืนยันนัดเรียนแล้ว" if is_class else "ยืนยันนัดสัมภาษณ์แล้ว",
+        "line_return_url": settings.LINE_RETURN_URL,
     })

@@ -8,7 +8,7 @@ from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.db import transaction
 from django.utils import timezone
 
-from .models import Person, Student
+from .models import HomeworkSubmission, Person, Student
 from .teacher_groups import ensure_default_teacher_group
 
 
@@ -771,3 +771,47 @@ class PaymentSlipUploadForm(forms.Form):
         self.student.is_paid = False
         self.student.save(update_fields=["payment_slip", "is_paid"])
         return self.student
+
+
+class HomeworkUploadForm(forms.Form):
+    homework_file = forms.FileField(
+        label="ไฟล์การบ้าน",
+        widget=forms.ClearableFileInput(
+            attrs={
+                "class": "student-file-input",
+                "accept": ".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.webp,.zip",
+                "data-student-upload-input": "",
+            }
+        ),
+    )
+    student_note = forms.CharField(
+        label="ข้อความถึงผู้สอน",
+        required=False,
+        max_length=1000,
+        widget=forms.Textarea(
+            attrs={
+                "class": "student-textarea",
+                "rows": 3,
+                "placeholder": "เขียนหมายเหตุเพิ่มเติมได้ เช่น ลิงก์งาน หรือสิ่งที่อยากให้อาจารย์ดูเป็นพิเศษ",
+            }
+        ),
+    )
+
+    def save(self, student, assignment):
+        submitted_at = timezone.now()
+        status = (
+            HomeworkSubmission.Status.LATE
+            if assignment.due_date < timezone.localdate()
+            else HomeworkSubmission.Status.SUBMITTED
+        )
+        submission, _ = HomeworkSubmission.objects.update_or_create(
+            homework_assignment=assignment,
+            student=student,
+            defaults={
+                "submission_file": self.cleaned_data["homework_file"],
+                "student_note": self.cleaned_data["student_note"],
+                "status": status,
+                "submitted_at": submitted_at,
+            },
+        )
+        return submission

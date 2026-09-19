@@ -36,7 +36,6 @@ class AppointmentScheduleTests(TestCase):
         }
         if appointment_type == "interview":
             data.update({
-                "total_capacity": "2",
                 "slot_start": ["09:30"],
                 "slot_end": ["10:30"],
                 "slot_capacity": ["2"],
@@ -138,7 +137,7 @@ class AppointmentScheduleTests(TestCase):
 
     @override_settings(PUBLIC_BASE_URL="https://bri.example")
     def test_interview_confirmation_requires_available_slot(self):
-        self.schedule(total_capacity="1", slot_capacity=["1"])
+        self.schedule(slot_capacity=["1"])
         participants = list(AppointmentParticipant.objects.order_by("pk"))
         slot = AppointmentSlot.objects.get()
         first_token = parse_qs(urlsplit(self.confirmation_url(participants[0])).query)["token"][0]
@@ -146,7 +145,7 @@ class AppointmentScheduleTests(TestCase):
 
         preview = self.client.get(reverse("school:appointment_confirmation"), {"token": first_token})
         self.assertContains(preview, "เลือกเวลาสัมภาษณ์")
-        self.assertContains(preview, "เหลือ 1 / 1 ที่นั่ง")
+        self.assertContains(preview, "เหลือ 1 จาก 1 ที่นั่ง")
         confirmed = self.client.post(reverse("school:appointment_confirmation"), {"token": first_token, "slot": slot.pk})
         self.assertContains(confirmed, "ยืนยันนัดสัมภาษณ์แล้ว")
         participants[0].refresh_from_db()

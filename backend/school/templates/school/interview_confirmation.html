@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static tz %}
 {% block title %}ยืนยันนัดหมาย | BRI{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20260920-slots-1">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20260920-slots-2">{% endblock %}
 {% block content %}
 <main class="confirmation-page"><section class="confirmation-shell" aria-labelledby="confirmation-title">
     <div class="confirmation-brand">{% include "school/includes/brand_logo.html" with variant="success" %}</div>
@@ -23,8 +23,8 @@
                     <div class="slot-choice-list">
                         {% for slot in slot_options %}
                             <label class="slot-choice{% if slot.is_full %} full{% endif %}">
-                                <input type="radio" name="slot" value="{{ slot.id }}" {% if slot.is_full %}disabled{% endif %}>
-                                <span><strong>{{ slot.label }}</strong><small>{% if slot.is_full %}เต็มแล้ว{% else %}เหลือ {{ slot.remaining }} / {{ slot.capacity }} ที่นั่ง{% endif %}</small></span>
+                                <input type="radio" name="slot" value="{{ slot.id }}" {% if slot.is_full %}disabled{% elif slot.is_default %}checked{% endif %}>
+                                <span><strong>{{ slot.label }}</strong><small>{% if slot.is_full %}เต็มแล้ว{% else %}เหลือ {{ slot.remaining }} จาก {{ slot.capacity }} ที่นั่ง{% endif %}</small></span>
                             </label>
                         {% endfor %}
                     </div>

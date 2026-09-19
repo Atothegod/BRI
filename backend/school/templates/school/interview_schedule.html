@@ -2,7 +2,7 @@
 {% load static tz %}
 {% block title %}จัดการนัดหมาย | BRI{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20260920-slots-1">
+<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20260920-slots-2">
 <link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20260916-school-admin-4">
 {% endblock %}
 {% block content %}
@@ -31,24 +31,24 @@
             <div>{{ form.date.label_tag }}{{ form.date }}</div>
             {% if appointment_type == "interview" %}
                 {{ form.time }}
-                <div>{{ form.total_capacity.label_tag }}{{ form.total_capacity }}</div>
+                <div class="capacity-summary" aria-live="polite"><span>จำนวนรับรวม</span><strong data-slot-capacity-value>0</strong><small>คำนวณจาก quota slot</small></div>
                 <div class="slot-editor" data-slot-editor>
                     <div class="slot-editor-heading"><div><strong>ช่วงเวลาสัมภาษณ์</strong><small>ผู้สมัครจะเลือก slot ตอนกดยืนยันใน LINE</small></div><button type="button" data-add-slot>เพิ่ม slot</button></div>
                     <div class="slot-rows" data-slot-rows>
                         {% for slot in slot_rows %}
                             <div class="slot-row">
-                                <label><span>เริ่ม</span><input type="time" name="slot_start" value="{{ slot.start }}"></label>
+                                <span class="slot-index">{{ forloop.counter }}</span>
+                                <label><span>เริ่มต้น</span><input type="time" name="slot_start" value="{{ slot.start }}"></label>
                                 <label><span>สิ้นสุด</span><input type="time" name="slot_end" value="{{ slot.end }}"></label>
-                                <label><span>Quota</span><input type="number" min="1" name="slot_capacity" value="{{ slot.capacity }}"></label>
+                                <label><span>รับได้</span><input type="number" min="1" name="slot_capacity" value="{{ slot.capacity }}"></label>
                                 <button type="button" class="slot-remove" data-remove-slot aria-label="ลบ slot">ลบ</button>
                             </div>
                         {% endfor %}
                     </div>
-                    <p class="slot-total" data-slot-total>ผลรวม quota slot: 0 คน</p>
+                    <p class="slot-total" data-slot-total>รับรวม 0 คน จาก 0 slot</p>
                 </div>
             {% else %}
                 <div>{{ form.time.label_tag }}{{ form.time }}</div>
-                {{ form.total_capacity }}
             {% endif %}
             <div class="location-field">{{ form.location.label_tag }}{{ form.location }}</div><div class="url-field">{{ form.meeting_url.label_tag }}{{ form.meeting_url }}</div>
             <div class="details-field">{{ form.details.label_tag }}{{ form.details }}</div>
@@ -75,4 +75,4 @@
 </main>
 {{ send_queue|json_script:"interview-queue" }}<div hidden data-confirmation-status-url="{% url 'school:appointment_confirmation_status' %}"></div>
 {% endblock %}
-{% block extra_js %}<script src="{% static 'school/js/interviews.js' %}?v=20260920-slots-1" defer></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'school/js/interviews.js' %}?v=20260920-slots-2" defer></script>{% endblock %}

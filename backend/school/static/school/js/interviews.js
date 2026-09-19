@@ -5,13 +5,31 @@
     const submit = document.querySelector('#confirm-schedule');
     const slotRows = document.querySelector('[data-slot-rows]');
     const slotTotal = document.querySelector('[data-slot-total]');
+    const slotCapacityValue = document.querySelector('[data-slot-capacity-value]');
     let busy = false;
+    function addMinutes(value, minutes) {
+        if (!value) return '';
+        const [hour, minute] = value.split(':').map(Number);
+        if (Number.isNaN(hour) || Number.isNaN(minute)) return '';
+        const total = hour * 60 + minute + minutes;
+        const nextHour = Math.floor((total % 1440) / 60).toString().padStart(2, '0');
+        const nextMinute = (total % 60).toString().padStart(2, '0');
+        return `${nextHour}:${nextMinute}`;
+    }
+    function renumberSlots() {
+        if (!slotRows) return;
+        [...slotRows.querySelectorAll('.slot-row')].forEach((row, index) => {
+            row.querySelector('.slot-index').textContent = index + 1;
+        });
+    }
     function syncSlotTotal() {
         if (!slotRows || !slotTotal) return;
-        const total = [...slotRows.querySelectorAll('[name="slot_capacity"]')].reduce((sum, input) => sum + (parseInt(input.value, 10) || 0), 0);
-        const target = parseInt(form.elements.total_capacity?.value || '0', 10) || 0;
-        slotTotal.textContent = `ผลรวม quota slot: ${total} คน${target ? ` / จำนวนรับรวม ${target} คน` : ''}`;
-        slotTotal.classList.toggle('mismatch', !!target && total !== target);
+        const capacities = [...slotRows.querySelectorAll('[name="slot_capacity"]')].map(input => parseInt(input.value, 10) || 0);
+        const total = capacities.reduce((sum, value) => sum + value, 0);
+        const filledSlots = capacities.filter(Boolean).length;
+        slotTotal.textContent = `รับรวม ${total} คน จาก ${filledSlots} slot`;
+        if (slotCapacityValue) slotCapacityValue.textContent = total;
+        renumberSlots();
     }
     function sync() {
         const count = boxes.filter(box => box.checked).length;
@@ -22,12 +40,17 @@
         syncSlotTotal();
     }
     function createSlotRow() {
+        const lastRow = slotRows?.querySelector('.slot-row:last-child');
+        const lastEnd = lastRow?.querySelector('[name="slot_end"]')?.value || '';
+        const lastCapacity = lastRow?.querySelector('[name="slot_capacity"]')?.value || '';
+        const nextEnd = addMinutes(lastEnd, 120);
         const row = document.createElement('div');
         row.className = 'slot-row';
         row.innerHTML = [
-            '<label><span>เริ่ม</span><input type="time" name="slot_start"></label>',
-            '<label><span>สิ้นสุด</span><input type="time" name="slot_end"></label>',
-            '<label><span>Quota</span><input type="number" min="1" name="slot_capacity"></label>',
+            '<span class="slot-index"></span>',
+            `<label><span>เริ่มต้น</span><input type="time" name="slot_start" value="${lastEnd}"></label>`,
+            `<label><span>สิ้นสุด</span><input type="time" name="slot_end" value="${nextEnd}"></label>`,
+            `<label><span>รับได้</span><input type="number" min="1" name="slot_capacity" value="${lastCapacity}"></label>`,
             '<button type="button" class="slot-remove" data-remove-slot aria-label="ลบ slot">ลบ</button>',
         ].join('');
         return row;
@@ -48,7 +71,6 @@
         }
         syncSlotTotal();
     });
-    form.elements.total_capacity?.addEventListener('input', syncSlotTotal);
     boxes.forEach(box => box.addEventListener('change', sync));
     selectAll.addEventListener('change', () => { boxes.forEach(box => { box.checked = selectAll.checked; }); sync(); });
     form.addEventListener('submit', event => {

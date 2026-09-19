@@ -47,13 +47,6 @@ class AppointmentScheduleForm(forms.Form):
     title = forms.CharField(label="ชื่อกิจกรรม", max_length=255)
     date = forms.DateField(label="วันที่", widget=forms.DateInput(attrs={"type": "date"}))
     time = forms.TimeField(label="เวลา (ประเทศไทย)", widget=forms.TimeInput(attrs={"type": "time"}))
-    total_capacity = forms.IntegerField(
-        label="จำนวนรับรวม",
-        min_value=1,
-        max_value=1000,
-        required=False,
-        widget=forms.NumberInput(attrs={"min": 1, "placeholder": "140"}),
-    )
     location = forms.CharField(label="สถานที่", required=False, max_length=500)
     meeting_url = forms.URLField(label="ลิงก์เข้าร่วม (ถ้ามี)", required=False, max_length=1000)
     details = forms.CharField(label="รายละเอียดเพิ่มเติม", required=False, max_length=2000, widget=forms.Textarea(attrs={"rows": 3}))
@@ -74,10 +67,6 @@ class AppointmentScheduleForm(forms.Form):
         if appointment_type == Appointment.Type.INTERVIEW:
             self.fields["time"].required = False
             self.fields["time"].widget = forms.HiddenInput()
-            self.fields["total_capacity"].required = True
-            self.fields["total_capacity"].initial = 140
-        else:
-            self.fields["total_capacity"].widget = forms.HiddenInput()
 
     def slot_rows(self):
         if self.is_bound:
@@ -154,10 +143,7 @@ class AppointmentScheduleForm(forms.Form):
             return
         if min(slot["starts_at"] for slot in slot_defs) <= timezone.now():
             self.add_error("date", "กรุณาเลือก slot เวลาในอนาคต")
-        total_capacity = data.get("total_capacity")
-        slot_capacity = sum(slot["capacity"] for slot in slot_defs)
-        if total_capacity and slot_capacity != total_capacity:
-            self.add_error("total_capacity", f"จำนวนรับรวมต้องเท่ากับผลรวม quota slot ({slot_capacity} คน)")
+        data["total_capacity"] = sum(slot["capacity"] for slot in slot_defs)
         data["slot_defs"] = slot_defs
         data["starts_at"] = min(slot["starts_at"] for slot in slot_defs)
 
@@ -327,10 +313,14 @@ def interview_slot_options(appointment, selected_slot_id=None):
         )
     ).order_by("starts_at", "pk")
     options = []
+    has_default = False
     for slot in slots:
         remaining = max(slot.capacity - slot.confirmed_count, 0)
         local_start = timezone.localtime(slot.starts_at, THAI_TIMEZONE)
         local_end = timezone.localtime(slot.ends_at, THAI_TIMEZONE)
+        is_selected = selected_slot_id == slot.pk
+        is_default = not selected_slot_id and not has_default and remaining > 0
+        has_default = has_default or is_default
         options.append({
             "id": slot.pk,
             "label": f"{local_start:%H:%M}-{local_end:%H:%M}",
@@ -338,7 +328,8 @@ def interview_slot_options(appointment, selected_slot_id=None):
             "confirmed_count": slot.confirmed_count,
             "remaining": remaining,
             "is_full": remaining <= 0,
-            "is_selected": selected_slot_id == slot.pk,
+            "is_selected": is_selected,
+            "is_default": is_default,
         })
     return options
 

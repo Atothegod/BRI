@@ -7,6 +7,7 @@
     const slotTotal = document.querySelector('[data-slot-total]');
     const slotCapacityValue = document.querySelector('[data-slot-capacity-value]');
     let busy = false;
+    let eventClosed = false;
     function addMinutes(value, minutes) {
         if (!value) return '';
         const [hour, minute] = value.split(':').map(Number);
@@ -33,10 +34,13 @@
     }
     function sync() {
         const count = boxes.filter(box => box.checked).length;
-        document.querySelector('#selected-count').textContent = count;
-        submit.disabled = busy || count === 0;
-        selectAll.checked = count > 0 && count === boxes.length;
-        selectAll.indeterminate = count > 0 && count < boxes.length;
+        const selectedCount = document.querySelector('#selected-count');
+        if (selectedCount) selectedCount.textContent = count;
+        if (submit) submit.disabled = busy || eventClosed || count === 0;
+        if (selectAll) {
+            selectAll.checked = count > 0 && count === boxes.length;
+            selectAll.indeterminate = count > 0 && count < boxes.length;
+        }
         syncSlotTotal();
     }
     function createSlotRow() {
@@ -72,12 +76,15 @@
         syncSlotTotal();
     });
     boxes.forEach(box => box.addEventListener('change', sync));
-    selectAll.addEventListener('change', () => { boxes.forEach(box => { box.checked = selectAll.checked; }); sync(); });
+    selectAll?.addEventListener('change', () => { boxes.forEach(box => { box.checked = selectAll.checked; }); sync(); });
     form.addEventListener('submit', event => {
         const count = boxes.filter(box => box.checked).length;
         const typeLabel = form.dataset.typeLabel || 'นัดหมาย';
-        const slotLabel = slotRows ? `วันที่ ${form.elements.date.value} ตาม slot ที่กำหนด` : `วันที่ ${form.elements.date.value} เวลา ${form.elements.time.value} (ประเทศไทย)`;
-        if (busy || !window.confirm(`สร้างนัด${typeLabel}สำหรับ ${count} คน ${slotLabel} และส่ง LINE ใช่หรือไม่?`)) event.preventDefault();
+        const eventTitle = form.dataset.eventTitle;
+        const eventLabel = eventTitle
+            ? `เพิ่ม ${count} คนเข้า Event “${eventTitle}” และส่ง LINE`
+            : `สร้าง Event ${typeLabel} วันที่ ${form.elements.date.value} สำหรับ ${count} คน และส่ง LINE`;
+        if (busy || !window.confirm(`${eventLabel} ใช่หรือไม่?`)) event.preventDefault();
         else { busy = true; sync(); }
     });
     async function send(item) {
@@ -101,7 +108,9 @@
     }
     document.querySelectorAll('[data-notify]').forEach(button => button.addEventListener('click', () => send({ id: button.dataset.notify, at: button.dataset.at, url: button.dataset.url })));
     async function runQueue() {
-        const queue = JSON.parse(document.querySelector('#interview-queue').textContent);
+        const queueElement = document.querySelector('#interview-queue');
+        if (!queueElement) return;
+        const queue = JSON.parse(queueElement.textContent);
         if (!queue.length) return;
         busy = true; sync();
         const summary = document.querySelector('#send-summary'); summary.hidden = false;
@@ -111,15 +120,17 @@
             if (await send(queue[index])) sent++;
         }
         summary.textContent = `บันทึกนัดแล้ว ${queue.length} คน · LINE รับข้อความแล้ว ${sent} คน · ส่งไม่สำเร็จ ${queue.length - sent} คน`;
-        busy = false; sync();
+        busy = false; sync(); refreshConfirmations();
     }
     async function refreshConfirmations() {
         const cells = [...document.querySelectorAll('[data-confirmation]')];
-        if (!cells.length || document.hidden) return;
+        const statusEndpoint = document.querySelector('[data-confirmation-status-url]');
+        if ((!cells.length && !statusEndpoint?.dataset.eventId) || document.hidden) return;
         try {
             const body = new URLSearchParams();
             cells.forEach(cell => body.append('participants', cell.dataset.confirmation));
-            const response = await fetch(document.querySelector('[data-confirmation-status-url]').dataset.confirmationStatusUrl, {
+            if (statusEndpoint.dataset.eventId) body.set('event_id', statusEndpoint.dataset.eventId);
+            const response = await fetch(statusEndpoint.dataset.confirmationStatusUrl, {
                 method: 'POST',
                 headers: { 'X-CSRFToken': form.elements.csrfmiddlewaretoken.value },
                 body,
@@ -133,6 +144,36 @@
                     cell.querySelector('small').textContent = item.confirmed_at;
                 }
             });
+            if (data.event?.capacity) {
+                const countLabel = `${data.event.confirmed_count}/${data.event.capacity}`;
+                document.querySelectorAll('[data-event-confirmed], [data-event-card-count], [data-event-full-count]').forEach(element => {
+                    element.textContent = countLabel;
+                });
+                const progress = document.querySelector('[data-event-progress]');
+                if (progress) progress.value = data.event.confirmed_count;
+                if (data.event.is_full) {
+                    eventClosed = true;
+                    document.querySelector('[data-selected-event-card]')?.classList.add('full');
+                    const state = document.querySelector('[data-event-state]');
+                    if (state) state.textContent = 'เต็มแล้ว';
+                    const message = document.querySelector('[data-event-full-message]');
+                    if (message) message.hidden = false;
+                    boxes.forEach(box => { box.checked = false; box.disabled = true; });
+                    if (selectAll) selectAll.disabled = true;
+                    document.querySelectorAll('[data-notify]').forEach(button => { button.disabled = true; });
+                    sync();
+                }
+            }
+            if (data.event) {
+                const eventSent = document.querySelector('[data-event-sent]');
+                const eventFailed = document.querySelector('[data-event-failed]');
+                const audienceSent = document.querySelector('[data-audience-sent]');
+                const audienceFailed = document.querySelector('[data-audience-failed]');
+                if (eventSent) eventSent.textContent = data.event.sent_count;
+                if (eventFailed) eventFailed.textContent = data.event.failed_count;
+                if (audienceSent) audienceSent.textContent = data.event.invited_count;
+                if (audienceFailed) audienceFailed.textContent = data.event.failed_count;
+            }
         } catch (_) {
             // The next visibility change or polling interval retries quietly.
         }

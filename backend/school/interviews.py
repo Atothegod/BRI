@@ -40,6 +40,7 @@ def appointment_candidates(appointment_type):
 
 class AppointmentScheduleForm(forms.Form):
     appointment_type = forms.ChoiceField(choices=Appointment.Type.choices, widget=forms.HiddenInput)
+    event_id = forms.IntegerField(required=False, widget=forms.HiddenInput)
     people = forms.ModelMultipleChoiceField(
         queryset=Person.objects.none(), label="ผู้เข้าร่วม",
         error_messages={"required": "กรุณาเลือกผู้เข้าร่วมอย่างน้อย 1 คน", "invalid_choice": "มีผู้เข้าร่วมที่ไม่ตรงเงื่อนไข กรุณาเลือกใหม่"},
@@ -51,7 +52,7 @@ class AppointmentScheduleForm(forms.Form):
     meeting_url = forms.URLField(label="ลิงก์เข้าร่วม (ถ้ามี)", required=False, max_length=1000)
     details = forms.CharField(label="รายละเอียดเพิ่มเติม", required=False, max_length=2000, widget=forms.Textarea(attrs={"rows": 3}))
 
-    def __init__(self, *args, appointment_type=Appointment.Type.INTERVIEW, **kwargs):
+    def __init__(self, *args, appointment_type=Appointment.Type.INTERVIEW, selected_appointment=None, **kwargs):
         super().__init__(*args, **kwargs)
         if appointment_type not in ADMIN_APPOINTMENT_TYPES:
             appointment_type = Appointment.Type.INTERVIEW
@@ -61,9 +62,17 @@ class AppointmentScheduleForm(forms.Form):
             if choice[0] in ADMIN_APPOINTMENT_TYPES
         ]
         self.fields["appointment_type"].initial = appointment_type
-        self.fields["people"].queryset = appointment_candidates(appointment_type)
+        people = appointment_candidates(appointment_type)
+        if selected_appointment is not None:
+            people = people.exclude(appointment_participations__appointment=selected_appointment)
+        self.fields["people"].queryset = people
         self.fields["title"].initial = dict(Appointment.Type.choices)[appointment_type]
         self.appointment_type = appointment_type
+        self.selected_appointment = selected_appointment
+        if selected_appointment is not None:
+            self.fields["event_id"].initial = selected_appointment.pk
+            for field_name in ("title", "date", "time", "location", "meeting_url", "details"):
+                self.fields[field_name].required = False
         if appointment_type == Appointment.Type.INTERVIEW:
             self.fields["time"].required = False
             self.fields["time"].widget = forms.HiddenInput()
@@ -94,6 +103,11 @@ class AppointmentScheduleForm(forms.Form):
         people = data.get("people")
         if people is not None and len(people) > 500:
             self.add_error("people", "เลือกได้ครั้งละไม่เกิน 500 คน")
+        if self.selected_appointment is not None:
+            if data.get("event_id") != self.selected_appointment.pk:
+                self.add_error("event_id", "Event ที่เลือกมีการเปลี่ยนแปลง กรุณาเลือกใหม่")
+            data["appointment"] = self.selected_appointment
+            return data
         if data.get("appointment_type") == Appointment.Type.INTERVIEW:
             self.clean_interview_slots(data)
         elif data.get("date") and data.get("time"):
@@ -153,36 +167,106 @@ def selected_appointment_type(request):
     return value if value in ADMIN_APPOINTMENT_TYPES else Appointment.Type.INTERVIEW
 
 
+def appointment_capacity(appointment):
+    return sum(slot.capacity for slot in appointment.slots.all())
+
+
+def appointment_is_full(appointment, confirmed_count=None):
+    capacity = appointment_capacity(appointment)
+    if not capacity:
+        return False
+    if confirmed_count is None:
+        confirmed_count = appointment.participants.filter(
+            response_status=AppointmentParticipant.ResponseStatus.CONFIRMED,
+        ).count()
+    return confirmed_count >= capacity
+
+
 @login_required(login_url="admin:login")
 @never_cache
 def interview_schedule(request):
     if not is_school_admin(request.user):
         raise PermissionDenied
     appointment_type = selected_appointment_type(request)
-    form = AppointmentScheduleForm(request.POST or None, appointment_type=appointment_type)
-    if request.method == "POST" and form.is_valid():
+    appointments = list(Appointment.objects.filter(appointment_type=appointment_type).prefetch_related("slots").annotate(
+        participant_count=Count("participants", distinct=True),
+        confirmed_count=Count("participants", filter=Q(participants__response_status="confirmed"), distinct=True),
+        sent_count=Count("participants", filter=Q(participants__notification_status="sent"), distinct=True),
+        failed_count=Count("participants", filter=Q(participants__notification_status="failed"), distinct=True),
+    )[:12])
+    for appointment in appointments:
+        appointment.slot_capacity = appointment_capacity(appointment)
+        appointment.is_full = appointment_is_full(appointment, appointment.confirmed_count)
+
+    requested_event = request.POST.get("event_id") if request.method == "POST" else request.GET.get("event")
+    selected_appointment = None
+    if requested_event and requested_event != "new":
+        try:
+            requested_event_id = int(requested_event)
+        except (TypeError, ValueError):
+            requested_event_id = None
+        selected_appointment = next(
+            (appointment for appointment in appointments if appointment.pk == requested_event_id),
+            None,
+        )
+        if selected_appointment is None and requested_event_id:
+            selected_appointment = Appointment.objects.filter(
+                pk=requested_event_id,
+                appointment_type=appointment_type,
+            ).prefetch_related("slots").annotate(
+                participant_count=Count("participants", distinct=True),
+                confirmed_count=Count("participants", filter=Q(participants__response_status="confirmed"), distinct=True),
+                sent_count=Count("participants", filter=Q(participants__notification_status="sent"), distinct=True),
+                failed_count=Count("participants", filter=Q(participants__notification_status="failed"), distinct=True),
+            ).first()
+            if selected_appointment:
+                selected_appointment.slot_capacity = appointment_capacity(selected_appointment)
+                selected_appointment.is_full = appointment_is_full(selected_appointment, selected_appointment.confirmed_count)
+    elif request.method != "POST" and requested_event != "new" and appointments:
+        selected_appointment = appointments[0]
+
+    form = AppointmentScheduleForm(
+        request.POST or None,
+        appointment_type=appointment_type,
+        selected_appointment=selected_appointment,
+    )
+    invalid_requested_event = bool(requested_event and requested_event != "new" and selected_appointment is None)
+    if request.method == "POST" and invalid_requested_event:
+        form.is_valid()
+        form.add_error("event_id", "ไม่พบ Event ที่เลือก กรุณาเลือก Event ใหม่")
+    if request.method == "POST" and not invalid_requested_event and form.is_valid():
         ids = list(form.cleaned_data["people"].values_list("pk", flat=True))
         appointment_type = form.cleaned_data["appointment_type"]
         with transaction.atomic():
             people = list(appointment_candidates(appointment_type).select_for_update().filter(pk__in=ids).order_by("pk"))
             if len(people) != len(ids):
                 form.add_error("people", "สถานะผู้เข้าร่วมเปลี่ยนแล้ว กรุณาเลือกใหม่")
+            elif selected_appointment is not None and selected_appointment.participants.filter(person_id__in=ids).exists():
+                form.add_error("people", "มีผู้สมัครบางคนอยู่ใน Event นี้แล้ว กรุณาโหลดรายชื่อใหม่")
+            elif selected_appointment is not None and (
+                selected_appointment.status != Appointment.Status.SCHEDULED
+                or not appointment_is_confirmable(selected_appointment)
+                or appointment_is_full(selected_appointment)
+            ):
+                form.add_error("people", "Event นี้เต็มหรือปิดรับแล้ว กรุณาสร้าง Event ใหม่")
             else:
-                appointment = Appointment.objects.create(
-                    appointment_type=appointment_type, title=form.cleaned_data["title"],
-                    starts_at=form.cleaned_data["starts_at"], location=form.cleaned_data["location"],
-                    meeting_url=form.cleaned_data["meeting_url"], details=form.cleaned_data["details"],
-                    created_by=request.user,
-                )
-                AppointmentSlot.objects.bulk_create([
-                    AppointmentSlot(appointment=appointment, **slot)
-                    for slot in form.cleaned_data.get("slot_defs", [])
-                ])
+                appointment = selected_appointment
+                if appointment is None:
+                    appointment = Appointment.objects.create(
+                        appointment_type=appointment_type, title=form.cleaned_data["title"],
+                        starts_at=form.cleaned_data["starts_at"], location=form.cleaned_data["location"],
+                        meeting_url=form.cleaned_data["meeting_url"], details=form.cleaned_data["details"],
+                        created_by=request.user,
+                    )
+                    AppointmentSlot.objects.bulk_create([
+                        AppointmentSlot(appointment=appointment, **slot)
+                        for slot in form.cleaned_data.get("slot_defs", [])
+                    ])
                 participants = AppointmentParticipant.objects.bulk_create([
                     AppointmentParticipant(appointment=appointment, person=person) for person in people
                 ])
                 if appointment_type == Appointment.Type.INTERVIEW:
-                    legacy_details = "\n".join(filter(None, [form.cleaned_data["location"], form.cleaned_data["meeting_url"], form.cleaned_data["details"]]))
+                    legacy_details = "\n".join(filter(None, [appointment.location, appointment.meeting_url, appointment.details]))
                     Person.objects.filter(pk__in=ids).update(
                         interview_at=appointment.starts_at, interview_details=legacy_details,
                         interview_notification_state="pending", interview_notified_at=None,
@@ -192,46 +276,75 @@ def interview_schedule(request):
             request.session["appointment_send_queue"] = [
                 {"id": participant.pk, "at": appointment.starts_at.isoformat()} for participant in participants
             ]
-            messages.success(request, f"สร้างนัดและเตรียมส่ง LINE ให้ {len(ids)} คนแล้ว")
-            return redirect(f"{reverse('school:appointment_schedule')}?type={appointment_type}")
+            action = "เพิ่มเข้า Event และเตรียมส่ง" if selected_appointment else "สร้าง Event และเตรียมส่ง"
+            messages.success(request, f"{action} LINE ให้ {len(ids)} คนแล้ว")
+            return redirect(f"{reverse('school:appointment_schedule')}?type={appointment_type}&event={appointment.pk}&audience=sent")
 
     query = request.GET.get("q", "").strip()
     filters = {key: request.GET.get(key, "") for key in ("appointment", "line", "notification", "confirmation")}
+    audience = request.GET.get("audience", "")
+    if audience not in ("unsent", "sent", "failed"):
+        if filters["notification"] == AppointmentParticipant.NotificationStatus.FAILED:
+            audience = "failed"
+        elif filters["appointment"] == "scheduled" or filters["notification"] in (
+            AppointmentParticipant.NotificationStatus.PENDING,
+            AppointmentParticipant.NotificationStatus.SENT,
+        ):
+            audience = "sent"
+        else:
+            audience = "unsent"
     people = appointment_candidates(appointment_type).order_by("first_name", "pk")
-    participations = AppointmentParticipant.objects.filter(appointment__appointment_type=appointment_type)
+    participations = AppointmentParticipant.objects.none()
+    audience_counts = {"unsent": people.count(), "sent": 0, "failed": 0}
+    if selected_appointment is not None:
+        participations = AppointmentParticipant.objects.filter(appointment=selected_appointment)
+        participant_people = participations.values("person_id")
+        audience_counts = {
+            "unsent": people.exclude(pk__in=participant_people).count(),
+            "sent": participations.exclude(notification_status=AppointmentParticipant.NotificationStatus.FAILED).count(),
+            "failed": participations.filter(notification_status=AppointmentParticipant.NotificationStatus.FAILED).count(),
+        }
+        if audience == "unsent":
+            people = people.exclude(pk__in=participant_people)
+        elif audience == "failed":
+            people = people.filter(pk__in=participations.filter(
+                notification_status=AppointmentParticipant.NotificationStatus.FAILED,
+            ).values("person_id"))
+        else:
+            people = people.filter(pk__in=participations.exclude(
+                notification_status=AppointmentParticipant.NotificationStatus.FAILED,
+            ).values("person_id"))
     if query:
         people = people.filter(Q(first_name__icontains=query) | Q(last_name__icontains=query) | Q(phone__icontains=query) | Q(line_display_name__icontains=query))
-    if filters["appointment"] == "scheduled":
-        people = people.filter(appointment_participations__in=participations)
-    elif filters["appointment"] == "unscheduled":
-        people = people.exclude(appointment_participations__in=participations)
     if filters["line"] == "connected":
         people = people.exclude(line_user_id="")
     elif filters["line"] == "missing":
         people = people.filter(line_user_id="")
-    if filters["notification"] in AppointmentParticipant.NotificationStatus.values:
+    if selected_appointment is not None and filters["notification"] in AppointmentParticipant.NotificationStatus.values:
         people = people.filter(appointment_participations__in=participations.filter(notification_status=filters["notification"]))
-    if filters["confirmation"] == "confirmed":
+    if selected_appointment is not None and filters["confirmation"] == "confirmed":
         people = people.filter(appointment_participations__in=participations.filter(response_status="confirmed"))
-    elif filters["confirmation"] == "waiting":
+    elif selected_appointment is not None and filters["confirmation"] == "waiting":
         people = people.filter(appointment_participations__in=participations.filter(response_status="waiting"))
     people = people.distinct()
     query_params = request.GET.copy()
     query_params.pop("page", None)
     query_params["type"] = appointment_type
+    query_params["event"] = selected_appointment.pk if selected_appointment else "new"
+    query_params["audience"] = audience
     filter_query = query_params.urlencode()
     page = Paginator(people, 50).get_page(request.GET.get("page"))
     latest_by_person = {}
-    for participant in participations.filter(person_id__in=[person.pk for person in page.object_list]).select_related("appointment", "selected_slot").order_by("person_id", "-appointment__starts_at", "-pk"):
+    for participant in participations.filter(person_id__in=[person.pk for person in page.object_list]).select_related("appointment", "selected_slot").order_by("person_id", "-pk"):
         latest_by_person.setdefault(participant.person_id, participant)
     for person in page.object_list:
         person.latest_appointment_participant = latest_by_person.get(person.pk)
-    appointments = list(Appointment.objects.filter(appointment_type=appointment_type).prefetch_related("slots").annotate(
-        participant_count=Count("participants", distinct=True),
-        confirmed_count=Count("participants", filter=Q(participants__response_status="confirmed"), distinct=True),
-    )[:12])
-    for appointment in appointments:
-        appointment.slot_capacity = sum(slot.capacity for slot in appointment.slots.all())
+    selected_event_open = bool(
+        selected_appointment
+        and selected_appointment.status == Appointment.Status.SCHEDULED
+        and appointment_is_confirmable(selected_appointment)
+        and not selected_appointment.is_full
+    )
     return render(request, "school/interview_schedule.html", {
         "form": form, "page_obj": page, "query": query, "filters": filters,
         "has_filters": bool(query or any(filters.values())),
@@ -246,6 +359,10 @@ def interview_schedule(request):
         ],
         "candidate_description": "นักศึกษาที่ผ่านการคัดเลือกและชำระเงินแล้ว" if appointment_type == Appointment.Type.ORIENTATION else "ผู้สมัครที่อยู่ระหว่างดำเนินการ",
         "appointments": appointments,
+        "selected_appointment": selected_appointment,
+        "selected_event_open": selected_event_open,
+        "audience": audience,
+        "audience_counts": audience_counts,
         "slot_rows": form.slot_rows(),
     })
 
@@ -270,6 +387,8 @@ def interview_notify(request, pk):
             return JsonResponse({"error": "สถานะผู้เข้าร่วมไม่ตรงเงื่อนไขแล้ว"}, status=409)
         if participant.notification_status == AppointmentParticipant.NotificationStatus.SENT:
             return JsonResponse({"sent": True, "label": "LINE รับข้อความแล้ว"})
+        if appointment.appointment_type == Appointment.Type.INTERVIEW and appointment_is_full(appointment):
+            return JsonResponse({"error": "รอบสัมภาษณ์เต็มแล้ว กรุณาสร้าง Event ใหม่"}, status=409)
         sent = send_line_push_message(participant.person.line_user_id, [build_appointment_invitation_flex_message(participant)])
         participant.notification_status = AppointmentParticipant.NotificationStatus.SENT if sent else AppointmentParticipant.NotificationStatus.FAILED
         participant.notified_at = timezone.now() if sent else None
@@ -293,10 +412,48 @@ def interview_confirmation_status(request):
     except (TypeError, ValueError):
         return JsonResponse({"error": "ข้อมูลผู้เข้าร่วมไม่ถูกต้อง"}, status=400)
     items = AppointmentParticipant.objects.filter(pk__in=ids).values("pk", "response_status", "confirmed_at")
+    event = None
+    try:
+        event_id = int(request.POST.get("event_id", ""))
+    except (TypeError, ValueError):
+        event_id = None
+    if event_id:
+        appointment = Appointment.objects.filter(pk=event_id).prefetch_related("slots").annotate(
+            confirmed_count=Count(
+                "participants",
+                filter=Q(participants__response_status=AppointmentParticipant.ResponseStatus.CONFIRMED),
+                distinct=True,
+            ),
+            sent_count=Count(
+                "participants",
+                filter=Q(participants__notification_status=AppointmentParticipant.NotificationStatus.SENT),
+                distinct=True,
+            ),
+            failed_count=Count(
+                "participants",
+                filter=Q(participants__notification_status=AppointmentParticipant.NotificationStatus.FAILED),
+                distinct=True,
+            ),
+            invited_count=Count(
+                "participants",
+                filter=~Q(participants__notification_status=AppointmentParticipant.NotificationStatus.FAILED),
+                distinct=True,
+            ),
+        ).first()
+        if appointment:
+            capacity = appointment_capacity(appointment)
+            event = {
+                "confirmed_count": appointment.confirmed_count,
+                "capacity": capacity,
+                "is_full": bool(capacity and appointment.confirmed_count >= capacity),
+                "sent_count": appointment.sent_count,
+                "failed_count": appointment.failed_count,
+                "invited_count": appointment.invited_count,
+            }
     return JsonResponse({"participants": {str(item["pk"]): {
         "status": item["response_status"],
         "confirmed_at": timezone.localtime(item["confirmed_at"], THAI_TIMEZONE).strftime("%d/%m/%Y %H:%M") if item["confirmed_at"] else None,
-    } for item in items}})
+    } for item in items}, "event": event})
 
 
 def appointment_is_confirmable(appointment):
@@ -414,8 +571,11 @@ def interview_confirmation(request):
     is_class = participant.appointment.appointment_type == Appointment.Type.CLASS
     slot_options = interview_slot_options(participant.appointment, participant.selected_slot_id)
     slots_are_full = bool(slot_options) and all(slot["is_full"] for slot in slot_options)
+    confirmation_state = "confirmed" if participant.response_status == AppointmentParticipant.ResponseStatus.CONFIRMED else "ready"
+    if confirmation_state == "ready" and slots_are_full:
+        confirmation_state = "full"
     return render(request, "school/interview_confirmation.html", {
-        "confirmation_state": "confirmed" if participant.response_status == AppointmentParticipant.ResponseStatus.CONFIRMED else "ready",
+        "confirmation_state": confirmation_state,
         "person": participant.person, "appointment": participant.appointment, "token": token,
         "slot_options": slot_options, "slots_are_full": slots_are_full,
         "selected_slot": participant.selected_slot, "slot_error": slot_error,

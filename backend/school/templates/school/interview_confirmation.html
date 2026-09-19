@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% load static tz %}
 {% block title %}ยืนยันนัดหมาย | BRI{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20260920-slots-2">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20260920-events-1">{% endblock %}
 {% block content %}
 <main class="confirmation-page"><section class="confirmation-shell" aria-labelledby="confirmation-title">
     <div class="confirmation-brand">{% include "school/includes/brand_logo.html" with variant="success" %}</div>
-    {% if confirmation_state == "ready" or confirmation_state == "confirmed" %}
+    {% if confirmation_state == "ready" or confirmation_state == "confirmed" or confirmation_state == "full" %}
         <span class="confirmation-eyebrow">{{ event_eyebrow }}</span>
-        <h1 id="confirmation-title">{% if confirmation_state == "confirmed" %}{{ event_confirmed_heading }}{% else %}{{ event_heading }}{% endif %}</h1>
+        <h1 id="confirmation-title">{% if confirmation_state == "confirmed" %}{{ event_confirmed_heading }}{% elif confirmation_state == "full" %}รอบสัมภาษณ์เต็มแล้ว{% else %}{{ event_heading }}{% endif %}</h1>
         <p>คุณ {{ person.full_name }}</p>
         <dl class="appointment-summary">{% timezone "Asia/Bangkok" %}
             <div><dt>กิจกรรม</dt><dd>{{ appointment.title }}</dd></div>
@@ -34,6 +34,7 @@
             {% endif %}
             <button class="confirm-button" type="submit" {% if slots_are_full %}disabled{% endif %}>{% if slot_options %}ยืนยันเวลานี้{% else %}ยืนยันเข้าร่วม{% endif %}</button>
         </form>
+        {% elif confirmation_state == "full" %}<div class="confirmation-full confirmation-full-page" role="status"><strong>ขณะนี้มีผู้ยืนยันครบตามจำนวนแล้ว</strong><span>คุณยังไม่ได้ยืนยันในรอบนี้ ทีมงานจะนัดวันสัมภาษณ์รอบถัดไปให้อีกครั้ง</span></div><a class="meeting-link" href="{{ line_return_url }}">กลับไปยัง LINE</a>
         {% else %}<div class="confirmation-success" role="status">ทีมงานได้รับการยืนยันของคุณแล้ว</div><a class="meeting-link" href="{{ line_return_url }}">กลับไปยัง LINE</a>{% endif %}
         {% if appointment.meeting_url %}<a class="meeting-link" href="{{ appointment.meeting_url }}" rel="noopener noreferrer">เปิดลิงก์เข้าร่วม</a>{% endif %}
     {% elif confirmation_state == "stale" %}<span class="confirmation-eyebrow">BRI Appointment</span><h1 id="confirmation-title">นัดนี้มีการเปลี่ยนแปลง</h1><p>กรุณาใช้ข้อความนัดหมายล่าสุด หรือติดต่อทีมงาน BRI</p>

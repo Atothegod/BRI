@@ -57,6 +57,13 @@ class AppointmentScheduleTests(TestCase):
         message = build_appointment_invitation_flex_message(participant)
         return message["contents"]["footer"]["contents"][0]["action"]["uri"]
 
+    def invite_to_event(self, appointment, people):
+        return self.client.post(self.url, {
+            "appointment_type": appointment.appointment_type,
+            "event_id": appointment.pk,
+            "people": [person.pk for person in people],
+        })
+
     @override_settings(TIME_ZONE="UTC")
     def test_bulk_interview_creates_appointment_participants_and_legacy_snapshot(self):
         self.assertEqual(self.schedule().status_code, 302)
@@ -155,9 +162,76 @@ class AppointmentScheduleTests(TestCase):
         self.assertContains(full, "เต็มแล้ว")
         rejected = self.client.post(reverse("school:appointment_confirmation"), {"token": second_token, "slot": slot.pk})
         self.assertEqual(rejected.status_code, 409)
-        self.assertContains(rejected, "ช่วงเวลานี้เต็มแล้ว", status_code=409)
+        self.assertContains(rejected, "ทีมงานจะนัดวันสัมภาษณ์รอบถัดไปให้อีกครั้ง", status_code=409)
         participants[1].refresh_from_db()
         self.assertEqual(participants[1].response_status, AppointmentParticipant.ResponseStatus.WAITING)
+
+    def test_existing_event_can_invite_new_applicants_without_creating_another_event(self):
+        self.schedule(people=[self.people[0].pk])
+        appointment = Appointment.objects.get()
+
+        unsent = self.client.get(self.url, {
+            "type": "interview", "event": appointment.pk, "audience": "unsent",
+        })
+        self.assertNotContains(unsent, "Applicant 0")
+        self.assertContains(unsent, "Applicant 1")
+
+        response = self.invite_to_event(appointment, [self.people[1]])
+        self.assertRedirects(
+            response,
+            f"{self.url}?type=interview&event={appointment.pk}&audience=sent",
+            fetch_redirect_response=False,
+        )
+        self.assertEqual(Appointment.objects.count(), 1)
+        self.assertEqual(appointment.participants.count(), 2)
+        self.assertEqual(len(self.client.session["appointment_send_queue"]), 1)
+
+    def test_event_audiences_separate_sent_failed_and_unsent_people(self):
+        third_person = Person.objects.create(
+            first_name="Applicant 2", last_name="Test", line_user_id="Utest2",
+        )
+        self.schedule()
+        appointment = Appointment.objects.get()
+        first, second = appointment.participants.order_by("pk")
+        first.notification_status = AppointmentParticipant.NotificationStatus.SENT
+        first.save(update_fields=["notification_status"])
+        second.notification_status = AppointmentParticipant.NotificationStatus.FAILED
+        second.save(update_fields=["notification_status"])
+
+        sent = self.client.get(self.url, {"type": "interview", "event": appointment.pk, "audience": "sent"})
+        self.assertContains(sent, "Applicant 0")
+        self.assertNotContains(sent, "Applicant 1")
+        self.assertContains(sent, "ส่งแล้ว / รอส่ง")
+
+        failed = self.client.get(self.url, {"type": "interview", "event": appointment.pk, "audience": "failed"})
+        self.assertContains(failed, "Applicant 1")
+        self.assertNotContains(failed, "Applicant 0")
+
+        unsent = self.client.get(self.url, {"type": "interview", "event": appointment.pk, "audience": "unsent"})
+        self.assertContains(unsent, third_person.full_name)
+        self.assertNotContains(unsent, "Applicant 0")
+        self.assertNotContains(unsent, "Applicant 1")
+
+    def test_full_event_cannot_invite_more_people(self):
+        self.schedule(people=[self.people[0].pk], slot_capacity=["1"])
+        appointment = Appointment.objects.get()
+        participant = appointment.participants.get()
+        participant.response_status = AppointmentParticipant.ResponseStatus.CONFIRMED
+        participant.selected_slot = appointment.slots.get()
+        participant.confirmed_at = timezone.now()
+        participant.save(update_fields=["response_status", "selected_slot", "confirmed_at"])
+
+        response = self.invite_to_event(appointment, [self.people[1]])
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Event นี้เต็มแล้ว")
+        self.assertContains(response, "กรุณาสร้าง Event ใหม่")
+        self.assertEqual(appointment.participants.count(), 1)
+        live_status = self.client.post(reverse("school:appointment_confirmation_status"), {
+            "participants": [participant.pk], "event_id": appointment.pk,
+        }).json()["event"]
+        self.assertEqual(live_status["confirmed_count"], 1)
+        self.assertEqual(live_status["capacity"], 1)
+        self.assertTrue(live_status["is_full"])
 
     @override_settings(PUBLIC_BASE_URL="https://bri.example")
     def test_public_urls_use_appointment_names_and_legacy_routes_redirect(self):
@@ -226,7 +300,7 @@ class AppointmentScheduleTests(TestCase):
         self.assertContains(response, "Applicant 0")
         self.assertNotContains(response, "Applicant 1")
         self.assertContains(response, "สัมภาษณ์รุ่นใหม่")
-        self.assertContains(response, "ประวัตินัดล่าสุด")
+        self.assertContains(response, "เลือก Event ที่จะส่งนัด")
 
     def test_requires_superuser_and_uses_admin_login(self):
         teacher = get_user_model().objects.create_user(username="teacher", password="test-password", is_staff=True)

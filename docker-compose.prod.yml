@@ -1,3 +1,9 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   backend:
     build:
@@ -5,7 +11,16 @@ services:
       dockerfile: backend/Dockerfile
     command: >
       sh -c "python manage.py collectstatic --noinput &&
-             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers ${GUNICORN_WORKERS:-3} --timeout ${GUNICORN_TIMEOUT:-60}"
+             gunicorn config.wsgi:application
+             --bind 0.0.0.0:8000
+             --worker-class ${GUNICORN_WORKER_CLASS:-gthread}
+             --workers ${GUNICORN_WORKERS:-2}
+             --threads ${GUNICORN_THREADS:-4}
+             --timeout ${GUNICORN_TIMEOUT:-60}
+             --max-requests ${GUNICORN_MAX_REQUESTS:-1000}
+             --max-requests-jitter ${GUNICORN_MAX_REQUESTS_JITTER:-100}
+             --access-logfile -
+             --error-logfile -"
     env_file:
       - .env
     volumes:
@@ -16,6 +31,13 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s=socket.create_connection(('127.0.0.1', 8000), 3); s.close()\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging: *default-logging
     restart: unless-stopped
 
   nginx:
@@ -27,7 +49,15 @@ services:
       - staticfiles:/static:ro
       - media:/media:ro
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/static/school/images/favicon.svg"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging: *default-logging
     restart: unless-stopped
 
   db:
@@ -43,6 +73,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    logging: *default-logging
     restart: unless-stopped
 
 volumes:

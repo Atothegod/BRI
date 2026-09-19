@@ -12,6 +12,13 @@ def env_bool(name, default=False):
     return value.lower() in {"1", "true", "yes", "on"}
 
 
+def env_int(name, default=0):
+    value = os.environ.get(name)
+    if value is None or value == "":
+        return default
+    return int(value)
+
+
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-local-dev-key")
 DEBUG = env_bool("DJANGO_DEBUG", False)
 
@@ -212,6 +219,8 @@ DATABASES = {
         "PASSWORD": os.environ.get("POSTGRES_PASSWORD", ""),
         "HOST": os.environ.get("POSTGRES_HOST", "db"),
         "PORT": os.environ.get("POSTGRES_PORT", "5432"),
+        "CONN_MAX_AGE": env_int("DJANGO_DB_CONN_MAX_AGE", 60),
+        "CONN_HEALTH_CHECKS": env_bool("DJANGO_DB_CONN_HEALTH_CHECKS", True),
     }
 }
 

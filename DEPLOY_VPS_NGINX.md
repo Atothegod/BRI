@@ -43,6 +43,14 @@ DJANGO_SESSION_COOKIE_SECURE=1
 DJANGO_CSRF_COOKIE_SECURE=1
 WEB_BIND=127.0.0.1
 WEB_PORT=8080
+DJANGO_DB_CONN_MAX_AGE=60
+DJANGO_DB_CONN_HEALTH_CHECKS=1
+GUNICORN_WORKER_CLASS=gthread
+GUNICORN_WORKERS=2
+GUNICORN_THREADS=4
+GUNICORN_TIMEOUT=60
+GUNICORN_MAX_REQUESTS=1000
+GUNICORN_MAX_REQUESTS_JITTER=100
 GOOGLE_OAUTH_CLIENT_ID=
 GOOGLE_OAUTH_CLIENT_SECRET=
 LINE_LIFF_ID=
@@ -145,6 +153,49 @@ Final checks:
 curl -I http://bri.brightromancechurch.org/
 curl -I https://bri.brightromancechurch.org/
 docker compose -f docker-compose.prod.yml ps
+```
+
+## 6. Production Operations
+
+Keep production free of long-running development agents. If CPU is unexpectedly high,
+check for stale VS Code or Claude agent processes before tuning the app:
+
+```bash
+top -b -n 1 -o %CPU | head -30
+ps -eo pid,ppid,user,stat,pcpu,pmem,etime,cmd --sort=-pcpu | head -30
+```
+
+Create a 2 GB swap safety buffer on small VPS instances:
+
+```bash
+fallocate -l 2G /swapfile
+chmod 600 /swapfile
+mkswap /swapfile
+swapon /swapfile
+grep -q '^/swapfile ' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+sysctl vm.swappiness=10
+echo 'vm.swappiness=10' > /etc/sysctl.d/99-swappiness.conf
+free -h
+```
+
+Run a backup before deploys and after important data changes:
+
+```bash
+sh scripts/backup_prod.sh
+```
+
+Restore commands, if needed:
+
+```bash
+docker compose -f docker-compose.prod.yml exec -T db sh -lc 'pg_restore --clean --if-exists -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < /var/backups/bri/YYYYMMDDTHHMMSSZ/postgres.dump
+docker compose -f docker-compose.prod.yml exec -T backend tar -xzf - -C /app < /var/backups/bri/YYYYMMDDTHHMMSSZ/media.tar.gz
+```
+
+Run a small load test in a planned test window. This creates real registration
+records marked by the generated run id.
+
+```bash
+python3 scripts/load_registration.py --base-url https://bri.brightromancechurch.org --users 20 --concurrency 4 --yes
 ```
 
 ## Troubleshooting 521

@@ -11,7 +11,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .line import build_appointment_invitation_flex_message
-from .models import Appointment, AppointmentParticipant, Person, Student
+from .models import Appointment, AppointmentParticipant, AppointmentSlot, Person, Student
 
 
 class AppointmentScheduleTests(TestCase):
@@ -34,6 +34,13 @@ class AppointmentScheduleTests(TestCase):
             "location": "ห้องประชุม BRI", "meeting_url": "https://meet.example/session",
             "details": "กรุณามาก่อนเวลา 15 นาที",
         }
+        if appointment_type == "interview":
+            data.update({
+                "total_capacity": "2",
+                "slot_start": ["09:30"],
+                "slot_end": ["10:30"],
+                "slot_capacity": ["2"],
+            })
         data.update(changes)
         return self.client.post(self.url, data)
 
@@ -56,6 +63,8 @@ class AppointmentScheduleTests(TestCase):
         self.assertEqual(self.schedule().status_code, 302)
         appointment = Appointment.objects.get()
         self.assertEqual(appointment.starts_at, self.at)
+        self.assertEqual(appointment.slots.count(), 1)
+        self.assertEqual(appointment.slots.get().capacity, 2)
         self.assertEqual(appointment.participants.count(), 2)
         self.assertEqual(len(self.client.session["appointment_send_queue"]), 2)
         for person in self.people:
@@ -84,8 +93,9 @@ class AppointmentScheduleTests(TestCase):
         send.assert_called_once()
         content = json.dumps(send.call_args.args[1], ensure_ascii=False)
         self.assertIn("09:30", content)
+        self.assertIn("เลือกช่วงเวลา", content)
         self.assertIn("ห้องประชุม BRI", content)
-        self.assertIn("ยืนยันเข้าร่วม", content)
+        self.assertIn("เลือกเวลา", content)
         participant.refresh_from_db()
         self.assertEqual(participant.notification_status, "sent")
 
@@ -125,6 +135,30 @@ class AppointmentScheduleTests(TestCase):
         }).json()["participants"][str(participant.pk)]
         self.assertEqual(status["status"], "confirmed")
         self.assertTrue(status["confirmed_at"])
+
+    @override_settings(PUBLIC_BASE_URL="https://bri.example")
+    def test_interview_confirmation_requires_available_slot(self):
+        self.schedule(total_capacity="1", slot_capacity=["1"])
+        participants = list(AppointmentParticipant.objects.order_by("pk"))
+        slot = AppointmentSlot.objects.get()
+        first_token = parse_qs(urlsplit(self.confirmation_url(participants[0])).query)["token"][0]
+        second_token = parse_qs(urlsplit(self.confirmation_url(participants[1])).query)["token"][0]
+
+        preview = self.client.get(reverse("school:appointment_confirmation"), {"token": first_token})
+        self.assertContains(preview, "เลือกเวลาสัมภาษณ์")
+        self.assertContains(preview, "เหลือ 1 / 1 ที่นั่ง")
+        confirmed = self.client.post(reverse("school:appointment_confirmation"), {"token": first_token, "slot": slot.pk})
+        self.assertContains(confirmed, "ยืนยันนัดสัมภาษณ์แล้ว")
+        participants[0].refresh_from_db()
+        self.assertEqual(participants[0].selected_slot, slot)
+
+        full = self.client.get(reverse("school:appointment_confirmation"), {"token": second_token})
+        self.assertContains(full, "เต็มแล้ว")
+        rejected = self.client.post(reverse("school:appointment_confirmation"), {"token": second_token, "slot": slot.pk})
+        self.assertEqual(rejected.status_code, 409)
+        self.assertContains(rejected, "ช่วงเวลานี้เต็มแล้ว", status_code=409)
+        participants[1].refresh_from_db()
+        self.assertEqual(participants[1].response_status, AppointmentParticipant.ResponseStatus.WAITING)
 
     @override_settings(PUBLIC_BASE_URL="https://bri.example")
     def test_public_urls_use_appointment_names_and_legacy_routes_redirect(self):
@@ -169,7 +203,7 @@ class AppointmentScheduleTests(TestCase):
         }, salt="school.interview-confirmation", compress=True)
         response = self.client.get(reverse("school:appointment_confirmation"), {"token": token})
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "ยืนยันนัดสัมภาษณ์")
+        self.assertContains(response, "เลือกเวลาสัมภาษณ์")
 
     def test_selection_validation_and_batch_scope(self):
         self.assertEqual(self.schedule(people=[]).status_code, 200)

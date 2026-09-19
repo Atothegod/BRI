@@ -177,6 +177,25 @@ class Appointment(TimeStampedModel):
         return f"{self.title} - {timezone.localtime(self.starts_at):%d/%m/%Y %H:%M}"
 
 
+class AppointmentSlot(TimeStampedModel):
+    appointment = models.ForeignKey(
+        Appointment,
+        on_delete=models.CASCADE,
+        related_name="slots",
+    )
+    starts_at = models.DateTimeField()
+    ends_at = models.DateTimeField()
+    capacity = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ("starts_at", "pk")
+
+    def __str__(self):
+        local_start = timezone.localtime(self.starts_at)
+        local_end = timezone.localtime(self.ends_at)
+        return f"{local_start:%d/%m/%Y %H:%M}-{local_end:%H:%M} ({self.capacity})"
+
+
 class AppointmentParticipant(TimeStampedModel):
     class ResponseStatus(models.TextChoices):
         WAITING = "waiting", "รอตอบรับ"
@@ -197,6 +216,13 @@ class AppointmentParticipant(TimeStampedModel):
         Person,
         on_delete=models.PROTECT,
         related_name="appointment_participations",
+    )
+    selected_slot = models.ForeignKey(
+        AppointmentSlot,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="participants",
     )
     response_status = models.CharField(
         max_length=20,

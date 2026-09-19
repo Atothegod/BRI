@@ -19,7 +19,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods, require_POST
 
 from .line import build_appointment_invitation_flex_message, send_line_push_message
-from .models import Appointment, AppointmentParticipant, Person
+from .models import Appointment, AppointmentParticipant, AppointmentSlot, Person
 from .views import is_school_admin
 
 THAI_TIMEZONE = ZoneInfo("Asia/Bangkok")
@@ -47,6 +47,13 @@ class AppointmentScheduleForm(forms.Form):
     title = forms.CharField(label="ชื่อกิจกรรม", max_length=255)
     date = forms.DateField(label="วันที่", widget=forms.DateInput(attrs={"type": "date"}))
     time = forms.TimeField(label="เวลา (ประเทศไทย)", widget=forms.TimeInput(attrs={"type": "time"}))
+    total_capacity = forms.IntegerField(
+        label="จำนวนรับรวม",
+        min_value=1,
+        max_value=1000,
+        required=False,
+        widget=forms.NumberInput(attrs={"min": 1, "placeholder": "140"}),
+    )
     location = forms.CharField(label="สถานที่", required=False, max_length=500)
     meeting_url = forms.URLField(label="ลิงก์เข้าร่วม (ถ้ามี)", required=False, max_length=1000)
     details = forms.CharField(label="รายละเอียดเพิ่มเติม", required=False, max_length=2000, widget=forms.Textarea(attrs={"rows": 3}))
@@ -63,17 +70,96 @@ class AppointmentScheduleForm(forms.Form):
         self.fields["appointment_type"].initial = appointment_type
         self.fields["people"].queryset = appointment_candidates(appointment_type)
         self.fields["title"].initial = dict(Appointment.Type.choices)[appointment_type]
+        self.appointment_type = appointment_type
+        if appointment_type == Appointment.Type.INTERVIEW:
+            self.fields["time"].required = False
+            self.fields["time"].widget = forms.HiddenInput()
+            self.fields["total_capacity"].required = True
+            self.fields["total_capacity"].initial = 140
+        else:
+            self.fields["total_capacity"].widget = forms.HiddenInput()
+
+    def slot_rows(self):
+        if self.is_bound:
+            starts = self.data.getlist("slot_start")
+            ends = self.data.getlist("slot_end")
+            capacities = self.data.getlist("slot_capacity")
+            row_count = max(len(starts), len(ends), len(capacities), 1)
+            return [
+                {
+                    "start": starts[index] if index < len(starts) else "",
+                    "end": ends[index] if index < len(ends) else "",
+                    "capacity": capacities[index] if index < len(capacities) else "",
+                }
+                for index in range(row_count)
+            ]
+        return [
+            {"start": "13:00", "end": "15:00", "capacity": "35"},
+            {"start": "15:00", "end": "17:00", "capacity": "35"},
+            {"start": "17:00", "end": "19:00", "capacity": "35"},
+            {"start": "19:00", "end": "20:00", "capacity": "35"},
+        ]
 
     def clean(self):
         data = super().clean()
         people = data.get("people")
-        if people is not None and len(people) > 50:
-            self.add_error("people", "เลือกได้ครั้งละไม่เกิน 50 คน")
-        if data.get("date") and data.get("time"):
+        if people is not None and len(people) > 500:
+            self.add_error("people", "เลือกได้ครั้งละไม่เกิน 500 คน")
+        if data.get("appointment_type") == Appointment.Type.INTERVIEW:
+            self.clean_interview_slots(data)
+        elif data.get("date") and data.get("time"):
             data["starts_at"] = timezone.make_aware(datetime.combine(data["date"], data["time"]), THAI_TIMEZONE)
             if data["starts_at"] <= timezone.now():
                 self.add_error("date", "กรุณาเลือกวันเวลาในอนาคต")
         return data
+
+    def clean_interview_slots(self, data):
+        if not data.get("date"):
+            return
+        slot_defs = []
+        time_field = forms.TimeField()
+        starts = self.data.getlist("slot_start")
+        ends = self.data.getlist("slot_end")
+        capacities = self.data.getlist("slot_capacity")
+        row_count = max(len(starts), len(ends), len(capacities))
+        for index in range(row_count):
+            raw_start = starts[index].strip() if index < len(starts) else ""
+            raw_end = ends[index].strip() if index < len(ends) else ""
+            raw_capacity = capacities[index].strip() if index < len(capacities) else ""
+            if not any([raw_start, raw_end, raw_capacity]):
+                continue
+            if not all([raw_start, raw_end, raw_capacity]):
+                self.add_error("date", f"กรุณากรอกข้อมูล slot แถวที่ {index + 1} ให้ครบ")
+                continue
+            try:
+                start_time = time_field.clean(raw_start)
+                end_time = time_field.clean(raw_end)
+                capacity = int(raw_capacity)
+            except (forms.ValidationError, TypeError, ValueError):
+                self.add_error("date", f"ข้อมูล slot แถวที่ {index + 1} ไม่ถูกต้อง")
+                continue
+            if capacity <= 0:
+                self.add_error("date", f"quota slot แถวที่ {index + 1} ต้องมากกว่า 0")
+                continue
+            if end_time <= start_time:
+                self.add_error("date", f"เวลาสิ้นสุด slot แถวที่ {index + 1} ต้องมากกว่าเวลาเริ่ม")
+                continue
+            slot_defs.append({
+                "starts_at": timezone.make_aware(datetime.combine(data["date"], start_time), THAI_TIMEZONE),
+                "ends_at": timezone.make_aware(datetime.combine(data["date"], end_time), THAI_TIMEZONE),
+                "capacity": capacity,
+            })
+        if not slot_defs:
+            self.add_error("date", "กรุณาเพิ่ม slot เวลาอย่างน้อย 1 slot")
+            return
+        if min(slot["starts_at"] for slot in slot_defs) <= timezone.now():
+            self.add_error("date", "กรุณาเลือก slot เวลาในอนาคต")
+        total_capacity = data.get("total_capacity")
+        slot_capacity = sum(slot["capacity"] for slot in slot_defs)
+        if total_capacity and slot_capacity != total_capacity:
+            self.add_error("total_capacity", f"จำนวนรับรวมต้องเท่ากับผลรวม quota slot ({slot_capacity} คน)")
+        data["slot_defs"] = slot_defs
+        data["starts_at"] = min(slot["starts_at"] for slot in slot_defs)
 
 
 def selected_appointment_type(request):
@@ -102,6 +188,10 @@ def interview_schedule(request):
                     meeting_url=form.cleaned_data["meeting_url"], details=form.cleaned_data["details"],
                     created_by=request.user,
                 )
+                AppointmentSlot.objects.bulk_create([
+                    AppointmentSlot(appointment=appointment, **slot)
+                    for slot in form.cleaned_data.get("slot_defs", [])
+                ])
                 participants = AppointmentParticipant.objects.bulk_create([
                     AppointmentParticipant(appointment=appointment, person=person) for person in people
                 ])
@@ -146,14 +236,16 @@ def interview_schedule(request):
     filter_query = query_params.urlencode()
     page = Paginator(people, 50).get_page(request.GET.get("page"))
     latest_by_person = {}
-    for participant in participations.filter(person_id__in=[person.pk for person in page.object_list]).select_related("appointment").order_by("person_id", "-appointment__starts_at", "-pk"):
+    for participant in participations.filter(person_id__in=[person.pk for person in page.object_list]).select_related("appointment", "selected_slot").order_by("person_id", "-appointment__starts_at", "-pk"):
         latest_by_person.setdefault(participant.person_id, participant)
     for person in page.object_list:
         person.latest_appointment_participant = latest_by_person.get(person.pk)
-    appointments = Appointment.objects.filter(appointment_type=appointment_type).annotate(
-        participant_count=Count("participants"),
-        confirmed_count=Count("participants", filter=Q(participants__response_status="confirmed")),
-    )[:12]
+    appointments = list(Appointment.objects.filter(appointment_type=appointment_type).prefetch_related("slots").annotate(
+        participant_count=Count("participants", distinct=True),
+        confirmed_count=Count("participants", filter=Q(participants__response_status="confirmed"), distinct=True),
+    )[:12])
+    for appointment in appointments:
+        appointment.slot_capacity = sum(slot.capacity for slot in appointment.slots.all())
     return render(request, "school/interview_schedule.html", {
         "form": form, "page_obj": page, "query": query, "filters": filters,
         "has_filters": bool(query or any(filters.values())),
@@ -168,6 +260,7 @@ def interview_schedule(request):
         ],
         "candidate_description": "นักศึกษาที่ผ่านการคัดเลือกและชำระเงินแล้ว" if appointment_type == Appointment.Type.ORIENTATION else "ผู้สมัครที่อยู่ระหว่างดำเนินการ",
         "appointments": appointments,
+        "slot_rows": form.slot_rows(),
     })
 
 
@@ -185,7 +278,7 @@ def interview_notify(request, pk):
             expected = parse_datetime(request.POST.get("at", ""))
         except ValueError:
             expected = None
-        if appointment.status != Appointment.Status.SCHEDULED or appointment.starts_at <= timezone.now() or expected != appointment.starts_at:
+        if appointment.status != Appointment.Status.SCHEDULED or not appointment_is_confirmable(appointment) or expected != appointment.starts_at:
             return JsonResponse({"error": "นัดนี้มีการเปลี่ยนแปลงหรือไม่สามารถส่งได้แล้ว"}, status=409)
         if not appointment_candidates(appointment.appointment_type).filter(pk=participant.person_id).exists():
             return JsonResponse({"error": "สถานะผู้เข้าร่วมไม่ตรงเงื่อนไขแล้ว"}, status=409)
@@ -218,6 +311,36 @@ def interview_confirmation_status(request):
         "status": item["response_status"],
         "confirmed_at": timezone.localtime(item["confirmed_at"], THAI_TIMEZONE).strftime("%d/%m/%Y %H:%M") if item["confirmed_at"] else None,
     } for item in items}})
+
+
+def appointment_is_confirmable(appointment):
+    if appointment.slots.exists():
+        return appointment.slots.filter(ends_at__gt=timezone.now()).exists()
+    return appointment.starts_at > timezone.now()
+
+
+def interview_slot_options(appointment, selected_slot_id=None):
+    slots = appointment.slots.annotate(
+        confirmed_count=Count(
+            "participants",
+            filter=Q(participants__response_status=AppointmentParticipant.ResponseStatus.CONFIRMED),
+        )
+    ).order_by("starts_at", "pk")
+    options = []
+    for slot in slots:
+        remaining = max(slot.capacity - slot.confirmed_count, 0)
+        local_start = timezone.localtime(slot.starts_at, THAI_TIMEZONE)
+        local_end = timezone.localtime(slot.ends_at, THAI_TIMEZONE)
+        options.append({
+            "id": slot.pk,
+            "label": f"{local_start:%H:%M}-{local_end:%H:%M}",
+            "capacity": slot.capacity,
+            "confirmed_count": slot.confirmed_count,
+            "remaining": remaining,
+            "is_full": remaining <= 0,
+            "is_selected": selected_slot_id == slot.pk,
+        })
+    return options
 
 
 def resolve_confirmation_token(token):
@@ -257,7 +380,7 @@ def interview_confirmation(request):
             participant is not None and expected_at is not None
             and participant.appointment.starts_at == expected_at
             and participant.appointment.status == Appointment.Status.SCHEDULED
-            and participant.appointment.starts_at > timezone.now()
+            and appointment_is_confirmable(participant.appointment)
             and appointment_candidates(participant.appointment.appointment_type).filter(pk=participant.person_id).exists()
         )
         if not valid:
@@ -267,19 +390,46 @@ def interview_confirmation(request):
                 {"confirmation_state": "stale"},
                 status=409,
             )
+        slot_error = ""
+        has_slots = participant.appointment.slots.exists()
         if request.method == "POST" and participant.response_status != AppointmentParticipant.ResponseStatus.CONFIRMED:
-            participant.response_status = AppointmentParticipant.ResponseStatus.CONFIRMED
-            participant.confirmed_at = timezone.now()
-            participant.save(update_fields=["response_status", "confirmed_at", "updated_at"])
-            if participant.appointment.appointment_type == Appointment.Type.INTERVIEW:
-                Person.objects.filter(pk=participant.person_id).update(interview_confirmed_at=participant.confirmed_at)
+            selected_slot = None
+            if has_slots:
+                try:
+                    slot_id = int(request.POST.get("slot", ""))
+                except (TypeError, ValueError):
+                    slot_id = None
+                selected_slot = AppointmentSlot.objects.select_for_update().filter(
+                    pk=slot_id,
+                    appointment=participant.appointment,
+                    ends_at__gt=timezone.now(),
+                ).first()
+                if selected_slot is None:
+                    slot_error = "กรุณาเลือกช่วงเวลาที่ยังเปิดให้ยืนยัน"
+                elif AppointmentParticipant.objects.filter(
+                    selected_slot=selected_slot,
+                    response_status=AppointmentParticipant.ResponseStatus.CONFIRMED,
+                ).count() >= selected_slot.capacity:
+                    slot_error = "ช่วงเวลานี้เต็มแล้ว กรุณาเลือกช่วงเวลาอื่น"
+            if not slot_error:
+                participant.response_status = AppointmentParticipant.ResponseStatus.CONFIRMED
+                participant.confirmed_at = timezone.now()
+                if selected_slot:
+                    participant.selected_slot = selected_slot
+                participant.save(update_fields=["response_status", "confirmed_at", "selected_slot", "updated_at"])
+                if participant.appointment.appointment_type == Appointment.Type.INTERVIEW:
+                    Person.objects.filter(pk=participant.person_id).update(interview_confirmed_at=participant.confirmed_at)
     is_orientation = participant.appointment.appointment_type == Appointment.Type.ORIENTATION
     is_class = participant.appointment.appointment_type == Appointment.Type.CLASS
+    slot_options = interview_slot_options(participant.appointment, participant.selected_slot_id)
+    slots_are_full = bool(slot_options) and all(slot["is_full"] for slot in slot_options)
     return render(request, "school/interview_confirmation.html", {
         "confirmation_state": "confirmed" if participant.response_status == AppointmentParticipant.ResponseStatus.CONFIRMED else "ready",
         "person": participant.person, "appointment": participant.appointment, "token": token,
+        "slot_options": slot_options, "slots_are_full": slots_are_full,
+        "selected_slot": participant.selected_slot, "slot_error": slot_error,
         "event_eyebrow": "BRI Orientation" if is_orientation else "BRI Class" if is_class else "BRI Interview",
-        "event_heading": "ยืนยันเข้าร่วมปฐมนิเทศ" if is_orientation else "ยืนยันนัดเรียน" if is_class else "ยืนยันนัดสัมภาษณ์",
+        "event_heading": "ยืนยันเข้าร่วมปฐมนิเทศ" if is_orientation else "ยืนยันนัดเรียน" if is_class else "เลือกเวลาสัมภาษณ์",
         "event_confirmed_heading": "ยืนยันเข้าร่วมปฐมนิเทศแล้ว" if is_orientation else "ยืนยันนัดเรียนแล้ว" if is_class else "ยืนยันนัดสัมภาษณ์แล้ว",
         "line_return_url": settings.LINE_RETURN_URL,
-    })
+    }, status=409 if slot_error else 200)

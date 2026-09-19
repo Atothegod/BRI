@@ -9,6 +9,7 @@ from .models import (
     AttendanceSession,
     Appointment,
     AppointmentParticipant,
+    AppointmentSlot,
     HomeworkAssignment,
     HomeworkSubmission,
     Person,
@@ -37,12 +38,20 @@ class AppointmentAdmin(UnfoldModelAdmin):
         return obj.participants.count()
 
 
+@admin.register(AppointmentSlot)
+class AppointmentSlotAdmin(UnfoldModelAdmin):
+    list_display = ("appointment", "starts_at", "ends_at", "capacity")
+    list_filter = ("appointment__appointment_type", "starts_at")
+    search_fields = ("appointment__title", "appointment__location")
+    autocomplete_fields = ("appointment",)
+
+
 @admin.register(AppointmentParticipant)
 class AppointmentParticipantAdmin(UnfoldModelAdmin):
-    list_display = ("appointment", "person", "notification_status", "response_status", "notified_at", "confirmed_at")
+    list_display = ("appointment", "person", "selected_slot", "notification_status", "response_status", "notified_at", "confirmed_at")
     list_filter = ("appointment__appointment_type", "notification_status", "response_status")
     search_fields = ("appointment__title", "person__first_name", "person__last_name", "person__phone")
-    autocomplete_fields = ("appointment", "person")
+    autocomplete_fields = ("appointment", "person", "selected_slot")
 
 
 class CountryCodeFilter(admin.SimpleListFilter):

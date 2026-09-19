@@ -367,6 +367,7 @@ def build_appointment_invitation_flex_message(participant):
     local_start = timezone.localtime(appointment.starts_at, ZoneInfo("Asia/Bangkok"))
     date = local_start.strftime("%d/%m/%Y")
     time = local_start.strftime("%H:%M")
+    slots = list(appointment.slots.order_by("starts_at", "pk"))
     is_orientation = appointment.appointment_type == appointment.Type.ORIENTATION
     is_class = appointment.appointment_type == appointment.Type.CLASS
     heading = (
@@ -397,8 +398,23 @@ def build_appointment_invitation_flex_message(participant):
         {"type": "text", "text": person.full_name, "weight": "bold", "wrap": True, "color": "#12271D"},
         {"type": "text", "text": appointment.title, "size": "sm", "wrap": True, "color": "#425B46"},
         build_flex_row("วันที่", date),
-        build_flex_row("เวลา", f"{time} น."),
     ]
+    if slots:
+        slot_labels = []
+        for slot in slots[:4]:
+            slot_start = timezone.localtime(slot.starts_at, ZoneInfo("Asia/Bangkok"))
+            slot_end = timezone.localtime(slot.ends_at, ZoneInfo("Asia/Bangkok"))
+            slot_labels.append(f"{slot_start:%H:%M}-{slot_end:%H:%M}")
+        contents.append(build_flex_row("เวลา", "เลือกช่วงเวลาในหน้าถัดไป"))
+        contents.append({
+            "type": "text",
+            "text": " / ".join(slot_labels),
+            "size": "sm",
+            "wrap": True,
+            "color": "#425B46",
+        })
+    else:
+        contents.append(build_flex_row("เวลา", f"{time} น."))
     if appointment.location:
         contents.append(build_flex_row("สถานที่", appointment.location))
     if appointment.details:
@@ -408,7 +424,7 @@ def build_appointment_invitation_flex_message(participant):
         "style": "primary",
         "height": "sm",
         "color": "#425B46",
-        "action": {"type": "uri", "label": "ยืนยันเข้าร่วม", "uri": confirmation_link},
+        "action": {"type": "uri", "label": "เลือกเวลา" if slots else "ยืนยันเข้าร่วม", "uri": confirmation_link},
     }]
     if appointment.meeting_url:
         buttons.append({
@@ -419,7 +435,7 @@ def build_appointment_invitation_flex_message(participant):
         })
     return {
         "type": "flex",
-        "altText": f"BRI {alt_event} {date} เวลา {time} น. (ประเทศไทย)",
+        "altText": f"BRI {alt_event} {date} {'เลือกช่วงเวลา' if slots else 'เวลา ' + time + ' น.'} (ประเทศไทย)",
         "contents": {
             "type": "bubble",
             "size": "mega",

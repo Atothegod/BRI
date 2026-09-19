@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static tz %}
 {% block title %}ยืนยันนัดหมาย | BRI{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20260913-font-3">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20260920-slots-1">{% endblock %}
 {% block content %}
 <main class="confirmation-page"><section class="confirmation-shell" aria-labelledby="confirmation-title">
     <div class="confirmation-brand">{% include "school/includes/brand_logo.html" with variant="success" %}</div>
@@ -12,11 +12,28 @@
         <dl class="appointment-summary">{% timezone "Asia/Bangkok" %}
             <div><dt>กิจกรรม</dt><dd>{{ appointment.title }}</dd></div>
             <div><dt>วันที่</dt><dd>{{ appointment.starts_at|date:"d/m/Y" }}</dd></div>
-            <div><dt>เวลา</dt><dd>{{ appointment.starts_at|date:"H:i" }} น.</dd></div>
+            <div><dt>เวลา</dt><dd>{% if selected_slot %}{{ selected_slot.starts_at|date:"H:i" }}-{{ selected_slot.ends_at|date:"H:i" }} น.{% elif slot_options %}เลือกช่วงเวลาที่สะดวกด้านล่าง{% else %}{{ appointment.starts_at|date:"H:i" }} น.{% endif %}</dd></div>
             {% if appointment.location %}<div><dt>สถานที่</dt><dd>{{ appointment.location }}</dd></div>{% endif %}
             {% if appointment.details %}<div><dt>รายละเอียด</dt><dd>{{ appointment.details|linebreaksbr }}</dd></div>{% endif %}
         {% endtimezone %}</dl>
-        {% if confirmation_state == "ready" %}<form method="post">{% csrf_token %}<input type="hidden" name="token" value="{{ token }}"><button class="confirm-button" type="submit">ยืนยันเข้าร่วม</button></form>
+        {% if confirmation_state == "ready" %}<form method="post" class="confirmation-form">{% csrf_token %}<input type="hidden" name="token" value="{{ token }}">
+            {% if slot_options %}
+                <section class="slot-picker" aria-label="เลือกเวลาสัมภาษณ์">
+                    <div class="calendar-tile">{% timezone "Asia/Bangkok" %}<span>วันที่</span><strong>{{ appointment.starts_at|date:"d" }}</strong><small>{{ appointment.starts_at|date:"m/Y" }}</small>{% endtimezone %}</div>
+                    <div class="slot-choice-list">
+                        {% for slot in slot_options %}
+                            <label class="slot-choice{% if slot.is_full %} full{% endif %}">
+                                <input type="radio" name="slot" value="{{ slot.id }}" {% if slot.is_full %}disabled{% endif %}>
+                                <span><strong>{{ slot.label }}</strong><small>{% if slot.is_full %}เต็มแล้ว{% else %}เหลือ {{ slot.remaining }} / {{ slot.capacity }} ที่นั่ง{% endif %}</small></span>
+                            </label>
+                        {% endfor %}
+                    </div>
+                </section>
+                {% if slot_error %}<p class="slot-error" role="alert">{{ slot_error }}</p>{% endif %}
+                {% if slots_are_full %}<div class="confirmation-full" role="status">รอบนี้เต็มแล้ว คุณยังไม่ได้ยืนยันนัดสัมภาษณ์ ทีมงานจะติดต่อรอบถัดไป</div>{% endif %}
+            {% endif %}
+            <button class="confirm-button" type="submit" {% if slots_are_full %}disabled{% endif %}>{% if slot_options %}ยืนยันเวลานี้{% else %}ยืนยันเข้าร่วม{% endif %}</button>
+        </form>
         {% else %}<div class="confirmation-success" role="status">ทีมงานได้รับการยืนยันของคุณแล้ว</div><a class="meeting-link" href="{{ line_return_url }}">กลับไปยัง LINE</a>{% endif %}
         {% if appointment.meeting_url %}<a class="meeting-link" href="{{ appointment.meeting_url }}" rel="noopener noreferrer">เปิดลิงก์เข้าร่วม</a>{% endif %}
     {% elif confirmation_state == "stale" %}<span class="confirmation-eyebrow">BRI Appointment</span><h1 id="confirmation-title">นัดนี้มีการเปลี่ยนแปลง</h1><p>กรุณาใช้ข้อความนัดหมายล่าสุด หรือติดต่อทีมงาน BRI</p>

@@ -2,7 +2,7 @@
 {% load static tz %}
 {% block title %}จัดการนัดหมาย | BRI{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20260913-font-3">
+<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20260920-slots-1">
 <link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20260916-school-admin-4">
 {% endblock %}
 {% block content %}
@@ -26,9 +26,30 @@
     <form method="post" id="schedule-form" data-type-label="{% if appointment_type == 'orientation' %}ปฐมนิเทศ{% else %}สัมภาษณ์{% endif %}">
         {% csrf_token %}{{ form.appointment_type }}
         {% if form.errors %}<div role="alert" class="errors">{{ form.errors }}</div>{% endif %}
-        <section class="schedule-fields" aria-label="รายละเอียดนัดหมาย">
+        <section class="schedule-fields{% if appointment_type == 'interview' %} interview-slot-mode{% endif %}" aria-label="รายละเอียดนัดหมาย">
             <div class="title-field">{{ form.title.label_tag }}{{ form.title }}</div>
-            <div>{{ form.date.label_tag }}{{ form.date }}</div><div>{{ form.time.label_tag }}{{ form.time }}</div>
+            <div>{{ form.date.label_tag }}{{ form.date }}</div>
+            {% if appointment_type == "interview" %}
+                {{ form.time }}
+                <div>{{ form.total_capacity.label_tag }}{{ form.total_capacity }}</div>
+                <div class="slot-editor" data-slot-editor>
+                    <div class="slot-editor-heading"><div><strong>ช่วงเวลาสัมภาษณ์</strong><small>ผู้สมัครจะเลือก slot ตอนกดยืนยันใน LINE</small></div><button type="button" data-add-slot>เพิ่ม slot</button></div>
+                    <div class="slot-rows" data-slot-rows>
+                        {% for slot in slot_rows %}
+                            <div class="slot-row">
+                                <label><span>เริ่ม</span><input type="time" name="slot_start" value="{{ slot.start }}"></label>
+                                <label><span>สิ้นสุด</span><input type="time" name="slot_end" value="{{ slot.end }}"></label>
+                                <label><span>Quota</span><input type="number" min="1" name="slot_capacity" value="{{ slot.capacity }}"></label>
+                                <button type="button" class="slot-remove" data-remove-slot aria-label="ลบ slot">ลบ</button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <p class="slot-total" data-slot-total>ผลรวม quota slot: 0 คน</p>
+                </div>
+            {% else %}
+                <div>{{ form.time.label_tag }}{{ form.time }}</div>
+                {{ form.total_capacity }}
+            {% endif %}
             <div class="location-field">{{ form.location.label_tag }}{{ form.location }}</div><div class="url-field">{{ form.meeting_url.label_tag }}{{ form.meeting_url }}</div>
             <div class="details-field">{{ form.details.label_tag }}{{ form.details }}</div>
         </section>
@@ -40,7 +61,7 @@
                     <td><input type="checkbox" name="people" value="{{ person.pk }}" aria-label="เลือก {{ person.full_name }}" {% if person.pk|stringformat:"s" in selected_ids %}checked{% endif %}></td>
                     <td><strong>{{ person.full_name }}</strong><small>{{ person.phone|default:"-" }}</small></td>
                     <td>{{ person.line_display_name|default:"-" }}{% if not person.line_user_id %}<small class="warning">ยังไม่เชื่อม LINE</small>{% endif %}</td>
-                    <td>{% if participant %}<strong>{{ participant.appointment.title }}</strong><small>{{ participant.appointment.starts_at|date:"d/m/Y H:i" }}{% if participant.appointment.location %} · {{ participant.appointment.location }}{% endif %}</small>{% else %}-{% endif %}</td>
+                    <td>{% if participant %}<strong>{{ participant.appointment.title }}</strong><small>{{ participant.appointment.starts_at|date:"d/m/Y" }}{% if participant.selected_slot %} · {{ participant.selected_slot.starts_at|date:"H:i" }}-{{ participant.selected_slot.ends_at|date:"H:i" }}{% elif appointment_type == "interview" %} · ยังไม่เลือกเวลา{% else %} · {{ participant.appointment.starts_at|date:"H:i" }}{% endif %}{% if participant.appointment.location %} · {{ participant.appointment.location }}{% endif %}</small>{% else %}-{% endif %}</td>
                     <td>{% if participant %}<span data-status="{{ participant.pk }}" class="state-{{ participant.notification_status }}">{{ participant.get_notification_status_display }}</span>{% if participant.notification_status != "sent" %}<button class="retry" type="button" data-notify="{{ participant.pk }}" data-at="{{ participant.appointment.starts_at|date:'c' }}" data-url="{% url 'school:appointment_notify' participant.pk %}">ส่ง LINE</button>{% endif %}{% else %}-{% endif %}</td>
                     <td{% if participant %} data-confirmation="{{ participant.pk }}"{% endif %}>{% if participant.response_status == "confirmed" %}<strong class="state-sent">ยืนยันแล้ว</strong><small>{{ participant.confirmed_at|date:"d/m/Y H:i" }}</small>{% elif participant %}<span class="state-pending">รอผู้เข้าร่วมยืนยัน</span>{% else %}-{% endif %}</td>
                 </tr>
@@ -49,9 +70,9 @@
         <footer class="schedule-footer"><span>หน้า {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span><nav aria-label="หน้ารายชื่อ">{% if page_obj.has_previous %}<a href="{{ page_query_prefix }}page={{ page_obj.previous_page_number }}">ก่อนหน้า</a>{% endif %} {% if page_obj.has_next %}<a href="{{ page_query_prefix }}page={{ page_obj.next_page_number }}">ถัดไป</a>{% endif %}</nav><button type="submit" id="confirm-schedule" disabled>สร้างนัดและแจ้ง LINE</button></footer>
     </form>
     <section class="appointment-history" aria-labelledby="history-title"><div class="history-heading"><h2 id="history-title">ประวัตินัดล่าสุด</h2><span>{{ appointments|length }} รายการ</span></div>
-        <div class="table-scroll"><table><thead><tr><th>กิจกรรม</th><th>วันและเวลา</th><th>สถานที่</th><th>ผู้เข้าร่วม</th><th>ตอบรับแล้ว</th><th>สถานะ</th></tr></thead><tbody>{% timezone "Asia/Bangkok" %}{% for item in appointments %}<tr><td><strong>{{ item.title }}</strong><small>{{ item.get_appointment_type_display }}</small></td><td>{{ item.starts_at|date:"d/m/Y H:i" }}</td><td>{{ item.location|default:"-" }}</td><td>{{ item.participant_count }} คน</td><td>{{ item.confirmed_count }} คน</td><td>{{ item.get_status_display }}</td></tr>{% empty %}<tr><td colspan="6">ยังไม่มีประวัตินัดหมาย</td></tr>{% endfor %}{% endtimezone %}</tbody></table></div>
+        <div class="table-scroll"><table><thead><tr><th>กิจกรรม</th><th>วันและเวลา</th><th>สถานที่</th><th>ผู้เข้าร่วม</th><th>ตอบรับแล้ว</th><th>สถานะ</th></tr></thead><tbody>{% timezone "Asia/Bangkok" %}{% for item in appointments %}<tr><td><strong>{{ item.title }}</strong><small>{{ item.get_appointment_type_display }}{% if item.slot_capacity %} · quota {{ item.slot_capacity }} คน{% endif %}</small></td><td>{{ item.starts_at|date:"d/m/Y" }}{% if item.slots.all %}<small>{% for slot in item.slots.all %}{{ slot.starts_at|date:"H:i" }}-{{ slot.ends_at|date:"H:i" }}{% if not forloop.last %}, {% endif %}{% endfor %}</small>{% else %} {{ item.starts_at|date:"H:i" }}{% endif %}</td><td>{{ item.location|default:"-" }}</td><td>{{ item.participant_count }} คน</td><td>{{ item.confirmed_count }} คน</td><td>{{ item.get_status_display }}</td></tr>{% empty %}<tr><td colspan="6">ยังไม่มีประวัตินัดหมาย</td></tr>{% endfor %}{% endtimezone %}</tbody></table></div>
     </section>
 </main>
 {{ send_queue|json_script:"interview-queue" }}<div hidden data-confirmation-status-url="{% url 'school:appointment_confirmation_status' %}"></div>
 {% endblock %}
-{% block extra_js %}<script src="{% static 'school/js/interviews.js' %}?v=20260912-appointments-1" defer></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'school/js/interviews.js' %}?v=20260920-slots-1" defer></script>{% endblock %}

@@ -23,8 +23,21 @@ class User(AbstractUser):
     )
     teacher_approved_at = models.DateTimeField(null=True, blank=True)
 
+    @property
+    def display_name(self):
+        return (
+            self.nickname.strip()
+            or self.get_full_name().strip()
+            or self.email
+            or self.username
+        )
+
+    @property
+    def display_initial(self):
+        return (self.display_name[:1] or "?").upper()
+
     def __str__(self):
-        return self.username
+        return self.display_name
 
     def mark_google_connected(self, email):
         self.google_email = email

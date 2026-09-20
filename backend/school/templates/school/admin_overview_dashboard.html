@@ -16,7 +16,7 @@
             <div>
                 <span class="eyebrow">Admin overview</span>
                 <h1 id="admin-dashboard-title">ภาพรวมโรงเรียน</h1>
-                <p>ยินดีต้อนรับ {{ request.user.get_full_name|default:request.user.username }} ดูสถานะสำคัญและงานที่ต้องดำเนินการได้จากที่นี่</p>
+                <p>ยินดีต้อนรับ {{ request.user.display_name }} ดูสถานะสำคัญและงานที่ต้องดำเนินการได้จากที่นี่</p>
             </div>
         </div>
 
@@ -117,8 +117,8 @@
                                 {% for teacher in teacher_summaries %}
                                 <article class="queue-row">
                                     <div>
-                                        <strong>{{ teacher.get_full_name|default:teacher.username }}</strong>
-                                        <span>{% if teacher.nickname %}{{ teacher.nickname }} · {% endif %}{{ teacher.email|default:teacher.username }}</span>
+                                        <strong>{{ teacher.display_name }}</strong>
+                                        <span>{{ teacher.email|default:teacher.display_name }}</span>
                                     </div>
                                     <span class="teacher-group-count">{{ teacher.teacher_groups.count }} กลุ่ม</span>
                                 </article>
@@ -146,7 +146,7 @@
                                 <article class="group-row">
                                     <div>
                                         <strong>{{ group.group_name }}</strong>
-                                        <span>{{ group.teacher.get_full_name|default:group.teacher.username }}</span>
+                                        <span>{{ group.teacher.display_name }}</span>
                                     </div>
                                     <div class="group-row-stats">
                                         <span>{{ group.student_count }} คน</span>

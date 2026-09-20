@@ -21,7 +21,7 @@
         <span class="eyebrow">Teacher access pending</span>
         <h1 id="pending-title">รอการอนุมัติจากผู้ดูแลระบบ</h1>
         <p class="success-lead">
-            บัญชี {{ request.user.get_full_name|default:request.user.username }} ลงทะเบียนเรียบร้อยแล้ว
+            บัญชี {{ request.user.display_name }} ลงทะเบียนเรียบร้อยแล้ว
             เมื่อได้รับอนุมัติ คุณจะเข้าสู่แดชบอร์ดผู้สอนได้ทันที
         </p>
 

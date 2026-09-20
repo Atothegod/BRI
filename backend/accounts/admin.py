@@ -32,7 +32,7 @@ class UserAdmin(DjangoUserAdmin, UnfoldModelAdmin):
         ),
     )
     list_display = (
-        "username",
+        "display_name",
         "email",
         "nickname",
         "google_email",
@@ -114,7 +114,7 @@ class TeacherAdmin(DjangoUserAdmin, UnfoldModelAdmin):
         ),
     )
     list_display = (
-        "username",
+        "display_name",
         "email",
         "nickname",
         "google_email",

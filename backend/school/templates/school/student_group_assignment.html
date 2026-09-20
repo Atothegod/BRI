@@ -75,7 +75,7 @@
                              aria-labelledby="lane-group-{{ group.pk }}-title">
                         <header class="assignment-lane-heading">
                             <div>
-                                <span>{{ group.teacher.get_full_name|default:group.teacher.username }}</span>
+                                <span>{{ group.teacher.display_name }}</span>
                                 <h3 id="lane-group-{{ group.pk }}-title">{{ group.group_name }}</h3>
                             </div>
                             <strong data-lane-count>{{ group.board_students|length }}</strong>
@@ -118,7 +118,7 @@
                 </button>
                 {% for group in groups %}
                 <button type="button" data-move-target data-group-id="{{ group.pk }}" data-group-name="{{ group.group_name }}">
-                    <span>{{ group.group_name }}</span><small>{{ group.teacher.get_full_name|default:group.teacher.username }}</small>
+                    <span>{{ group.group_name }}</span><small>{{ group.teacher.display_name }}</small>
                 </button>
                 {% endfor %}
             </div>

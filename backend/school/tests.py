@@ -412,8 +412,8 @@ class TeacherFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Continue with Google")
         self.assertContains(response, reverse("google_login"))
-        self.assertContains(response, "ชื่อเล่น")
-        self.assertContains(response, 'autocomplete="nickname"')
+        self.assertContains(response, "อีเมล")
+        self.assertNotContains(response, "ชื่อผู้ใช้")
         self.assertContains(response, 'width="18" height="18"')
         self.assertContains(response, "school/css/teacher_auth.css")
 
@@ -424,6 +424,9 @@ class TeacherFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Continue with Google")
         self.assertContains(response, reverse("google_login"))
+        self.assertContains(response, "ชื่อเล่น")
+        self.assertNotContains(response, "ชื่อผู้ใช้")
+        self.assertNotContains(response, 'name="username"')
 
     def test_allauth_login_and_signup_redirect_to_teacher_pages(self):
         login_response = self.client.get("/accounts/login/")
@@ -492,7 +495,6 @@ class TeacherFlowTests(TestCase):
         response = self.client.post(
             reverse("school:teacher_register"),
             {
-                "username": "teacher1",
                 "email": "teacher@example.com",
                 "nickname": "อ.เอก",
                 "password1": "StrongPass12345",
@@ -504,7 +506,7 @@ class TeacherFlowTests(TestCase):
             response,
             f"{reverse('school:login')}?teacher_status=registered_pending",
         )
-        user = get_user_model().objects.get(username="teacher1")
+        user = get_user_model().objects.get(username="teacher@example.com")
         self.assertEqual(user.role, user.Role.TEACHER)
         self.assertEqual(user.email, "teacher@example.com")
         self.assertEqual(user.nickname, "อ.เอก")
@@ -684,6 +686,7 @@ class TeacherFlowTests(TestCase):
             username="teacher1",
             password="pass",
             role=User.Role.TEACHER,
+            nickname="อ.เอก",
             is_teacher_approved=True,
         )
         other_teacher = User.objects.create_user(
@@ -704,6 +707,8 @@ class TeacherFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "school/teacher_dashboard_base.html")
+        self.assertContains(response, "สวัสดี อ.เอก")
+        self.assertNotContains(response, "teacher1")
         self.assertContains(response, "Visible Student")
         self.assertNotContains(response, "Hidden Student")
 

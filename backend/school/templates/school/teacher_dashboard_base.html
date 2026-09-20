@@ -35,9 +35,9 @@
         </nav>
 
         <div class="teacher-sidebar-account">
-            <span class="teacher-avatar">{{ request.user.first_name|default:request.user.username|slice:":1"|upper }}</span>
+            <span class="teacher-avatar">{{ request.user.display_initial }}</span>
             <div>
-                <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
+                <strong>{{ request.user.display_name }}</strong>
                 <span>บัญชีผู้สอน</span>
             </div>
         </div>

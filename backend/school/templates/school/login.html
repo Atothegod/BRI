@@ -40,7 +40,7 @@
             <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#info"></use></svg>
             <div>
                 <strong>เข้าสู่ระบบไม่สำเร็จ</strong>
-                <p>ตรวจสอบชื่อผู้ใช้และรหัสผ่านอีกครั้ง</p>
+                <p>ตรวจสอบอีเมลและรหัสผ่านอีกครั้ง</p>
             </div>
         </div>
         {% endif %}
@@ -67,7 +67,7 @@
         <form class="teacher-auth-form" method="post" novalidate>
             {% csrf_token %}
             <div class="field-group">
-                <label class="field-label" for="{{ form.username.id_for_label }}">ชื่อผู้ใช้หรืออีเมล</label>
+                <label class="field-label" for="{{ form.username.id_for_label }}">อีเมล</label>
                 {{ form.username }}
             </div>
             <div class="field-group">

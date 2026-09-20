@@ -6,7 +6,7 @@
     <header class="teacher-page-heading" id="dashboard-top">
         <div>
             <span class="teacher-eyebrow">BRI TEACHER DASHBOARD</span>
-            <h1>สวัสดี {{ request.user.first_name|default:request.user.username }}</h1>
+            <h1>สวัสดี {{ request.user.display_name }}</h1>
             <p>{% if selected_group %}ภาพรวมของ {{ selected_group.group_name }}{% else %}ภาพรวมนักศึกษาทุกกลุ่มที่คุณดูแล{% endif %}</p>
         </div>
         <div class="teacher-heading-scope">

@@ -6,6 +6,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from .models import HomeworkSubmission, Person, Student
@@ -655,7 +656,7 @@ class PersonForm(forms.Form):
 
 class TeacherLoginForm(AuthenticationForm):
     username = forms.CharField(
-        label="ชื่อผู้ใช้หรืออีเมล",
+        label="อีเมล",
         widget=forms.TextInput(
             attrs={
                 "class": CONTROL_CLASS,
@@ -690,21 +691,20 @@ class TeacherSignupForm(UserCreationForm):
 
     class Meta(UserCreationForm.Meta):
         model = get_user_model()
-        fields = ("username", "nickname", "email")
+        fields = ("email", "nickname")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for field_name in ("username", "password1", "password2"):
+        self.fields.pop("username", None)
+        for field_name in ("password1", "password2"):
             self.fields[field_name].widget.attrs.setdefault("class", CONTROL_CLASS)
-        self.fields["username"].widget.attrs.setdefault("autocomplete", "username")
-        self.fields["username"].widget.attrs.setdefault("placeholder", "teacher")
         self.fields["password1"].widget.attrs.setdefault("autocomplete", "new-password")
         self.fields["password2"].widget.attrs.setdefault("autocomplete", "new-password")
 
     def clean_email(self):
         email = self.cleaned_data["email"].strip().lower()
         User = get_user_model()
-        if User.objects.filter(email__iexact=email).exists():
+        if User.objects.filter(Q(email__iexact=email) | Q(username__iexact=email)).exists():
             raise forms.ValidationError("มีบัญชีที่ใช้อีเมลนี้แล้ว")
         return email
 
@@ -714,6 +714,7 @@ class TeacherSignupForm(UserCreationForm):
         user.role = user.Role.TEACHER
         user.nickname = self.cleaned_data["nickname"].strip()
         user.email = self.cleaned_data["email"]
+        user.username = user.email
 
         if commit:
             user.save()

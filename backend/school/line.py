@@ -7,6 +7,8 @@ from django.conf import settings
 from django.core import signing
 from django.urls import reverse
 
+from .date_formats import thai_date
+
 
 logger = logging.getLogger(__name__)
 
@@ -365,7 +367,7 @@ def build_appointment_invitation_flex_message(participant):
     appointment = participant.appointment
     person = participant.person
     local_start = timezone.localtime(appointment.starts_at, ZoneInfo("Asia/Bangkok"))
-    date = local_start.strftime("%d/%m/%Y")
+    date = thai_date(local_start, include_weekday=True)
     time = local_start.strftime("%H:%M")
     slots = list(appointment.slots.order_by("starts_at", "pk"))
     is_orientation = appointment.appointment_type == appointment.Type.ORIENTATION

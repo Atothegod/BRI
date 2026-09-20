@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static tz %}
+{% load static tz school_dates %}
 
 {% block title %}Student Dashboard | BRI School of Fivefold{% endblock %}
 
@@ -85,7 +85,7 @@
                 {% timezone "Asia/Bangkok" %}
                 {% for participant in appointment_rows %}
                 <article>
-                    <time datetime="{{ participant.appointment.starts_at|date:'c' }}">{{ participant.appointment.starts_at|date:"d M H:i" }}</time>
+                    <time datetime="{{ participant.appointment.starts_at|date:'c' }}">{{ participant.appointment.starts_at|thai_date:"time" }}</time>
                     <div>
                         <strong>{{ participant.appointment.title }}</strong>
                         <small>{{ participant.get_response_status_display }}{% if participant.appointment.location %} · {{ participant.appointment.location }}{% endif %}</small>

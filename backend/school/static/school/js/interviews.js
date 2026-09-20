@@ -8,6 +8,16 @@
     const slotCapacityValue = document.querySelector('[data-slot-capacity-value]');
     let busy = false;
     let eventClosed = false;
+    const thaiMonths = [
+        'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+        'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม',
+    ];
+    function formatThaiDateInput(value) {
+        if (!value) return '';
+        const [year, month, day] = value.split('-').map(Number);
+        if (!year || !month || !day) return value;
+        return `${day} ${thaiMonths[month - 1]} ${year}`;
+    }
     function addMinutes(value, minutes) {
         if (!value) return '';
         const [hour, minute] = value.split(':').map(Number);
@@ -81,9 +91,10 @@
         const count = boxes.filter(box => box.checked).length;
         const typeLabel = form.dataset.typeLabel || 'นัดหมาย';
         const eventTitle = form.dataset.eventTitle;
+        const dateLabel = formatThaiDateInput(form.elements.date?.value);
         const eventLabel = eventTitle
             ? `เพิ่ม ${count} คนเข้า Event “${eventTitle}” และส่ง LINE`
-            : `สร้าง Event ${typeLabel} วันที่ ${form.elements.date.value} สำหรับ ${count} คน และส่ง LINE`;
+            : `สร้าง Event ${typeLabel} วันที่ ${dateLabel} สำหรับ ${count} คน และส่ง LINE`;
         if (busy || !window.confirm(`${eventLabel} ใช่หรือไม่?`)) event.preventDefault();
         else { busy = true; sync(); }
     });

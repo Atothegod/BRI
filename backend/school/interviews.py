@@ -18,6 +18,7 @@ from django.utils.dateparse import parse_datetime
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods, require_POST
 
+from .date_formats import thai_date
 from .line import build_appointment_invitation_flex_message, send_line_push_message
 from .models import Appointment, AppointmentParticipant, AppointmentSlot, Person
 from .views import is_school_admin
@@ -521,7 +522,7 @@ def interview_confirmation_status(request):
             }
     return JsonResponse({"participants": {str(item["pk"]): {
         "status": item["response_status"],
-        "confirmed_at": timezone.localtime(item["confirmed_at"], THAI_TIMEZONE).strftime("%d/%m/%Y %H:%M") if item["confirmed_at"] else None,
+        "confirmed_at": thai_date(item["confirmed_at"], include_time=True) if item["confirmed_at"] else None,
     } for item in items}, "event": event})
 
 

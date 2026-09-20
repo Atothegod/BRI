@@ -11,9 +11,20 @@
     const queueElement = document.querySelector('#teacher-appointment-queue');
     const notifyTemplate = document.querySelector('[data-notify-url-template]')?.dataset.notifyUrlTemplate || '';
     let busy = false;
+    const thaiMonths = [
+        'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+        'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม',
+    ];
 
     function pad(value) {
         return String(value).padStart(2, '0');
+    }
+
+    function formatThaiDateInput(value) {
+        if (!value) return '';
+        const [year, month, day] = value.split('-').map(Number);
+        if (!year || !month || !day) return value;
+        return `${day} ${thaiMonths[month - 1]} ${year}`;
     }
 
     function setInitialDateTime() {
@@ -55,7 +66,7 @@
             event.preventDefault();
             return;
         }
-        const date = dateInput.value;
+        const date = formatThaiDateInput(dateInput.value);
         const time = timeInput.value;
         if (!window.confirm(`สร้างนัดเรียนวันที่ ${date} เวลา ${time} และส่ง LINE ให้ ${count} คน ใช่หรือไม่?`)) {
             event.preventDefault();

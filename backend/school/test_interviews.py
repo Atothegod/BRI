@@ -10,6 +10,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
+from .date_formats import thai_date
 from .line import build_appointment_invitation_flex_message
 from .models import Appointment, AppointmentParticipant, AppointmentSlot, Person, Student
 
@@ -99,6 +100,8 @@ class AppointmentScheduleTests(TestCase):
         send.assert_called_once()
         content = json.dumps(send.call_args.args[1], ensure_ascii=False)
         self.assertIn("09:30", content)
+        self.assertIn(thai_date(self.at, include_weekday=True), content)
+        self.assertNotIn(self.at.strftime("%d/%m/%Y"), content)
         self.assertIn("เลือกช่วงเวลา", content)
         self.assertIn("ห้องประชุม BRI", content)
         self.assertIn("เลือกเวลา", content)
@@ -128,6 +131,7 @@ class AppointmentScheduleTests(TestCase):
         token = parse_qs(parsed.query)["token"][0]
         preview = self.client.get(parsed.path, {"token": token})
         self.assertContains(preview, "ยืนยันเข้าร่วมปฐมนิเทศ")
+        self.assertContains(preview, thai_date(self.at, include_weekday=True))
         self.assertContains(preview, "ห้องประชุม BRI")
         participant.refresh_from_db()
         self.assertEqual(participant.response_status, "waiting")
@@ -140,7 +144,7 @@ class AppointmentScheduleTests(TestCase):
             "participants": [participant.pk]
         }).json()["participants"][str(participant.pk)]
         self.assertEqual(status["status"], "confirmed")
-        self.assertTrue(status["confirmed_at"])
+        self.assertEqual(status["confirmed_at"], thai_date(participant.confirmed_at, include_time=True))
 
     @override_settings(PUBLIC_BASE_URL="https://bri.example")
     def test_interview_confirmation_requires_available_slot(self):
@@ -152,6 +156,7 @@ class AppointmentScheduleTests(TestCase):
 
         preview = self.client.get(reverse("school:appointment_confirmation"), {"token": first_token})
         self.assertContains(preview, "เลือกเวลาสัมภาษณ์")
+        self.assertContains(preview, thai_date(self.at, include_weekday=True))
         self.assertContains(preview, "เหลือ 1 จาก 1 ที่นั่ง")
         confirmed = self.client.post(reverse("school:appointment_confirmation"), {"token": first_token, "slot": slot.pk})
         self.assertContains(confirmed, "ยืนยันนัดสัมภาษณ์แล้ว")

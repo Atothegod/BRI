@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static tz %}
+{% load static tz school_dates %}
 {% block title %}ยืนยันนัดหมาย | BRI{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20260920-confirm-mobile-1">{% endblock %}
 {% block content %}
@@ -11,7 +11,7 @@
         <p>คุณ {{ person.full_name }}</p>
         <dl class="appointment-summary">{% timezone "Asia/Bangkok" %}
             <div><dt>กิจกรรม</dt><dd>{{ appointment.title }}</dd></div>
-            <div><dt>วันที่</dt><dd>{{ appointment.starts_at|date:"d/m/Y" }}</dd></div>
+            <div><dt>วันที่</dt><dd>{{ appointment.starts_at|thai_date:"weekday" }}</dd></div>
             <div><dt>เวลา</dt><dd>{% if selected_slot %}{{ selected_slot.starts_at|date:"H:i" }}-{{ selected_slot.ends_at|date:"H:i" }} น.{% elif slot_options %}เลือกช่วงเวลาที่สะดวกด้านล่าง{% else %}{{ appointment.starts_at|date:"H:i" }} น.{% endif %}</dd></div>
             {% if appointment.location %}<div><dt>สถานที่</dt><dd>{{ appointment.location }}</dd></div>{% endif %}
             {% if appointment.details %}<div><dt>รายละเอียด</dt><dd>{{ appointment.details|linebreaksbr }}</dd></div>{% endif %}
@@ -19,7 +19,7 @@
         {% if confirmation_state == "ready" %}<form method="post" class="confirmation-form">{% csrf_token %}<input type="hidden" name="token" value="{{ token }}">
             {% if slot_options %}
                 <section class="slot-picker" aria-label="เลือกเวลาสัมภาษณ์">
-                    <div class="calendar-tile">{% timezone "Asia/Bangkok" %}<span>วันที่</span><strong>{{ appointment.starts_at|date:"d" }}</strong><small>{{ appointment.starts_at|date:"m/Y" }}</small>{% endtimezone %}</div>
+                    <div class="calendar-tile">{% timezone "Asia/Bangkok" %}<span>วันที่</span><strong>{{ appointment.starts_at|date:"d" }}</strong><small>{{ appointment.starts_at|thai_date:"month_year" }}</small>{% endtimezone %}</div>
                     <div class="slot-choice-list">
                         <div class="slot-choice-heading"><span>เลือกช่วงเวลาที่สะดวก</span><small>กดเลือกได้ 1 ช่วงเวลา</small></div>
                         {% for slot in slot_options %}

@@ -1,5 +1,5 @@
 {% extends "school/teacher_dashboard_base.html" %}
-{% load static tz %}
+{% load static tz school_dates %}
 
 {% block dashboard_title %}ปฏิทินนัดเรียน{% endblock %}
 
@@ -40,7 +40,7 @@
             <div class="teacher-calendar-board-head">
                 <div>
                     <span class="teacher-eyebrow">MONTH VIEW</span>
-                    <h2 id="calendar-title">{{ month_start|date:"F Y" }}</h2>
+                    <h2 id="calendar-title">{{ month_start|thai_date:"month_year" }}</h2>
                 </div>
                 <div class="teacher-calendar-month-actions">
                     <a href="?{% if selected_group %}group={{ selected_group.pk }}&{% endif %}month={{ previous_month|date:'Y-m' }}" aria-label="เดือนก่อนหน้า">
@@ -156,7 +156,7 @@
                     {% timezone "Asia/Bangkok" %}
                     {% for appointment in upcoming_appointments %}
                     <article>
-                        <time datetime="{{ appointment.starts_at|date:'c' }}">{{ appointment.starts_at|date:"d M H:i" }}</time>
+                        <time datetime="{{ appointment.starts_at|date:'c' }}">{{ appointment.starts_at|thai_date:"time" }}</time>
                         <div>
                             <strong>{{ appointment.title }}</strong>
                             <small>{{ appointment.participant_count }} คน · ยืนยันแล้ว {{ appointment.confirmed_count }} คน</small>
@@ -176,5 +176,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'school/js/teacher_calendar.js' %}?v=20260918-calendar-1" defer></script>
+<script src="{% static 'school/js/teacher_calendar.js' %}?v=20260920-thai-date-1" defer></script>
 {% endblock %}

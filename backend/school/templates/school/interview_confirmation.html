@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static tz %}
 {% block title %}ยืนยันนัดหมาย | BRI{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20260920-events-1">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20260920-confirm-mobile-1">{% endblock %}
 {% block content %}
 <main class="confirmation-page"><section class="confirmation-shell" aria-labelledby="confirmation-title">
     <div class="confirmation-brand">{% include "school/includes/brand_logo.html" with variant="success" %}</div>
@@ -21,8 +21,9 @@
                 <section class="slot-picker" aria-label="เลือกเวลาสัมภาษณ์">
                     <div class="calendar-tile">{% timezone "Asia/Bangkok" %}<span>วันที่</span><strong>{{ appointment.starts_at|date:"d" }}</strong><small>{{ appointment.starts_at|date:"m/Y" }}</small>{% endtimezone %}</div>
                     <div class="slot-choice-list">
+                        <div class="slot-choice-heading"><span>เลือกช่วงเวลาที่สะดวก</span><small>กดเลือกได้ 1 ช่วงเวลา</small></div>
                         {% for slot in slot_options %}
-                            <label class="slot-choice{% if slot.is_full %} full{% endif %}">
+                            <label class="slot-choice{% if slot.is_full %} full{% endif %}"{% if slot.is_full %} aria-disabled="true"{% endif %}>
                                 <input type="radio" name="slot" value="{{ slot.id }}" {% if slot.is_full %}disabled{% elif slot.is_default %}checked{% endif %}>
                                 <span><strong>{{ slot.label }}</strong><small>{% if slot.is_full %}เต็มแล้ว{% else %}เหลือ {{ slot.remaining }} จาก {{ slot.capacity }} ที่นั่ง{% endif %}</small></span>
                             </label>

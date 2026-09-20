@@ -2,7 +2,7 @@
 {% load static tz %}
 {% block title %}จัดการนัดหมาย | BRI{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20260920-events-1">
+<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20260920-pipeline-1">
 <link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20260916-school-admin-4">
 {% endblock %}
 {% block content %}
@@ -53,15 +53,17 @@
             {% if selected_event_open %}<div class="event-closed-message" data-event-full-message hidden><strong>Event นี้เต็มแล้ว</strong><span>ครบ <b data-event-full-count></b> คน กรุณาสร้าง Event ใหม่เพื่อส่งนัดรอบถัดไป</span></div>{% endif %}
         </section>
         <nav class="audience-tabs" aria-label="สถานะการส่งของ Event">
-            <a href="?type={{ appointment_type }}&event={{ selected_appointment.pk }}&audience=unsent" class="{% if audience == 'unsent' %}active{% endif %}"><span>ยังไม่ส่ง</span><b>{{ audience_counts.unsent }}</b></a>
-            <a href="?type={{ appointment_type }}&event={{ selected_appointment.pk }}&audience=sent" class="{% if audience == 'sent' %}active{% endif %}"><span>ส่งแล้ว / รอส่ง</span><b data-audience-sent>{{ audience_counts.sent }}</b></a>
+            <a href="?type={{ appointment_type }}&event={{ selected_appointment.pk }}&audience=unsent" class="{% if audience == 'unsent' %}active{% endif %}"><span>พร้อมส่งนัด</span><b>{{ audience_counts.unsent }}</b></a>
+            <a href="?type={{ appointment_type }}&event={{ selected_appointment.pk }}&audience=waiting" class="{% if audience == 'waiting' %}active{% endif %}"><span>รอยืนยัน</span><b data-audience-waiting>{{ audience_counts.waiting }}</b></a>
+            <a href="?type={{ appointment_type }}&event={{ selected_appointment.pk }}&audience=confirmed" class="{% if audience == 'confirmed' %}active{% endif %}"><span>ยืนยันแล้ว</span><b>{{ audience_counts.confirmed }}</b></a>
             <a href="?type={{ appointment_type }}&event={{ selected_appointment.pk }}&audience=failed" class="{% if audience == 'failed' %}active{% endif %}"><span>ส่งไม่สำเร็จ</span><b data-audience-failed>{{ audience_counts.failed }}</b></a>
+            {% if appointment_type == 'interview' %}<a href="?type={{ appointment_type }}&event={{ selected_appointment.pk }}&audience=confirmed_other" class="{% if audience == 'confirmed_other' %}active{% endif %}"><span>ยืนยันรอบอื่นแล้ว</span><b>{{ audience_counts.confirmed_other }}</b></a>{% endif %}
         </nav>
     {% endif %}
 
     <section class="candidate-section" aria-labelledby="candidate-title">
         <div class="section-heading">
-            <div><span>ขั้นตอนที่ 2</span><h2 id="candidate-title">{% if selected_appointment %}{% if audience == 'unsent' %}เลือกผู้สมัครที่ยังไม่ส่ง{% elif audience == 'failed' %}รายการที่ส่งไม่สำเร็จ{% else %}ผู้สมัครที่ส่งนัดแล้ว{% endif %}{% else %}สร้าง Event และเลือกผู้สมัคร{% endif %}</h2></div>
+            <div><span>ขั้นตอนที่ 2</span><h2 id="candidate-title">{% if selected_appointment %}{% if audience == 'unsent' %}เลือกผู้สมัครที่พร้อมส่งนัด{% elif audience == 'waiting' %}ผู้สมัครที่รอยืนยัน{% elif audience == 'confirmed' %}ผู้สมัครที่ยืนยันแล้ว{% elif audience == 'confirmed_other' %}ผู้สมัครที่ยืนยันรอบอื่นแล้ว{% elif audience == 'failed' %}รายการที่ส่งไม่สำเร็จ{% else %}ผู้สมัครใน Event นี้{% endif %}{% else %}สร้าง Event และเลือกผู้สมัคร{% endif %}</h2></div>
         </div>
         <form method="get" class="filter-panel compact-filter">
             <input type="hidden" name="type" value="{{ appointment_type }}"><input type="hidden" name="event" value="{% if selected_appointment %}{{ selected_appointment.pk }}{% else %}new{% endif %}"><input type="hidden" name="audience" value="{{ audience }}">
@@ -90,15 +92,16 @@
 
             <div class="selection-bar"><strong>พบ {{ page_obj.paginator.count }} คน</strong>{% if not selected_appointment or audience == 'unsent' %}<span>เลือก <b id="selected-count">0</b> คน</span>{% endif %}</div>
             <div class="table-scroll"><table>
-                <thead><tr><th>{% if not selected_appointment or audience == 'unsent' %}<input type="checkbox" id="select-all" aria-label="เลือกทุกคนในหน้านี้"{% if selected_appointment and not selected_event_open %} disabled{% endif %}>{% endif %}</th><th>ผู้สมัคร</th><th>LINE</th><th>Event นี้</th><th>การส่ง LINE</th><th>การตอบรับ</th></tr></thead>
-                <tbody>{% timezone "Asia/Bangkok" %}{% for person in page_obj %}{% with participant=person.latest_appointment_participant %}<tr>
-                    <td>{% if not selected_appointment or audience == 'unsent' %}<input type="checkbox" name="people" value="{{ person.pk }}" aria-label="เลือก {{ person.full_name }}" {% if person.pk|stringformat:"s" in selected_ids %}checked{% endif %}{% if selected_appointment and not selected_event_open %} disabled{% endif %}>{% endif %}</td>
+                <thead><tr><th>{% if not selected_appointment or audience == 'unsent' %}<input type="checkbox" id="select-all" aria-label="เลือกทุกคนในหน้านี้"{% if selected_appointment and not selected_event_open %} disabled{% endif %}>{% endif %}</th><th>ผู้สมัคร</th><th>LINE</th><th>สถานะสัมภาษณ์รวม</th><th>Event นี้</th><th>การส่ง LINE</th><th>การตอบรับ</th></tr></thead>
+                <tbody>{% timezone "Asia/Bangkok" %}{% for person in page_obj %}{% with participant=person.latest_appointment_participant overall=person.overall_appointment_participant confirmed=person.confirmed_appointment_participant %}<tr{% if confirmed %} class="has-confirmed-appointment"{% endif %}>
+                    <td>{% if not selected_appointment or audience == 'unsent' %}<input type="checkbox" name="people" value="{{ person.pk }}" aria-label="เลือก {{ person.full_name }}" {% if person.pk|stringformat:"s" in selected_ids %}checked{% endif %}{% if confirmed or selected_appointment and not selected_event_open %} disabled{% endif %}>{% if confirmed %}<small class="state-confirmed-note">ยืนยันแล้ว</small>{% endif %}{% endif %}</td>
                     <td><strong>{{ person.full_name }}</strong><small>{{ person.phone|default:"-" }}</small></td>
                     <td>{{ person.line_display_name|default:"-" }}{% if not person.line_user_id %}<small class="warning">ยังไม่เชื่อม LINE</small>{% endif %}</td>
+                    <td>{% if confirmed %}<strong class="state-sent">ยืนยันแล้ว</strong><small>{{ confirmed.appointment.title }}</small><small>{{ confirmed.appointment.starts_at|date:"d/m/Y" }}{% if confirmed.selected_slot %} · {{ confirmed.selected_slot.starts_at|date:"H:i" }}-{{ confirmed.selected_slot.ends_at|date:"H:i" }}{% endif %}</small>{% elif overall %}<span class="state-pending">รอยืนยัน</span><small>{{ overall.appointment.title }}</small><small>{{ overall.appointment.starts_at|date:"d/m/Y" }}</small>{% else %}<span class="state-unsent">ยังไม่เคยนัด</span>{% endif %}</td>
                     <td>{% if participant %}<strong>{{ participant.appointment.title }}</strong><small>{{ participant.appointment.starts_at|date:"d/m/Y" }}{% if participant.selected_slot %} · {{ participant.selected_slot.starts_at|date:"H:i" }}-{{ participant.selected_slot.ends_at|date:"H:i" }}{% elif appointment_type == 'interview' %} · ยังไม่เลือกเวลา{% else %} · {{ participant.appointment.starts_at|date:"H:i" }}{% endif %}</small>{% elif selected_appointment %}<span class="state-unsent">ยังไม่อยู่ใน Event นี้</span>{% else %}<span class="state-unsent">พร้อมส่งนัด</span>{% endif %}</td>
                     <td>{% if participant %}<span data-status="{{ participant.pk }}" class="state-{{ participant.notification_status }}">{{ participant.get_notification_status_display }}</span>{% if participant.notification_status != 'sent' %}<button class="retry" type="button" data-notify="{{ participant.pk }}" data-at="{{ participant.appointment.starts_at|date:'c' }}" data-url="{% url 'school:appointment_notify' participant.pk %}"{% if not selected_event_open %} disabled{% endif %}>ส่ง LINE อีกครั้ง</button>{% endif %}{% else %}-{% endif %}</td>
                     <td{% if participant %} data-confirmation="{{ participant.pk }}"{% endif %}>{% if participant.response_status == 'confirmed' %}<strong class="state-sent">ยืนยันแล้ว</strong><small>{{ participant.confirmed_at|date:"d/m/Y H:i" }}</small>{% elif participant %}<span class="state-pending">ยังไม่ยืนยัน</span>{% else %}-{% endif %}</td>
-                </tr>{% endwith %}{% empty %}<tr><td colspan="6"><div class="empty-state">{% if audience == 'unsent' and selected_appointment %}ส่งนัดให้ผู้สมัครใน Event นี้ครบทุกคนแล้ว{% elif audience == 'failed' %}ไม่มีรายการส่งไม่สำเร็จ{% else %}ไม่พบรายชื่อที่ตรงเงื่อนไข{% endif %}</div></td></tr>{% endfor %}{% endtimezone %}</tbody>
+                </tr>{% endwith %}{% empty %}<tr><td colspan="7"><div class="empty-state">{% if audience == 'unsent' and selected_appointment %}ไม่มีผู้สมัครที่พร้อมส่งนัดใน Event นี้{% elif audience == 'waiting' %}ไม่มีผู้สมัครที่รอยืนยัน{% elif audience == 'confirmed' %}ยังไม่มีผู้สมัครยืนยัน Event นี้{% elif audience == 'confirmed_other' %}ไม่มีผู้สมัครที่ยืนยันรอบอื่นแล้ว{% elif audience == 'failed' %}ไม่มีรายการส่งไม่สำเร็จ{% else %}ไม่พบรายชื่อที่ตรงเงื่อนไข{% endif %}</div></td></tr>{% endfor %}{% endtimezone %}</tbody>
             </table></div>
             <footer class="schedule-footer"><span>หน้า {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span><nav aria-label="หน้ารายชื่อ">{% if page_obj.has_previous %}<a href="{{ page_query_prefix }}page={{ page_obj.previous_page_number }}">ก่อนหน้า</a>{% endif %} {% if page_obj.has_next %}<a href="{{ page_query_prefix }}page={{ page_obj.next_page_number }}">ถัดไป</a>{% endif %}</nav>{% if not selected_appointment or audience == 'unsent' %}<button type="submit" id="confirm-schedule" disabled>{% if selected_appointment %}เพิ่มเข้า Event และส่ง LINE{% else %}สร้าง Event และส่ง LINE{% endif %}</button>{% endif %}</footer>
         </form>
@@ -106,4 +109,4 @@
 </main>
 {{ send_queue|json_script:"interview-queue" }}<div hidden data-confirmation-status-url="{% url 'school:appointment_confirmation_status' %}"{% if selected_appointment %} data-event-id="{{ selected_appointment.pk }}"{% endif %}></div>
 {% endblock %}
-{% block extra_js %}<script src="{% static 'school/js/interviews.js' %}?v=20260920-events-1" defer></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'school/js/interviews.js' %}?v=20260920-pipeline-1" defer></script>{% endblock %}

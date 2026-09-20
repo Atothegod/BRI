@@ -167,11 +167,11 @@
             if (data.event) {
                 const eventSent = document.querySelector('[data-event-sent]');
                 const eventFailed = document.querySelector('[data-event-failed]');
-                const audienceSent = document.querySelector('[data-audience-sent]');
+                const audienceWaiting = document.querySelector('[data-audience-waiting]');
                 const audienceFailed = document.querySelector('[data-audience-failed]');
                 if (eventSent) eventSent.textContent = data.event.sent_count;
                 if (eventFailed) eventFailed.textContent = data.event.failed_count;
-                if (audienceSent) audienceSent.textContent = data.event.invited_count;
+                if (audienceWaiting) audienceWaiting.textContent = data.event.waiting_count ?? data.event.invited_count;
                 if (audienceFailed) audienceFailed.textContent = data.event.failed_count;
             }
         } catch (_) {

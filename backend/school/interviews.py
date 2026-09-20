@@ -27,6 +27,7 @@ ADMIN_APPOINTMENT_TYPES = (
     Appointment.Type.INTERVIEW,
     Appointment.Type.ORIENTATION,
 )
+APPOINTMENT_AUDIENCES = ("unsent", "waiting", "confirmed", "failed", "confirmed_other")
 
 
 def appointment_candidates(appointment_type):
@@ -36,6 +37,13 @@ def appointment_candidates(appointment_type):
     if appointment_type == Appointment.Type.ORIENTATION:
         return queryset.filter(status=Person.Status.PASSED, student__is_paid=True)
     return queryset.filter(status=Person.Status.IN_PROGRESS)
+
+
+def confirmed_interview_people():
+    return AppointmentParticipant.objects.filter(
+        appointment__appointment_type=Appointment.Type.INTERVIEW,
+        response_status=AppointmentParticipant.ResponseStatus.CONFIRMED,
+    ).values("person_id")
 
 
 class AppointmentScheduleForm(forms.Form):
@@ -63,6 +71,8 @@ class AppointmentScheduleForm(forms.Form):
         ]
         self.fields["appointment_type"].initial = appointment_type
         people = appointment_candidates(appointment_type)
+        if appointment_type == Appointment.Type.INTERVIEW:
+            people = people.exclude(pk__in=confirmed_interview_people())
         if selected_appointment is not None:
             people = people.exclude(appointment_participations__appointment=selected_appointment)
         self.fields["people"].queryset = people
@@ -278,42 +288,73 @@ def interview_schedule(request):
             ]
             action = "เพิ่มเข้า Event และเตรียมส่ง" if selected_appointment else "สร้าง Event และเตรียมส่ง"
             messages.success(request, f"{action} LINE ให้ {len(ids)} คนแล้ว")
-            return redirect(f"{reverse('school:appointment_schedule')}?type={appointment_type}&event={appointment.pk}&audience=sent")
+            return redirect(f"{reverse('school:appointment_schedule')}?type={appointment_type}&event={appointment.pk}&audience=waiting")
 
     query = request.GET.get("q", "").strip()
     filters = {key: request.GET.get(key, "") for key in ("appointment", "line", "notification", "confirmation")}
     audience = request.GET.get("audience", "")
-    if audience not in ("unsent", "sent", "failed"):
+    if audience == "sent":
+        audience = "waiting"
+    if audience not in APPOINTMENT_AUDIENCES:
         if filters["notification"] == AppointmentParticipant.NotificationStatus.FAILED:
             audience = "failed"
+        elif filters["confirmation"] == AppointmentParticipant.ResponseStatus.CONFIRMED:
+            audience = "confirmed"
         elif filters["appointment"] == "scheduled" or filters["notification"] in (
             AppointmentParticipant.NotificationStatus.PENDING,
             AppointmentParticipant.NotificationStatus.SENT,
         ):
-            audience = "sent"
+            audience = "waiting"
         else:
             audience = "unsent"
     people = appointment_candidates(appointment_type).order_by("first_name", "pk")
     participations = AppointmentParticipant.objects.none()
-    audience_counts = {"unsent": people.count(), "sent": 0, "failed": 0}
+    confirmed_people = confirmed_interview_people() if appointment_type == Appointment.Type.INTERVIEW else Person.objects.none().values("pk")
+    if selected_appointment is None:
+        if audience == "confirmed_other" and appointment_type == Appointment.Type.INTERVIEW:
+            people = people.filter(pk__in=confirmed_people)
+        elif audience == "unsent":
+            people = people.exclude(pk__in=confirmed_people)
+    audience_counts = {
+        "unsent": people.count(),
+        "waiting": 0,
+        "confirmed": 0,
+        "failed": 0,
+        "confirmed_other": appointment_candidates(appointment_type).filter(pk__in=confirmed_people).count()
+        if appointment_type == Appointment.Type.INTERVIEW else 0,
+    }
     if selected_appointment is not None:
         participations = AppointmentParticipant.objects.filter(appointment=selected_appointment)
         participant_people = participations.values("person_id")
+        waiting_participations = participations.filter(
+            response_status=AppointmentParticipant.ResponseStatus.WAITING,
+        ).exclude(notification_status=AppointmentParticipant.NotificationStatus.FAILED)
+        confirmed_participations = participations.filter(
+            response_status=AppointmentParticipant.ResponseStatus.CONFIRMED,
+        )
         audience_counts = {
-            "unsent": people.exclude(pk__in=participant_people).count(),
-            "sent": participations.exclude(notification_status=AppointmentParticipant.NotificationStatus.FAILED).count(),
+            "unsent": people.exclude(pk__in=participant_people).exclude(pk__in=confirmed_people).count(),
+            "waiting": waiting_participations.count(),
+            "confirmed": confirmed_participations.count(),
             "failed": participations.filter(notification_status=AppointmentParticipant.NotificationStatus.FAILED).count(),
+            "confirmed_other": people.filter(pk__in=confirmed_people).exclude(
+                pk__in=confirmed_participations.values("person_id"),
+            ).count() if appointment_type == Appointment.Type.INTERVIEW else 0,
         }
         if audience == "unsent":
-            people = people.exclude(pk__in=participant_people)
+            people = people.exclude(pk__in=participant_people).exclude(pk__in=confirmed_people)
+        elif audience == "confirmed_other":
+            people = people.filter(pk__in=confirmed_people).exclude(
+                pk__in=confirmed_participations.values("person_id"),
+            )
+        elif audience == "confirmed":
+            people = people.filter(pk__in=confirmed_participations.values("person_id"))
         elif audience == "failed":
             people = people.filter(pk__in=participations.filter(
                 notification_status=AppointmentParticipant.NotificationStatus.FAILED,
             ).values("person_id"))
         else:
-            people = people.filter(pk__in=participations.exclude(
-                notification_status=AppointmentParticipant.NotificationStatus.FAILED,
-            ).values("person_id"))
+            people = people.filter(pk__in=waiting_participations.values("person_id"))
     if query:
         people = people.filter(Q(first_name__icontains=query) | Q(last_name__icontains=query) | Q(phone__icontains=query) | Q(line_display_name__icontains=query))
     if filters["line"] == "connected":
@@ -334,11 +375,30 @@ def interview_schedule(request):
     query_params["audience"] = audience
     filter_query = query_params.urlencode()
     page = Paginator(people, 50).get_page(request.GET.get("page"))
+    page_person_ids = [person.pk for person in page.object_list]
+    event_by_person = {}
     latest_by_person = {}
-    for participant in participations.filter(person_id__in=[person.pk for person in page.object_list]).select_related("appointment", "selected_slot").order_by("person_id", "-pk"):
-        latest_by_person.setdefault(participant.person_id, participant)
+    confirmed_by_person = {}
+    if page_person_ids:
+        if selected_appointment is not None:
+            for participant in participations.filter(person_id__in=page_person_ids).select_related("appointment", "selected_slot").order_by("person_id", "-pk"):
+                event_by_person.setdefault(participant.person_id, participant)
+        global_participations = (
+            AppointmentParticipant.objects.filter(
+                person_id__in=page_person_ids,
+                appointment__appointment_type=appointment_type,
+            )
+            .select_related("appointment", "selected_slot")
+            .order_by("person_id", "-pk")
+        )
+        for participant in global_participations:
+            if participant.response_status == AppointmentParticipant.ResponseStatus.CONFIRMED:
+                confirmed_by_person.setdefault(participant.person_id, participant)
+            latest_by_person.setdefault(participant.person_id, participant)
     for person in page.object_list:
-        person.latest_appointment_participant = latest_by_person.get(person.pk)
+        person.latest_appointment_participant = event_by_person.get(person.pk)
+        person.overall_appointment_participant = confirmed_by_person.get(person.pk) or latest_by_person.get(person.pk)
+        person.confirmed_appointment_participant = confirmed_by_person.get(person.pk)
     selected_event_open = bool(
         selected_appointment
         and selected_appointment.status == Appointment.Status.SCHEDULED
@@ -434,6 +494,14 @@ def interview_confirmation_status(request):
                 filter=Q(participants__notification_status=AppointmentParticipant.NotificationStatus.FAILED),
                 distinct=True,
             ),
+            waiting_count=Count(
+                "participants",
+                filter=(
+                    Q(participants__response_status=AppointmentParticipant.ResponseStatus.WAITING)
+                    & ~Q(participants__notification_status=AppointmentParticipant.NotificationStatus.FAILED)
+                ),
+                distinct=True,
+            ),
             invited_count=Count(
                 "participants",
                 filter=~Q(participants__notification_status=AppointmentParticipant.NotificationStatus.FAILED),
@@ -448,6 +516,7 @@ def interview_confirmation_status(request):
                 "is_full": bool(capacity and appointment.confirmed_count >= capacity),
                 "sent_count": appointment.sent_count,
                 "failed_count": appointment.failed_count,
+                "waiting_count": appointment.waiting_count,
                 "invited_count": appointment.invited_count,
             }
     return JsonResponse({"participants": {str(item["pk"]): {

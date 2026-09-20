@@ -179,7 +179,7 @@ class AppointmentScheduleTests(TestCase):
         response = self.invite_to_event(appointment, [self.people[1]])
         self.assertRedirects(
             response,
-            f"{self.url}?type=interview&event={appointment.pk}&audience=sent",
+            f"{self.url}?type=interview&event={appointment.pk}&audience=waiting",
             fetch_redirect_response=False,
         )
         self.assertEqual(Appointment.objects.count(), 1)
@@ -198,10 +198,10 @@ class AppointmentScheduleTests(TestCase):
         second.notification_status = AppointmentParticipant.NotificationStatus.FAILED
         second.save(update_fields=["notification_status"])
 
-        sent = self.client.get(self.url, {"type": "interview", "event": appointment.pk, "audience": "sent"})
-        self.assertContains(sent, "Applicant 0")
-        self.assertNotContains(sent, "Applicant 1")
-        self.assertContains(sent, "ส่งแล้ว / รอส่ง")
+        waiting = self.client.get(self.url, {"type": "interview", "event": appointment.pk, "audience": "waiting"})
+        self.assertContains(waiting, "Applicant 0")
+        self.assertNotContains(waiting, "Applicant 1")
+        self.assertContains(waiting, "รอยืนยัน")
 
         failed = self.client.get(self.url, {"type": "interview", "event": appointment.pk, "audience": "failed"})
         self.assertContains(failed, "Applicant 1")
@@ -211,6 +211,45 @@ class AppointmentScheduleTests(TestCase):
         self.assertContains(unsent, third_person.full_name)
         self.assertNotContains(unsent, "Applicant 0")
         self.assertNotContains(unsent, "Applicant 1")
+
+    def test_confirmed_interview_people_are_separated_from_ready_to_send(self):
+        self.schedule(people=[self.people[0].pk])
+        appointment = Appointment.objects.get()
+        participant = appointment.participants.get()
+        participant.response_status = AppointmentParticipant.ResponseStatus.CONFIRMED
+        participant.selected_slot = appointment.slots.get()
+        participant.confirmed_at = timezone.now()
+        participant.save(update_fields=["response_status", "selected_slot", "confirmed_at"])
+
+        create_new = self.client.get(self.url, {"type": "interview", "event": "new"})
+        self.assertNotContains(create_new, "Applicant 0")
+        self.assertContains(create_new, "Applicant 1")
+
+        next_event = Appointment.objects.create(
+            appointment_type=Appointment.Type.INTERVIEW,
+            title="สัมภาษณ์รอบถัดไป",
+            starts_at=self.at + timedelta(days=7),
+        )
+        AppointmentSlot.objects.create(
+            appointment=next_event,
+            starts_at=self.at + timedelta(days=7),
+            ends_at=self.at + timedelta(days=7, hours=1),
+            capacity=10,
+        )
+        ready = self.client.get(self.url, {"type": "interview", "event": next_event.pk, "audience": "unsent"})
+        self.assertNotContains(ready, "Applicant 0")
+        self.assertContains(ready, "Applicant 1")
+
+        confirmed_other = self.client.get(self.url, {
+            "type": "interview", "event": next_event.pk, "audience": "confirmed_other",
+        })
+        self.assertContains(confirmed_other, "Applicant 0")
+        self.assertContains(confirmed_other, "ยืนยันรอบอื่นแล้ว")
+
+        response = self.invite_to_event(next_event, [self.people[0]])
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "มีผู้เข้าร่วมที่ไม่ตรงเงื่อนไข")
+        self.assertFalse(next_event.participants.exists())
 
     def test_full_event_cannot_invite_more_people(self):
         self.schedule(people=[self.people[0].pk], slot_capacity=["1"])

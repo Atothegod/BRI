@@ -100,10 +100,13 @@ docker compose -f docker-compose.prod.yml exec backend python manage.py createsu
 Check the internal app:
 
 ```bash
-curl -I http://127.0.0.1:8080/
+curl -I http://127.0.0.1:8080/healthz
+curl -I -H 'Host: bri.brightromancechurch.org' http://127.0.0.1:8080/
 ```
 
-It should return `HTTP/1.1 200 OK` or a normal redirect.
+The health endpoint should return `HTTP/1.1 200 OK`. The second command should return
+`200 OK` or a normal redirect from Django. Supplying the public Host header avoids an
+expected Django `DisallowedHost` response when production only allows the public domain.
 
 ## 4. Host Nginx
 
@@ -198,17 +201,23 @@ records marked by the generated run id.
 python3 scripts/load_registration.py --base-url https://bri.brightromancechurch.org --users 20 --concurrency 4 --yes
 ```
 
-## Troubleshooting 521
+## Troubleshooting 521 / 522
 
-Cloudflare 521 usually means Cloudflare cannot connect to the origin.
+Cloudflare 521 means the origin refused the connection. Cloudflare 522 means it could
+connect to the origin network but the origin did not respond before the timeout. Both
+normally point to the host Nginx service, public listeners, firewall, or an incorrect DNS
+origin rather than a Django page error.
 
 Check these on the VPS:
 
 ```bash
-curl -I http://127.0.0.1:8080/
+curl -I http://127.0.0.1:8080/healthz
+curl -I -H 'Host: bri.brightromancechurch.org' http://127.0.0.1:8080/
 sudo ss -tlnp | grep -E ':80|:443|:8080'
 sudo nginx -t
 sudo systemctl status nginx
 ```
 
-If Docker returns `200` on `127.0.0.1:8080` but Cloudflare still shows 521, host Nginx is not reachable on public `80/443` or the VPS firewall/security group is blocking traffic.
+If Docker returns `200` on `127.0.0.1:8080/healthz` but Cloudflare still shows 521/522,
+check that host Nginx is reachable on public `80/443`, the VPS firewall/security group
+allows Cloudflare traffic, and the Cloudflare A record still points to this VPS.

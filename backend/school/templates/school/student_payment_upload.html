@@ -4,19 +4,53 @@
 {% block title %}อัปโหลดสลิป | BRI School of Fivefold{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/registration.css' %}">
+<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20260914-journey-1">
 {% endblock %}
 
 {% block content %}
 <main class="success-page auth-page" data-registration-app>
-    <section class="success-shell auth-shell" aria-labelledby="payment-title">
+    <section class="success-shell journey-shell auth-shell" aria-labelledby="payment-title">
         <a class="mobile-brand success-brand" href="{% url 'school:registration' %}" aria-label="BRI School of Fivefold">
-            <strong>BRI</strong>
-            <span>School of Fivefold</span>
+            {% include "school/includes/brand_logo.html" with variant="success" %}
         </a>
 
-        <span class="eyebrow">Payment slip</span>
+        {% if payment_state == "paid" %}
+        {% include "school/includes/paid_student_summary.html" with paid_title_id="payment-title" %}
+
+        <a class="button button--primary success-action payment-action" href="{{ line_return_url }}" data-liff-close>
+            <span>กลับไปยัง LINE</span>
+            <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
+        </a>
+        {% elif payment_state == "not_student" %}
+        <div class="success-mark status-mark--pending" aria-hidden="true">
+            <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#clock"></use></svg>
+        </div>
+        <span class="eyebrow">จ่ายเงินได้หลังสัมภาษณ์ผ่าน</span>
+        <h1 id="payment-title">ยังไม่เปิดให้ชำระเงิน</h1>
+        <p class="success-lead">คุณ {{ person.full_name }} ต้องได้รับสถานะผ่านสัมภาษณ์ก่อน ระบบจึงจะเปิดให้แจ้งชำระเงิน</p>
+        <div class="receipt-block result-card">
+            <span>สถานะใบสมัคร</span>
+            <strong>{{ person.get_status_display }}</strong>
+            <small>กรุณารอตรวจสอบผลประกาศ หรือสอบถามทีมงานผ่าน LINE</small>
+        </div>
+        <div class="result-actions">
+            <a class="button button--primary success-action" href="{% url 'school:announcement_result' %}">
+                <span>ดูประกาศผล</span>
+                <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
+            </a>
+            <a class="button button--secondary success-action" href="{{ line_return_url }}" data-liff-close>
+                <span>กลับไปยัง LINE</span>
+            </a>
+        </div>
+        {% elif payment_state == "missing" or payment_state == "missing_line" %}
+        {% include "school/includes/missing_application.html" with missing_title_id="payment-title" %}
+        {% elif payment_state == "ready" %}
+        <div class="success-mark status-mark--success" aria-hidden="true">
+            <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#check"></use></svg>
+        </div>
+        <span class="eyebrow">แจ้งชำระเงิน</span>
         <h1 id="payment-title">อัปโหลดสลิปการโอนเงิน</h1>
+        <p class="success-lead">ระบบตรวจสอบแล้วว่าคุณผ่านสัมภาษณ์ สามารถส่งสลิปเพื่อยืนยันการเข้าเรียนได้</p>
 
         {% if messages %}
         {% for message in messages %}
@@ -47,11 +81,12 @@
                 <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#check-circle"></use></svg>
             </button>
         </form>
+        {% endif %}
     </section>
 </main>
 {% endblock %}
 
 {% block extra_js %}
 {% include "school/includes/liff_bridge.html" %}
-<script src="{% static 'school/js/registration.js' %}" defer></script>
+<script src="{% static 'school/js/registration.js' %}?v=20260828-4" defer></script>
 {% endblock %}

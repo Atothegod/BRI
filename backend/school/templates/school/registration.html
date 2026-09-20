@@ -4,43 +4,38 @@
 {% block title %}สมัครเรียน | BRI School of Fivefold{% endblock %}
 
 {% block extra_css %}
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{% static 'school/css/registration.css' %}">
+<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20260914-journey-1">
 {% endblock %}
 
 {% block content %}
 <div class="registration-app" data-registration-app>
     <div class="sidebar-backdrop" data-menu-backdrop hidden></div>
 
-    <aside class="app-sidebar" id="app-navigation" aria-label="ขั้นตอนการสมัคร" data-app-sidebar>
+    <aside class="app-sidebar" id="app-navigation" aria-label="ขั้นตอนการสมัคร" data-app-sidebar data-i18n-aria-label="sidebar_aria">
         <div class="sidebar-head">
-            <a class="brand-lockup brand-lockup--sidebar" href="{% url 'school:registration' %}" aria-label="BRI School of Fivefold หน้าสมัครเรียน">
-                <span class="brand-image-crop" aria-hidden="true">
-                    <img src="{% static 'school/images/ci-bri.png' %}" alt="" width="1080" height="1080">
-                </span>
+            <a class="brand-lockup brand-lockup--sidebar" href="{% url 'school:registration' %}" aria-label="BRI School of Fivefold หน้าสมัครเรียน" data-i18n-aria-label="brand_registration_aria">
+                {% include "school/includes/brand_logo.html" with variant="sidebar" %}
             </a>
-            <button class="icon-button sidebar-close" type="button" aria-label="ปิดเมนู" data-menu-close>
+            <button class="icon-button sidebar-close" type="button" aria-label="ปิดเมนู" data-menu-close data-i18n-aria-label="close_menu">
                 <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#x"></use></svg>
             </button>
         </div>
 
         <div class="sidebar-copy">
-            <span class="eyebrow">ใบสมัครออนไลน์</span>
-            <h1>เริ่มต้นการเดินทางของคุณ</h1>
-            <p>กรอกข้อมูลตามขั้นตอน ใช้เวลาประมาณ 8 นาที</p>
+            <span class="eyebrow" data-i18n="online_application">ใบสมัครออนไลน์</span>
+            <h2 data-i18n="sidebar_title">เริ่มต้นการเดินทางของคุณ</h2>
+            <p data-i18n="sidebar_copy">กรอกข้อมูลตามขั้นตอน ใช้เวลาประมาณ 8 นาที</p>
         </div>
 
-        <nav class="step-navigation" aria-label="ความคืบหน้าการสมัคร">
+        <nav class="step-navigation" aria-label="ความคืบหน้าการสมัคร" data-i18n-aria-label="progress_aria">
             {% for item in registration_steps %}
             <button class="step-nav-item{% if item.number == 1 %} is-active{% endif %}" type="button" data-step-jump="{{ item.number }}" aria-current="{% if item.number == 1 %}step{% else %}false{% endif %}">
                 <span class="step-nav-icon">
                     <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#{{ item.icon }}"></use></svg>
                 </span>
                 <span class="step-nav-copy">
-                    <small>ขั้นตอน {{ item.number }}</small>
-                    <strong>{{ item.label }}</strong>
+                    <small><span data-i18n-prefix="step_prefix">ขั้นตอน</span> {{ item.number }}</small>
+                    <strong data-i18n="{{ item.i18n_key }}">{{ item.label }}</strong>
                 </span>
                 <span class="step-nav-state" aria-hidden="true">
                     <svg class="icon icon-check"><use href="{% static 'school/images/icons.svg' %}#check"></use></svg>
@@ -54,17 +49,16 @@
 
         <div class="sidebar-security">
             <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#shield-check"></use></svg>
-            <p><strong>ข้อมูลของคุณปลอดภัย</strong><span>ใช้เพื่อการสมัครเรียนเท่านั้น</span></p>
+            <p><strong data-i18n="security_title">ข้อมูลของคุณปลอดภัย</strong><span data-i18n="security_copy">ใช้เพื่อการสมัครเรียนเท่านั้น</span></p>
         </div>
     </aside>
 
     <main class="app-main" data-app-main>
         <header class="mobile-app-bar">
             <a class="mobile-brand" href="{% url 'school:registration' %}" aria-label="BRI School of Fivefold">
-                <strong>BRI</strong>
-                <span>School of Fivefold</span>
+                {% include "school/includes/brand_logo.html" with variant="nav" %}
             </a>
-            <button class="icon-button" type="button" aria-label="เปิดเมนูขั้นตอน" aria-controls="app-navigation" aria-expanded="false" data-menu-open>
+            <button class="icon-button" type="button" aria-label="เปิดเมนูขั้นตอน" aria-controls="app-navigation" aria-expanded="false" data-menu-open data-i18n-aria-label="open_menu">
                 <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#menu"></use></svg>
             </button>
         </header>
@@ -72,27 +66,32 @@
         <div class="main-content">
             <div class="page-heading app-hero" data-reveal>
                 <div class="hero-copy">
-                    <span class="eyebrow">ระบบรับสมัครนักเรียน</span>
-                    <h2>ใบสมัครเรียน</h2>
-                    <p>BRI School of Fivefold</p>
+                    <span class="eyebrow" data-i18n="hero_eyebrow">ระบบรับสมัครนักเรียน</span>
+                    <h1 data-i18n="hero_title">ใบสมัครเรียน</h1>
+                </div>
+                <div class="hero-controls">
+                    <div class="language-switch" role="group" aria-label="เลือกภาษา" data-language-switch data-i18n-aria-label="language_switch_aria">
+                        <button class="language-option is-selected" type="button" data-language-option="th" aria-pressed="true">ไทย</button>
+                        <button class="language-option" type="button" data-language-option="en" aria-pressed="false">English</button>
+                    </div>
                 </div>
             </div>
 
             <div class="mobile-progress mobile-step-map" aria-live="polite" data-reveal>
                 <div class="mobile-step-summary">
-                    <span>ลำดับการสมัคร</span>
+                    <span data-i18n="mobile_progress_title">ลำดับการสมัคร</span>
                     <strong><span data-progress-label>ข้อมูลส่วนตัว</span> · <span data-current-step>1</span>/{{ registration_steps|length }}</strong>
                 </div>
                 <div class="mobile-step-track" role="progressbar" aria-valuemin="1" aria-valuemax="{{ registration_steps|length }}" aria-valuenow="1" data-progress-track>
                     <span data-progress-bar></span>
                 </div>
-                <div class="mobile-step-list" aria-label="ขั้นตอนการสมัคร">
+                <div class="mobile-step-list" aria-label="ขั้นตอนการสมัคร" data-i18n-aria-label="steps_aria">
                     {% for item in registration_steps %}
                     <button class="mobile-step-item{% if item.number == 1 %} is-active{% endif %}" type="button" data-step-jump="{{ item.number }}" aria-current="{% if item.number == 1 %}step{% else %}false{% endif %}">
                         <span class="mobile-step-icon" aria-hidden="true">
                             <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#{{ item.icon }}"></use></svg>
                         </span>
-                        <span class="mobile-step-caption">{{ item.label }}</span>
+                        <span class="mobile-step-caption" data-i18n="{{ item.i18n_key }}">{{ item.label }}</span>
                     </button>
                     {% empty %}
                     <p class="empty-inline">ยังไม่มีขั้นตอนการสมัคร</p>
@@ -104,35 +103,38 @@
             <div class="form-alert" role="alert" data-server-errors>
                 <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#info"></use></svg>
                 <div>
-                    <strong>ยังมีข้อมูลที่ต้องตรวจสอบ</strong>
-                    <p>แก้ไขช่องที่แสดงข้อความสีแดง แล้วลองส่งใบสมัครอีกครั้ง</p>
+                    <strong data-i18n="server_error_title">ยังมีข้อมูลที่ต้องตรวจสอบ</strong>
+                    <p data-i18n="server_error_copy">แก้ไขช่องที่แสดงข้อความสีแดง แล้วลองส่งใบสมัครอีกครั้ง</p>
                     {{ form.non_field_errors }}
                 </div>
             </div>
             {% endif %}
 
-            <form class="registration-form" method="post" enctype="multipart/form-data" novalidate data-registration-form>
+            <form class="registration-form" method="post" enctype="multipart/form-data" novalidate data-registration-form data-address-data-url="{% static 'school/data/thai_addresses.min.json' %}?v=20260828-1" data-country-data-url="{% static 'school/data/countries.min.json' %}?v=20260910-country-1" data-country-initial="{{ form.country_code.value|default:'TH' }}">
                 {% csrf_token %}
                 {{ form.line_user_id }}
                 {{ form.line_display_name }}
                 {{ form.line_picture_url }}
-                <section class="form-panel is-active" data-form-step="1" data-step-label="ข้อมูลส่วนตัว" data-reveal>
+                {{ form.preferred_language }}
+                {{ form.country_code }}
+                {{ form.country_name_th }}
+                <section class="form-panel is-active" data-form-step="1" data-step-label="ข้อมูลส่วนตัว" data-step-label-th="ข้อมูลส่วนตัว" data-step-label-en="Personal" data-reveal>
                     <div class="panel-heading">
                         <span class="panel-number">01</span>
                         <div>
-                            <h3>ข้อมูลส่วนตัว</h3>
-                            <p>กรอกข้อมูลที่ใช้ติดต่อคุณ</p>
+                            <h3 data-i18n="personal_title">ข้อมูลส่วนตัว</h3>
+                            <p data-i18n="personal_copy">กรอกข้อมูลที่ใช้ติดต่อคุณ</p>
                         </div>
                     </div>
 
                     <div class="field-grid field-grid--two">
                         <div class="field-group{% if form.first_name.errors %} has-error{% endif %}">
-                            <label class="field-label" for="{{ form.first_name.id_for_label }}">ชื่อจริง <span aria-hidden="true">*</span></label>
+                            <label class="field-label" for="{{ form.first_name.id_for_label }}"><span data-i18n="first_name">ชื่อจริง</span> <span aria-hidden="true">*</span></label>
                             {{ form.first_name }}
                             {{ form.first_name.errors }}
                         </div>
                         <div class="field-group{% if form.last_name.errors %} has-error{% endif %}">
-                            <label class="field-label" for="{{ form.last_name.id_for_label }}">นามสกุล <span aria-hidden="true">*</span></label>
+                            <label class="field-label" for="{{ form.last_name.id_for_label }}"><span data-i18n="last_name">นามสกุล</span> <span aria-hidden="true">*</span></label>
                             {{ form.last_name }}
                             {{ form.last_name.errors }}
                         </div>
@@ -140,25 +142,25 @@
 
                     <div class="field-grid field-grid--two">
                         <div class="field-group{% if form.nickname.errors %} has-error{% endif %}">
-                            <label class="field-label" for="{{ form.nickname.id_for_label }}">ชื่อเล่น <span aria-hidden="true">*</span></label>
+                            <label class="field-label" for="{{ form.nickname.id_for_label }}"><span data-i18n="nickname">ชื่อเล่น</span> <span aria-hidden="true">*</span></label>
                             {{ form.nickname }}
                             {{ form.nickname.errors }}
                         </div>
                         <div class="field-group{% if form.date_of_birth.errors %} has-error{% endif %}">
-                            <label class="field-label" for="{{ form.date_of_birth.id_for_label }}">วันเดือนปีเกิด <span aria-hidden="true">*</span></label>
+                            <label class="field-label" for="{{ form.date_of_birth.id_for_label }}"><span data-i18n="date_of_birth">วันเดือนปีเกิด</span> <span aria-hidden="true">*</span></label>
                             {{ form.date_of_birth }}
-                            <p class="field-hint">ระบบจะคำนวณอายุจากวันเกิด</p>
+                            <p class="field-hint" data-i18n="date_hint">พิมพ์ตัวเลข 8 หลัก เช่น 15012533</p>
                             {{ form.date_of_birth.errors }}
                         </div>
                     </div>
 
                     <fieldset class="field-group{% if form.gender.errors %} has-error{% endif %}">
-                        <legend class="field-label">เพศ <span aria-hidden="true">*</span></legend>
-                        <div class="choice-grid choice-grid--three">
+                        <legend class="field-label"><span data-i18n="gender">เพศ</span> <span aria-hidden="true">*</span></legend>
+                        <div class="choice-grid choice-grid--two">
                             {% for value, label in form.gender.field.choices %}
                             <label class="choice-control">
                                 <input type="radio" name="gender" value="{{ value }}" {% if form.gender.value == value %}checked{% endif %} required>
-                                <span>{{ label }}</span>
+                                <span data-i18n="gender_{{ value }}">{{ label }}</span>
                             </label>
                             {% endfor %}
                         </div>
@@ -167,49 +169,57 @@
 
                     <div class="field-grid field-grid--two">
                         <div class="field-group{% if form.phone.errors %} has-error{% endif %}">
-                            <label class="field-label" for="{{ form.phone.id_for_label }}">เบอร์โทรศัพท์ <span aria-hidden="true">*</span></label>
+                            <label class="field-label" for="{{ form.phone.id_for_label }}"><span data-i18n="phone">เบอร์โทรศัพท์</span> <span aria-hidden="true">*</span></label>
                             {{ form.phone }}
                             {{ form.phone.errors }}
                         </div>
                         <div class="field-group{% if form.email.errors %} has-error{% endif %}">
-                            <label class="field-label" for="{{ form.email.id_for_label }}">อีเมล <span aria-hidden="true">*</span></label>
+                            <label class="field-label" for="{{ form.email.id_for_label }}"><span data-i18n="email">อีเมล</span> <span aria-hidden="true">*</span></label>
                             {{ form.email }}
                             {{ form.email.errors }}
                         </div>
                     </div>
 
-                    <div class="field-group{% if form.line_id.errors %} has-error{% endif %}">
-                        <label class="field-label" for="{{ form.line_id.id_for_label }}">LINE ID <span class="optional-label">ไม่บังคับ</span></label>
-                        {{ form.line_id }}
-                        {{ form.line_id.errors }}
-                    </div>
-
                     <div class="field-group{% if form.occupation.errors %} has-error{% endif %}">
-                        <label class="field-label" for="{{ form.occupation.id_for_label }}">อาชีพ <span aria-hidden="true">*</span></label>
+                        <label class="field-label" for="{{ form.occupation.id_for_label }}"><span data-i18n="occupation">อาชีพ</span> <span aria-hidden="true">*</span></label>
                         {{ form.occupation }}
                         {{ form.occupation.errors }}
                     </div>
 
                 </section>
 
-                <section class="form-panel" data-form-step="2" data-step-label="ที่อยู่" data-reveal>
+                <section class="form-panel" data-form-step="2" data-step-label="ที่อยู่" data-step-label-th="ที่อยู่" data-step-label-en="Address" data-reveal>
                     <div class="panel-heading">
                         <span class="panel-number">02</span>
                         <div>
-                            <h3>ที่อยู่ปัจจุบัน</h3>
-                            <p>ข้อมูลพื้นที่ช่วยให้เราจัดกลุ่มการเรียนได้เหมาะสม</p>
+                            <h3 data-i18n="address_title">ที่อยู่ปัจจุบัน</h3>
+                            <p data-i18n="address_copy">ข้อมูลพื้นที่ช่วยให้เราจัดกลุ่มการเรียนได้เหมาะสม</p>
                         </div>
                     </div>
 
+                    <div class="field-group country-field{% if form.country_name_en.errors %} has-error{% endif %}">
+                        <label class="field-label" for="{{ form.country_name_en.id_for_label }}"><span data-i18n="country">ประเทศ</span> <span aria-hidden="true">*</span></label>
+                        <div class="address-combobox">
+                            {{ form.country_name_en }}
+                            <div class="address-suggestions" id="country-suggestions" role="listbox" data-country-suggestions hidden></div>
+                        </div>
+                        {{ form.country_name_en.errors }}
+                    </div>
+
+                    <div class="address-mode address-mode--thai" data-thailand-address>
                     <fieldset class="field-group{% if form.region.errors %} has-error{% endif %}">
-                        <legend class="field-label">ภูมิภาค <span aria-hidden="true">*</span></legend>
-                        <div class="choice-grid choice-grid--four">
+                        <legend class="field-label"><span data-i18n="region">ภูมิภาค</span> <span aria-hidden="true">*</span></legend>
+                        <div class="choice-grid choice-grid--six">
                             {% for item in region_options %}
                             <label class="choice-control">
-                                <input type="radio" name="region" value="{{ item.value }}" {% if form.region.value == item.value %}checked{% endif %} required>
+                                <input type="radio" name="region" value="{{ item.value }}" {% if form.region.value == item.value %}checked{% endif %} data-thailand-required>
                                 <span class="region-choice">
+                                    {% if item.icon %}
                                     <img src="{% static item.icon %}" alt="" width="52" height="52">
-                                    <strong>{{ item.label }}</strong>
+                                    {% else %}
+                                    <span class="region-choice__mark" aria-hidden="true">{{ item.initial }}</span>
+                                    {% endif %}
+                                    <strong data-i18n="region_{{ item.value }}">{{ item.label }}</strong>
                                 </span>
                             </label>
                             {% empty %}
@@ -221,122 +231,158 @@
 
                     <div class="field-grid field-grid--two">
                         <div class="field-group{% if form.province.errors %} has-error{% endif %}">
-                            <label class="field-label" for="{{ form.province.id_for_label }}">จังหวัด <span aria-hidden="true">*</span></label>
-                            {{ form.province }}
+                            <label class="field-label" for="{{ form.province.id_for_label }}"><span data-i18n="province">จังหวัด</span> <span aria-hidden="true">*</span></label>
+                            <div class="address-combobox">
+                                {{ form.province }}
+                                <div class="address-suggestions" id="province-suggestions" role="listbox" data-address-province-suggestions hidden></div>
+                            </div>
                             {{ form.province.errors }}
                         </div>
                         <div class="field-group{% if form.district.errors %} has-error{% endif %}">
-                            <label class="field-label" for="{{ form.district.id_for_label }}">อำเภอ / เขต <span aria-hidden="true">*</span></label>
-                            {{ form.district }}
+                            <label class="field-label" for="{{ form.district.id_for_label }}"><span data-i18n="district">อำเภอ / เขต</span> <span aria-hidden="true">*</span></label>
+                            <div class="address-combobox">
+                                {{ form.district }}
+                                <div class="address-suggestions" id="district-suggestions" role="listbox" data-address-district-suggestions hidden></div>
+                            </div>
                             {{ form.district.errors }}
                         </div>
                     </div>
 
                     <div class="field-group{% if form.sub_district.errors %} has-error{% endif %}">
-                        <label class="field-label" for="{{ form.sub_district.id_for_label }}">ตำบล / แขวง <span aria-hidden="true">*</span></label>
-                        {{ form.sub_district }}
+                        <label class="field-label" for="{{ form.sub_district.id_for_label }}"><span data-i18n="sub_district">ตำบล / แขวง</span> <span aria-hidden="true">*</span></label>
+                        <div class="address-combobox">
+                            {{ form.sub_district }}
+                            <div class="address-suggestions" id="subdistrict-suggestions" role="listbox" data-address-subdistrict-suggestions hidden></div>
+                        </div>
                         {{ form.sub_district.errors }}
                     </div>
 
                     <div class="field-group{% if form.address.errors %} has-error{% endif %}">
-                        <label class="field-label" for="{{ form.address.id_for_label }}">ที่อยู่ปัจจุบัน <span aria-hidden="true">*</span></label>
+                        <label class="field-label" for="{{ form.address.id_for_label }}"><span data-i18n="thai_address">ที่อยู่ปัจจุบัน</span> <span aria-hidden="true">*</span></label>
                         {{ form.address }}
+                        <p class="field-hint" data-i18n="thai_address_hint">เลือกจากรายการแนะนำได้ หรือพิมพ์เองหากไม่พบพื้นที่ของคุณ</p>
                         {{ form.address.errors }}
+                    </div>
+                    </div>
+
+                    <div class="address-mode address-mode--foreign" data-foreign-address hidden>
+                        <div class="field-group{% if form.address_line.errors %} has-error{% endif %}">
+                            <label class="field-label" for="{{ form.address_line.id_for_label }}"><span data-i18n="foreign_address">Address</span> <span aria-hidden="true">*</span></label>
+                            {{ form.address_line }}
+                            {{ form.address_line.errors }}
+                        </div>
+                        <div class="field-grid field-grid--two">
+                            <div class="field-group{% if form.city.errors %} has-error{% endif %}">
+                                <label class="field-label" for="{{ form.city.id_for_label }}"><span data-i18n="city">City</span> <span aria-hidden="true">*</span></label>
+                                {{ form.city }}
+                                {{ form.city.errors }}
+                            </div>
+                            <div class="field-group{% if form.state_province.errors %} has-error{% endif %}">
+                                <label class="field-label" for="{{ form.state_province.id_for_label }}" data-i18n="state_province">State / Province</label>
+                                {{ form.state_province }}
+                                {{ form.state_province.errors }}
+                            </div>
+                        </div>
+                        <div class="field-group{% if form.postal_code.errors %} has-error{% endif %}">
+                            <label class="field-label" for="{{ form.postal_code.id_for_label }}" data-i18n="postal_code">Postal code</label>
+                            {{ form.postal_code }}
+                            {{ form.postal_code.errors }}
+                        </div>
                     </div>
                 </section>
 
-                <section class="form-panel" data-form-step="3" data-step-label="คริสตจักร" data-reveal>
+                <section class="form-panel" data-form-step="3" data-step-label="คริสตจักร" data-step-label-th="คริสตจักร" data-step-label-en="Church" data-reveal>
                     <div class="panel-heading">
                         <span class="panel-number">03</span>
                         <div>
-                            <h3>ความเชื่อและการรับใช้</h3>
-                            <p>เล่าบริบทการเติบโตฝ่ายวิญญาณของคุณ</p>
+                            <h3 data-i18n="church_title">ความเชื่อและการรับใช้</h3>
+                            <p data-i18n="church_copy">เล่าบริบทการเติบโตฝ่ายวิญญาณของคุณ</p>
                         </div>
                     </div>
 
                     <fieldset class="field-group{% if form.is_pastor.errors %} has-error{% endif %}">
-                        <legend class="field-label">ท่านเป็นศิษยาภิบาลหรือไม่ <span aria-hidden="true">*</span></legend>
+                        <legend class="field-label"><span data-i18n="is_pastor">ท่านเป็นศิษยาภิบาลหรือไม่</span> <span aria-hidden="true">*</span></legend>
                         <div class="choice-grid choice-grid--two">
                             <label class="choice-control choice-control--large">
                                 <input type="radio" name="is_pastor" value="true" {% if form.is_pastor.value == 'true' %}checked{% endif %} required>
-                                <span><strong>ใช่</strong><small>เป็นศิษยาภิบาลอยู่ในปัจจุบัน</small></span>
+                                <span><strong data-i18n="yes">ใช่</strong><small data-i18n="pastor_yes_copy">เป็นศิษยาภิบาลอยู่ในปัจจุบัน</small></span>
                             </label>
                             <label class="choice-control choice-control--large">
                                 <input type="radio" name="is_pastor" value="false" {% if form.is_pastor.value == 'false' %}checked{% endif %} required>
-                                <span><strong>ไม่ใช่</strong><small>ไม่ได้ทำหน้าที่ศิษยาภิบาล</small></span>
+                                <span><strong data-i18n="no">ไม่ใช่</strong><small data-i18n="pastor_no_copy">ไม่ได้ทำหน้าที่ศิษยาภิบาล</small></span>
                             </label>
                         </div>
                         {{ form.is_pastor.errors }}
                     </fieldset>
 
                     <fieldset class="field-group{% if form.has_studied_bri.errors %} has-error{% endif %}">
-                        <legend class="field-label">ท่านเคยเรียน BRI มาก่อนหรือไม่ <span aria-hidden="true">*</span></legend>
+                        <legend class="field-label"><span data-i18n="has_studied_bri">ท่านเคยเรียน BRI มาก่อนหรือไม่</span> <span aria-hidden="true">*</span></legend>
                         <div class="choice-grid choice-grid--two">
                             <label class="choice-control choice-control--large">
                                 <input type="radio" name="has_studied_bri" value="true" {% if form.has_studied_bri.value == 'true' %}checked{% endif %} required>
-                                <span><strong>เคย</strong><small>เคยเข้าร่วมหลักสูตรของ BRI</small></span>
+                                <span><strong data-i18n="studied_yes">เคย</strong><small data-i18n="studied_yes_copy">เคยเข้าร่วมหลักสูตรของ BRI</small></span>
                             </label>
                             <label class="choice-control choice-control--large">
                                 <input type="radio" name="has_studied_bri" value="false" {% if form.has_studied_bri.value == 'false' %}checked{% endif %} required>
-                                <span><strong>ยังไม่เคย</strong><small>นี่จะเป็นครั้งแรกของฉัน</small></span>
+                                <span><strong data-i18n="studied_no">ยังไม่เคย</strong><small data-i18n="studied_no_copy">นี่จะเป็นครั้งแรกของฉัน</small></span>
                             </label>
                         </div>
                         {{ form.has_studied_bri.errors }}
                     </fieldset>
 
                     <div class="field-group{% if form.church.errors %} has-error{% endif %}">
-                        <label class="field-label" for="{{ form.church.id_for_label }}">คริสตจักรที่ผูกพันตัว <span aria-hidden="true">*</span></label>
+                        <label class="field-label" for="{{ form.church.id_for_label }}"><span data-i18n="church">คริสตจักรที่ผูกพันตัว</span> <span aria-hidden="true">*</span></label>
                         {{ form.church }}
                         {{ form.church.errors }}
                     </div>
 
                     <div class="field-group{% if form.serving_position.errors %} has-error{% endif %}" data-serving-position>
-                        <label class="field-label" for="{{ form.serving_position.id_for_label }}">ตำแหน่งงานรับใช้ <span class="optional-label">ไม่บังคับ</span></label>
+                        <label class="field-label" for="{{ form.serving_position.id_for_label }}"><span data-i18n="serving_position">ตำแหน่งงานรับใช้</span> <span class="optional-label" data-i18n="optional">ไม่บังคับ</span></label>
                         {{ form.serving_position }}
                         {{ form.serving_position.errors }}
                     </div>
 
                     <div class="field-grid field-grid--two">
                         <div class="field-group{% if form.mentor_name.errors %} has-error{% endif %}">
-                            <label class="field-label" for="{{ form.mentor_name.id_for_label }}">ชื่อพี่เลี้ยง <span aria-hidden="true">*</span></label>
+                            <label class="field-label" for="{{ form.mentor_name.id_for_label }}"><span data-i18n="mentor_name">ชื่อพี่เลี้ยง</span> <span class="optional-label" data-i18n="optional">ไม่บังคับ</span></label>
                             {{ form.mentor_name }}
                             {{ form.mentor_name.errors }}
                         </div>
                         <div class="field-group{% if form.believer_years.errors %} has-error{% endif %}">
-                            <label class="field-label" for="{{ form.believer_years.id_for_label }}">เป็นผู้เชื่อมาแล้ว <span aria-hidden="true">*</span></label>
+                            <label class="field-label" for="{{ form.believer_years.id_for_label }}"><span data-i18n="believer_years">เป็นผู้เชื่อมาแล้ว</span> <span aria-hidden="true">*</span></label>
                             <div class="input-with-suffix">
                                 {{ form.believer_years }}
-                                <span>ปี</span>
+                                <span data-i18n="years_suffix">ปี</span>
                             </div>
                             {{ form.believer_years.errors }}
                         </div>
                     </div>
 
                     <div class="field-group{% if form.facebook_link.errors %} has-error{% endif %}">
-                        <label class="field-label" for="{{ form.facebook_link.id_for_label }}">Facebook ส่วนตัว <span aria-hidden="true">*</span></label>
+                        <label class="field-label" for="{{ form.facebook_link.id_for_label }}"><span data-i18n="facebook_link">Facebook ส่วนตัว</span> <span aria-hidden="true">*</span></label>
                         {{ form.facebook_link }}
-                        <p class="field-hint">ใส่ลิงก์โปรไฟล์เต็มเพื่อให้ทีมงานตรวจสอบได้</p>
+                        <p class="field-hint" data-i18n="facebook_hint">ใส่ลิงก์โปรไฟล์เต็มเพื่อให้ทีมงานตรวจสอบได้</p>
                         {{ form.facebook_link.errors }}
                     </div>
                 </section>
 
-                <section class="form-panel" data-form-step="4" data-step-label="เป้าหมาย" data-reveal>
+                <section class="form-panel" data-form-step="4" data-step-label="เป้าหมาย" data-step-label-th="เป้าหมาย" data-step-label-en="Calling" data-reveal>
                     <div class="panel-heading">
                         <span class="panel-number">04</span>
                         <div>
-                            <h3>เป้าหมายและการทรงเรียก</h3>
-                            <p>ส่วนนี้ไม่มีคำตอบถูกผิด เขียนจากเรื่องราวจริงของคุณได้เลย</p>
+                            <h3 data-i18n="calling_title">เป้าหมายและการทรงเรียก</h3>
+                            <p data-i18n="calling_copy">ส่วนนี้ไม่มีคำตอบถูกผิด เขียนจากเรื่องราวจริงของคุณได้เลย</p>
                         </div>
                     </div>
 
                     <div class="field-group{% if form.goal.errors %} has-error{% endif %}">
-                        <label class="field-label" for="{{ form.goal.id_for_label }}">เป้าหมายในการสมัครเข้าเรียนครั้งนี้คืออะไร <span aria-hidden="true">*</span></label>
+                        <label class="field-label" for="{{ form.goal.id_for_label }}"><span data-i18n="goal">เป้าหมายในการสมัครเข้าเรียนครั้งนี้คืออะไร</span> <span aria-hidden="true">*</span></label>
                         {{ form.goal }}
                         {{ form.goal.errors }}
                     </div>
 
                     <div class="field-group{% if form.vision_calling.errors %} has-error{% endif %}">
-                        <label class="field-label" for="{{ form.vision_calling.id_for_label }}">นิมิตและการทรงเรียกของคุณคืออะไร <span aria-hidden="true">*</span></label>
+                        <label class="field-label" for="{{ form.vision_calling.id_for_label }}"><span data-i18n="vision_calling">นิมิตและการทรงเรียกของคุณคืออะไร</span> <span aria-hidden="true">*</span></label>
                         {{ form.vision_calling }}
                         {{ form.vision_calling.errors }}
                     </div>
@@ -344,13 +390,13 @@
                     <label class="consent-control{% if form.privacy_consent.errors %} has-error{% endif %}">
                         <input type="checkbox" name="privacy_consent" value="true" {% if form.privacy_consent.value %}checked{% endif %} required>
                         <span class="custom-checkbox"><svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#check"></use></svg></span>
-                        <span>ข้าพเจ้ารับรองว่าข้อมูลถูกต้อง และยินยอมให้ BRI ใช้ข้อมูลนี้เพื่อดำเนินการรับสมัครและติดต่อเกี่ยวกับการเรียน</span>
+                        <span data-i18n="privacy_consent">ข้าพเจ้ารับรองว่าข้อมูลถูกต้อง และยินยอมให้ BRI ใช้ข้อมูลนี้เพื่อดำเนินการรับสมัครและติดต่อเกี่ยวกับการเรียน</span>
                     </label>
                     {{ form.privacy_consent.errors }}
 
                     <div class="submit-assurance">
                         <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#shield-check"></use></svg>
-                        <div><strong>ตรวจสอบก่อนส่งได้เสมอ</strong><span>เมื่อกดส่ง ระบบจะบันทึกข้อมูลและตั้งสถานะเป็นดำเนินการ</span></div>
+                        <div><strong data-i18n="assurance_title">ตรวจสอบก่อนส่งได้เสมอ</strong><span data-i18n="assurance_copy">เมื่อกดส่ง ระบบจะบันทึกข้อมูลและตั้งสถานะเป็นดำเนินการ</span></div>
                     </div>
                 </section>
 
@@ -358,14 +404,14 @@
                     <div class="action-buttons">
                         <button class="button button--secondary button--back" type="button" data-step-back hidden>
                             <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-left"></use></svg>
-                            <span>ย้อนกลับ</span>
+                            <span data-i18n="back">ย้อนกลับ</span>
                         </button>
                         <button class="button button--primary" type="button" data-step-next hidden>
-                            <span>ถัดไป</span>
+                            <span data-i18n="next">ถัดไป</span>
                             <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
                         </button>
                         <button class="button button--primary button--submit" type="submit" data-submit-button>
-                            <span>ส่งใบสมัคร</span>
+                            <span data-submit-label data-i18n="submit">ส่งใบสมัคร</span>
                             <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#check-circle"></use></svg>
                         </button>
                     </div>
@@ -379,5 +425,5 @@
 
 {% block extra_js %}
 {% include "school/includes/liff_bridge.html" %}
-<script src="{% static 'school/js/registration.js' %}" defer></script>
+<script src="{% static 'school/js/registration.js' %}?v=20260915-addressfree-1" defer></script>
 {% endblock %}

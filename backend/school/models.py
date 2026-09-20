@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.db import models
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
 
@@ -18,6 +18,10 @@ class Person(TimeStampedModel):
         IN_PROGRESS = "in_progress", "ดำเนินการ"
         PASSED = "passed", "ผ่าน"
         FAILED = "failed", "ไม่ผ่าน"
+
+    class AdmissionType(models.TextChoices):
+        INTERVIEW = "interview", "ผ่านสัมภาษณ์"
+        ONLINE = "online", "ผ่านแบบออนไลน์"
 
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -45,7 +49,20 @@ class Person(TimeStampedModel):
         choices=Status.choices,
         default=Status.IN_PROGRESS,
     )
+    admission_type = models.CharField(
+        max_length=20,
+        choices=AdmissionType.choices,
+        blank=True,
+    )
     extra_data = models.JSONField(default=dict, blank=True)
+    interview_at = models.DateTimeField(null=True, blank=True)
+    interview_details = models.CharField(max_length=1000, blank=True)
+    interview_notified_at = models.DateTimeField(null=True, blank=True)
+    interview_confirmed_at = models.DateTimeField(null=True, blank=True)
+    interview_notification_state = models.CharField(
+        max_length=10, blank=True,
+        choices=[("pending", "รอส่ง"), ("sent", "LINE รับข้อความแล้ว"), ("failed", "ส่งไม่สำเร็จ")],
+    )
 
     class Meta:
         constraints = [
@@ -83,7 +100,7 @@ class Person(TimeStampedModel):
 
     @property
     def student_code(self):
-        if not hasattr(self, "student"):
+        if not hasattr(self, "student") or not self.student.is_paid:
             return ""
         return self.student.student_id
 
@@ -93,14 +110,145 @@ class Person(TimeStampedModel):
             return False
         return self.student.is_paid
 
+    @property
+    def admission_type_name(self):
+        if self.status != self.Status.PASSED:
+            return ""
+        return self.get_admission_type_display() or self.AdmissionType.INTERVIEW.label
+
     def connect_line_account(self, user_id, display_name="", picture_url=""):
         self.line_user_id = user_id
         self.line_display_name = display_name
         self.line_picture_url = picture_url
         self.line_connected_at = timezone.now()
 
+    def normalize_admission_type(self):
+        if self.status != self.Status.PASSED:
+            self.admission_type = ""
+        elif not self.admission_type:
+            self.admission_type = self.AdmissionType.INTERVIEW
+
+    def save(self, *args, **kwargs):
+        original_admission_type = self.admission_type
+        self.normalize_admission_type()
+        update_fields = kwargs.get("update_fields")
+        if update_fields is not None and self.admission_type != original_admission_type:
+            kwargs["update_fields"] = set(update_fields) | {"admission_type"}
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.full_name
+
+
+class Appointment(TimeStampedModel):
+    class Type(models.TextChoices):
+        INTERVIEW = "interview", "สัมภาษณ์"
+        ORIENTATION = "orientation", "ปฐมนิเทศ"
+        CLASS = "class", "นัดเรียน"
+
+    class Status(models.TextChoices):
+        SCHEDULED = "scheduled", "กำหนดนัดแล้ว"
+        CANCELLED = "cancelled", "ยกเลิก"
+        COMPLETED = "completed", "เสร็จสิ้น"
+
+    appointment_type = models.CharField(max_length=20, choices=Type.choices)
+    title = models.CharField(max_length=255)
+    starts_at = models.DateTimeField()
+    location = models.CharField(max_length=500, blank=True)
+    meeting_url = models.URLField(max_length=1000, blank=True)
+    details = models.TextField(blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.SCHEDULED,
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_appointments",
+    )
+
+    class Meta:
+        ordering = ("-starts_at", "-pk")
+
+    def __str__(self):
+        return f"{self.title} - {timezone.localtime(self.starts_at):%d/%m/%Y %H:%M}"
+
+
+class AppointmentSlot(TimeStampedModel):
+    appointment = models.ForeignKey(
+        Appointment,
+        on_delete=models.CASCADE,
+        related_name="slots",
+    )
+    starts_at = models.DateTimeField()
+    ends_at = models.DateTimeField()
+    capacity = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ("starts_at", "pk")
+
+    def __str__(self):
+        local_start = timezone.localtime(self.starts_at)
+        local_end = timezone.localtime(self.ends_at)
+        return f"{local_start:%d/%m/%Y %H:%M}-{local_end:%H:%M} ({self.capacity})"
+
+
+class AppointmentParticipant(TimeStampedModel):
+    class ResponseStatus(models.TextChoices):
+        WAITING = "waiting", "รอตอบรับ"
+        CONFIRMED = "confirmed", "ยืนยันแล้ว"
+        DECLINED = "declined", "ไม่สะดวกเข้าร่วม"
+
+    class NotificationStatus(models.TextChoices):
+        PENDING = "pending", "รอส่ง"
+        SENT = "sent", "LINE รับข้อความแล้ว"
+        FAILED = "failed", "ส่งไม่สำเร็จ"
+
+    appointment = models.ForeignKey(
+        Appointment,
+        on_delete=models.CASCADE,
+        related_name="participants",
+    )
+    person = models.ForeignKey(
+        Person,
+        on_delete=models.PROTECT,
+        related_name="appointment_participations",
+    )
+    selected_slot = models.ForeignKey(
+        AppointmentSlot,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="participants",
+    )
+    response_status = models.CharField(
+        max_length=20,
+        choices=ResponseStatus.choices,
+        default=ResponseStatus.WAITING,
+    )
+    notification_status = models.CharField(
+        max_length=20,
+        choices=NotificationStatus.choices,
+        default=NotificationStatus.PENDING,
+    )
+    notified_at = models.DateTimeField(null=True, blank=True)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    notification_error = models.CharField(max_length=500, blank=True)
+
+    class Meta:
+        ordering = ("pk",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=("appointment", "person"),
+                name="uniq_appointment_participant",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.appointment.title} - {self.person.full_name}"
 
 
 class TeacherGroup(TimeStampedModel):
@@ -169,12 +317,74 @@ class Student(TimeStampedModel):
         return f"{self.student_id} - {self.person.full_name}"
 
 
+def line_notification_sent(person, key):
+    return bool((person.extra_data or {}).get("line_notifications", {}).get(key))
+
+
+def mark_line_notification_sent(person, key):
+    extra_data = dict(person.extra_data or {})
+    notifications = dict(extra_data.get("line_notifications", {}))
+    notifications[key] = timezone.now().isoformat()
+    extra_data["line_notifications"] = notifications
+    Person.objects.filter(pk=person.pk).update(extra_data=extra_data)
+    person.extra_data = extra_data
+
+
+@receiver(pre_save, sender=Person)
+def remember_previous_person_status(sender, instance, **kwargs):
+    instance._previous_status = None
+    if instance.pk:
+        instance._previous_status = (
+            Person.objects.filter(pk=instance.pk)
+            .values_list("status", flat=True)
+            .first()
+        )
+
+
 @receiver(post_save, sender=Person)
-def create_student_for_passed_person(sender, instance, **kwargs):
+def handle_passed_person(sender, instance, **kwargs):
     if instance.status != Person.Status.PASSED:
         return
 
-    Student.objects.get_or_create(person=instance)
+    student, _ = Student.objects.get_or_create(person=instance)
+    previous_status = getattr(instance, "_previous_status", None)
+    if previous_status == Person.Status.PASSED or line_notification_sent(
+        instance,
+        "interview_passed",
+    ):
+        return
+
+    from .line import notify_interview_passed
+
+    if notify_interview_passed(instance, student):
+        mark_line_notification_sent(instance, "interview_passed")
+
+
+@receiver(pre_save, sender=Student)
+def remember_previous_student_payment_status(sender, instance, **kwargs):
+    instance._previous_is_paid = None
+    if instance.pk:
+        instance._previous_is_paid = (
+            Student.objects.filter(pk=instance.pk)
+            .values_list("is_paid", flat=True)
+            .first()
+        )
+
+
+@receiver(post_save, sender=Student)
+def notify_student_payment_approved(sender, instance, **kwargs):
+    previous_is_paid = getattr(instance, "_previous_is_paid", None)
+    if not instance.is_paid or previous_is_paid is True:
+        return
+
+    person = instance.person
+    if line_notification_sent(person, "payment_approved"):
+        return
+
+    from .line import notify_payment_approved
+
+    if notify_payment_approved(person, instance):
+        mark_line_notification_sent(person, "payment_approved")
 
 
 class AttendanceSession(TimeStampedModel):
@@ -262,6 +472,12 @@ class HomeworkSubmission(TimeStampedModel):
         default=Status.PENDING,
     )
     score = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    submission_file = models.FileField(
+        upload_to="homework_submissions/",
+        null=True,
+        blank=True,
+    )
+    student_note = models.TextField(blank=True)
     submitted_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:

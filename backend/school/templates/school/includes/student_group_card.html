@@ -1,0 +1,27 @@
+{% load static %}
+<article class="student-board-card"
+         draggable="true"
+         tabindex="0"
+         data-student-card
+         data-student-id="{{ student.pk }}"
+         data-student-name="{{ student.person.full_name }}"
+         data-group-id="{{ student.group_id|default:'' }}">
+    <header>
+        <span class="student-board-avatar" aria-hidden="true">{{ student.person.first_name|slice:":1"|upper }}</span>
+        <div>
+            <strong>{{ student.person.full_name }}</strong>
+            <small>{% if student.student_id %}{{ student.student_id }}{% else %}ยังไม่มีรหัส{% endif %}{% if student.person.nickname %} · {{ student.person.nickname }}{% endif %}</small>
+        </div>
+        <button type="button" class="student-move-button" data-open-move-dialog title="ย้ายกลุ่ม" aria-label="ย้ายกลุ่มให้ {{ student.person.full_name }}">
+            <svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
+        </button>
+    </header>
+    <footer>
+        {% if student.is_paid %}
+            <span class="student-payment-status student-payment-status--paid">ชำระแล้ว</span>
+        {% else %}
+            <span class="student-payment-status student-payment-status--unpaid">ยังไม่ชำระ</span>
+        {% endif %}
+        {% if student.person.phone %}<small>{{ student.person.phone }}</small>{% endif %}
+    </footer>
+</article>

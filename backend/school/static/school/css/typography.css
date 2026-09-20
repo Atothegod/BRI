@@ -1,0 +1,68 @@
+@font-face {
+    font-family: "NotoSansThai_Condensed-Medium";
+    src: url("../fonts/NotoSansThai_Condensed-Regular.ttf?v=20260913-font-3") format("truetype");
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "NotoSansThai_Condensed-Medium";
+    src: url("../fonts/NotoSansThai_Condensed-Medium.ttf?v=20260913-font-3") format("truetype");
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "NotoSansThai_Condensed-Medium";
+    src: url("../fonts/NotoSansThai_Condensed-SemiBold.ttf?v=20260913-font-3") format("truetype");
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "NotoSansThai_Condensed-Medium";
+    src: url("../fonts/NotoSansThai_Condensed-Bold.ttf?v=20260913-font-3") format("truetype");
+    font-style: normal;
+    font-weight: 700 900;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "NotoSansThai_Condensed-Medium";
+    src: url("../fonts/NotoSans-Italic-VariableFont_wdth,wght.ttf?v=20260913-font-3") format("truetype");
+    font-style: italic;
+    font-weight: 100 900;
+    font-stretch: 62.5% 100%;
+    font-display: swap;
+}
+
+:root {
+    --font-primary: "NotoSansThai_Condensed-Medium", sans-serif;
+}
+
+html {
+    font-size: 19px;
+}
+
+html,
+body,
+button,
+input,
+textarea,
+select {
+    font-family: var(--font-primary);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+strong,
+b {
+    font-synthesis: none;
+}

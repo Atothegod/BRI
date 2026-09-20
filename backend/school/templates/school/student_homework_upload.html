@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}ส่งการบ้าน | BRI School of Fivefold{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'school/css/student_portal.css' %}?v=20260918-student-1">
+{% endblock %}
+
+{% block content %}
+<main class="student-portal" data-student-portal>
+    <header class="student-topbar">
+        <a class="student-brand" href="{% url 'school:student_dashboard' %}" aria-label="BRI School of Fivefold">
+            {% include "school/includes/brand_logo.html" with variant="nav" %}
+        </a>
+        <nav aria-label="เมนูนักเรียน">
+            <a href="{% url 'school:student_dashboard' %}">Dashboard</a>
+            <a class="is-active" href="{% url 'school:student_homework_upload' %}">การบ้าน</a>
+        </nav>
+    </header>
+
+    {% if student_state == "ready" %}
+    <section class="student-hero student-hero--homework" aria-labelledby="student-homework-page-title">
+        <div>
+            <span>HOMEWORK SUBMISSION</span>
+            <h1 id="student-homework-page-title">ส่งการบ้าน</h1>
+            <p>{{ student.person.full_name }} · {{ student.group.group_name|default:"ยังไม่มีกลุ่ม" }}</p>
+        </div>
+        <a class="student-hero-action" href="{% url 'school:student_dashboard' %}">กลับ Dashboard</a>
+    </section>
+
+    {% for message in messages %}
+    <p class="student-notice" role="status">{{ message }}</p>
+    {% endfor %}
+
+    <section class="student-panel student-homework-page" aria-label="รายการการบ้าน">
+        {% for row in assignment_rows %}
+        <article class="student-homework-card">
+            <div class="student-homework-card-head">
+                <div>
+                    <time datetime="{{ row.assignment.due_date|date:'Y-m-d' }}">กำหนดส่ง {{ row.assignment.due_date|date:"d M Y" }}</time>
+                    <h2>{{ row.assignment.title }}</h2>
+                    <p>{% if row.submission %}ส่งล่าสุด {{ row.submission.submitted_at|date:"d/m/Y H:i" }} · {{ row.submission.get_status_display }}{% else %}ยังไม่ได้ส่งงาน{% endif %}</p>
+                </div>
+                <span class="{% if row.submission %}is-done{% elif row.is_late %}is-late{% endif %}">
+                    {% if row.submission %}ส่งแล้ว{% else %}รอส่ง{% endif %}
+                </span>
+            </div>
+            {% if row.submission.submission_file %}
+            <a class="student-submission-link" href="{{ row.submission.submission_file.url }}" target="_blank" rel="noopener">เปิดไฟล์ที่ส่งแล้ว</a>
+            {% endif %}
+            <form class="student-upload-form" method="post" enctype="multipart/form-data" data-student-upload-form>
+                {% csrf_token %}
+                <input type="hidden" name="assignment_id" value="{{ row.assignment.pk }}">
+                {% if active_assignment.pk == row.assignment.pk and row.form.errors %}
+                <div class="student-form-errors" role="alert">{{ row.form.errors }}</div>
+                {% endif %}
+                <label class="student-upload-control">
+                    <span>
+                        <strong data-student-file-label>{% if row.submission %}อัปโหลดไฟล์ใหม่{% else %}เลือกไฟล์การบ้าน{% endif %}</strong>
+                        <small>PDF, Office, รูปภาพ หรือ ZIP</small>
+                    </span>
+                    {{ row.form.homework_file }}
+                </label>
+                <label class="student-note-field">
+                    <span>หมายเหตุ</span>
+                    {{ row.form.student_note }}
+                </label>
+                <button type="submit">{% if row.submission %}ส่งไฟล์ใหม่{% else %}ส่งการบ้าน{% endif %}</button>
+            </form>
+        </article>
+        {% empty %}
+        <div class="student-empty">ยังไม่มีการบ้านในกลุ่มนี้</div>
+        {% endfor %}
+    </section>
+    {% else %}
+    <section class="student-state" aria-labelledby="student-state-title">
+        {% include "school/includes/brand_logo.html" with variant="success" %}
+        <span>STUDENT ACCESS</span>
+        <h1 id="student-state-title">ยังไม่สามารถส่งการบ้านได้</h1>
+        <p>กรุณาเปิดผ่าน LINE และตรวจสอบว่าบัญชีของคุณได้รับสถานะนักเรียนแล้ว</p>
+        <a href="{{ line_return_url }}" data-liff-close>กลับไปยัง LINE</a>
+    </section>
+    {% endif %}
+</main>
+{% endblock %}
+
+{% block extra_js %}
+{% include "school/includes/liff_bridge.html" %}
+<script src="{% static 'school/js/student_portal.js' %}?v=20260918-student-1" defer></script>
+{% endblock %}

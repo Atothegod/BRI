@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}จัดกลุ่มนักศึกษา | BRI{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20260913-font-3">
+<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20260916-school-admin-4">
+<link rel="stylesheet" href="{% static 'school/css/student_group_assignment.css' %}?v=20260916-board-3">
+{% endblock %}
+{% block content %}
+{% include "school/includes/school_admin_nav.html" %}
+<main class="interviews student-group-page">
+    <header class="page-heading">
+        <div>
+            <span>BRI STUDENT GROUPS</span>
+            <h1>จัดกลุ่มนักศึกษา</h1>
+            <p>ลากนักศึกษาไปยังกลุ่มปลายทาง ระบบจะบันทึกให้ทันที</p>
+        </div>
+    </header>
+
+    <section class="assignment-stats" aria-label="สรุปการจัดกลุ่ม">
+        <div><span>นักศึกษาทั้งหมด</span><strong data-stat-total>{{ stats.total }}</strong></div>
+        <div><span>ยังไม่มีกลุ่ม</span><strong data-stat-unassigned>{{ stats.unassigned }}</strong></div>
+        <div><span>จัดกลุ่มแล้ว</span><strong data-stat-assigned>{{ stats.assigned }}</strong></div>
+        <div><span>กลุ่มที่พร้อมใช้</span><strong>{{ stats.groups }}</strong></div>
+    </section>
+
+    {% for message in messages %}<p role="status" class="notice">{{ message }}</p>{% endfor %}
+
+    {% if groups %}
+    <form method="post" id="assignment-board-form">
+        {% csrf_token %}
+        {% if form.errors %}<div role="alert" class="errors">{{ form.errors }}</div>{% endif %}
+
+        <section class="assignment-board" data-assignment-board aria-labelledby="assignment-board-title">
+            <header class="assignment-board-heading">
+                <div>
+                    <span>ข้อมูลพร้อมจัดกลุ่มทั้งหมด</span>
+                    <h2 id="assignment-board-title">กระดานจัดกลุ่ม</h2>
+                </div>
+                <div class="assignment-board-legend" aria-label="วิธีใช้งาน">
+                    <svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#info"></use></svg>
+                    <span>ลากการ์ดข้ามคอลัมน์ หรือกดปุ่มลูกศรบนการ์ด</span>
+                </div>
+            </header>
+
+            <div class="assignment-board-status" data-board-status role="status" aria-live="polite">
+                <span class="status-indicator" aria-hidden="true"></span>
+                <span data-board-status-text>พร้อมจัดกลุ่มนักศึกษา {{ stats.total }} คน</span>
+            </div>
+
+            <div class="assignment-board-scroll">
+                <div class="assignment-board-columns">
+                    <section class="assignment-lane assignment-lane--unassigned"
+                             data-assignment-lane
+                             data-group-id=""
+                             data-group-name="ยังไม่มีกลุ่ม"
+                             aria-labelledby="lane-unassigned-title">
+                        <header class="assignment-lane-heading">
+                            <div><span>รอจัดกลุ่ม</span><h3 id="lane-unassigned-title">ยังไม่มีกลุ่ม</h3></div>
+                            <strong data-lane-count>{{ unassigned_students|length }}</strong>
+                        </header>
+                        <div class="assignment-lane-list" data-lane-list>
+                            {% for student in unassigned_students %}
+                                {% include "school/includes/student_group_card.html" with student=student %}
+                            {% endfor %}
+                            <div class="assignment-lane-empty" data-lane-empty{% if unassigned_students %} hidden{% endif %}>ไม่มีนักศึกษาในคอลัมน์นี้</div>
+                        </div>
+                    </section>
+
+                    {% for group in groups %}
+                    <section class="assignment-lane"
+                             data-assignment-lane
+                             data-group-id="{{ group.pk }}"
+                             data-group-name="{{ group.group_name }}"
+                             aria-labelledby="lane-group-{{ group.pk }}-title">
+                        <header class="assignment-lane-heading">
+                            <div>
+                                <span>{{ group.teacher.display_name }}</span>
+                                <h3 id="lane-group-{{ group.pk }}-title">{{ group.group_name }}</h3>
+                            </div>
+                            <strong data-lane-count>{{ group.board_students|length }}</strong>
+                        </header>
+                        <div class="assignment-lane-list" data-lane-list>
+                            {% for student in group.board_students %}
+                                {% include "school/includes/student_group_card.html" with student=student %}
+                            {% endfor %}
+                            <div class="assignment-lane-empty" data-lane-empty{% if group.board_students %} hidden{% endif %}>ลากนักศึกษามาวางที่นี่</div>
+                        </div>
+                    </section>
+                    {% endfor %}
+
+                    {% if other_group_students %}
+                    <section class="assignment-lane assignment-lane--source-only" aria-labelledby="lane-other-title">
+                        <header class="assignment-lane-heading">
+                            <div><span>กลุ่มไม่พร้อมใช้งาน</span><h3 id="lane-other-title">กลุ่มอื่น</h3></div>
+                            <strong data-lane-count>{{ other_group_students|length }}</strong>
+                        </header>
+                        <div class="assignment-lane-list" data-lane-list>
+                            {% for student in other_group_students %}
+                                {% include "school/includes/student_group_card.html" with student=student %}
+                            {% endfor %}
+                        </div>
+                    </section>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+
+        <dialog class="student-move-dialog" id="student-move-dialog" aria-labelledby="student-move-title">
+            <header>
+                <span>ย้ายกลุ่มนักศึกษา</span>
+                <h2 id="student-move-title">เลือกกลุ่มปลายทาง</h2>
+                <p data-dialog-student-name></p>
+            </header>
+            <div class="student-move-options">
+                <button type="button" data-move-target data-group-id="" data-group-name="ยังไม่มีกลุ่ม">
+                    <span>ยังไม่มีกลุ่ม</span><small>นำกลับไปรอจัดกลุ่ม</small>
+                </button>
+                {% for group in groups %}
+                <button type="button" data-move-target data-group-id="{{ group.pk }}" data-group-name="{{ group.group_name }}">
+                    <span>{{ group.group_name }}</span><small>{{ group.teacher.display_name }}</small>
+                </button>
+                {% endfor %}
+            </div>
+            <footer><button type="button" data-close-move-dialog>ยกเลิก</button></footer>
+        </dialog>
+    </form>
+    {% else %}
+    <section class="empty-groups">
+        <strong>ยังไม่มีกลุ่มที่พร้อมใช้งาน</strong>
+        <p>สร้างกลุ่มและกำหนดผู้สอนก่อนเริ่มจัดนักศึกษา</p>
+        <a class="admin-action-link" href="{% url 'admin:school_teachergroup_add' %}">สร้างกลุ่มใน Django Admin</a>
+    </section>
+    {% endif %}
+</main>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'school/js/student_group_assignment.js' %}?v=20260916-board-1" defer></script>{% endblock %}

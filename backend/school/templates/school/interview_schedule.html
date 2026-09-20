@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% load static tz %}
+{% block title %}จัดการนัดหมาย | BRI{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20260920-events-1">
+<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20260916-school-admin-4">
+{% endblock %}
+{% block content %}
+{% include "school/includes/school_admin_nav.html" %}
+<main class="interviews">
+    <div class="page-heading"><div><span>BRI APPOINTMENTS</span><h1>จัดการนัดหมาย</h1><p>{{ candidate_description }}</p></div></div>
+    <nav class="type-tabs" aria-label="ประเภทนัดหมาย">
+        {% for value, label in appointment_types %}<a href="?type={{ value }}" class="{% if appointment_type == value %}active{% endif %}"{% if appointment_type == value %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}
+    </nav>
+
+    {% for message in messages %}<p role="status" class="notice">{{ message }}</p>{% endfor %}
+    <p id="send-summary" role="status" hidden></p>
+
+    <section class="event-browser" aria-labelledby="event-browser-title">
+        <div class="section-heading">
+            <div><span>ขั้นตอนที่ 1</span><h2 id="event-browser-title">เลือก Event ที่จะส่งนัด</h2></div>
+            <small>เลือก Event เดิมเพื่อเพิ่มผู้สมัครใหม่ หรือสร้างรอบใหม่เมื่อเต็ม</small>
+        </div>
+        <div class="event-list">
+            <a class="event-card event-card-new{% if not selected_appointment %} selected{% endif %}" href="?type={{ appointment_type }}&event=new"{% if not selected_appointment %} aria-current="true"{% endif %}>
+                <strong>สร้าง Event ใหม่</strong><span>กำหนดวัน เวลา และ quota</span>
+            </a>
+            {% timezone "Asia/Bangkok" %}{% for item in appointments %}
+                <a class="event-card{% if selected_appointment.pk == item.pk %} selected{% endif %}{% if item.is_full %} full{% endif %}" href="?type={{ appointment_type }}&event={{ item.pk }}&audience=unsent"{% if selected_appointment.pk == item.pk %} aria-current="true" data-selected-event-card{% endif %}>
+                    <span class="event-card-top"><b{% if selected_appointment.pk == item.pk %} data-event-state{% endif %}>{% if item.is_full %}เต็มแล้ว{% elif item.status != 'scheduled' %}{{ item.get_status_display }}{% else %}เปิดรับ{% endif %}</b><small>{{ item.starts_at|date:"d/m/Y" }}</small></span>
+                    <strong>{{ item.title }}</strong>
+                    <span class="event-card-meta">{% if item.slots.all %}{{ item.slots.all.0.starts_at|date:"H:i" }}-{{ item.slots.all.0.ends_at|date:"H:i" }}{% if item.slots.all|length > 1 %} และอีก {{ item.slots.all|length|add:"-1" }} slot{% endif %}{% else %}{{ item.starts_at|date:"H:i" }} น.{% endif %}</span>
+                    {% if item.slot_capacity %}<progress value="{{ item.confirmed_count }}" max="{{ item.slot_capacity }}" aria-label="ยืนยันแล้ว {{ item.confirmed_count }} จาก {{ item.slot_capacity }}"{% if selected_appointment.pk == item.pk %} data-event-progress{% endif %}></progress><span class="event-capacity"><b{% if selected_appointment.pk == item.pk %} data-event-card-count{% endif %}>{{ item.confirmed_count }}/{{ item.slot_capacity }}</b> ยืนยันแล้ว</span>{% else %}<span class="event-capacity"><b>{{ item.confirmed_count }}</b> ยืนยันแล้ว · ส่งแล้ว {{ item.sent_count }}</span>{% endif %}
+                </a>
+            {% empty %}{% endfor %}{% endtimezone %}
+        </div>
+    </section>
+
+    {% if selected_appointment %}
+        <section class="selected-event" aria-labelledby="selected-event-title">
+            <div class="selected-event-main">
+                <span>EVENT ที่เลือก</span><h2 id="selected-event-title">{{ selected_appointment.title }}</h2>
+                <p>{% timezone "Asia/Bangkok" %}{{ selected_appointment.starts_at|date:"l d F Y" }}{% if selected_appointment.location %} · {{ selected_appointment.location }}{% endif %}{% endtimezone %}</p>
+                <div class="event-slots">{% timezone "Asia/Bangkok" %}{% for slot in selected_appointment.slots.all %}<span>{{ slot.starts_at|date:"H:i" }}-{{ slot.ends_at|date:"H:i" }} · {{ slot.capacity }} คน</span>{% endfor %}{% endtimezone %}</div>
+            </div>
+            <div class="event-metrics">
+                <div><span>ยืนยันแล้ว</span><strong data-event-confirmed>{{ selected_appointment.confirmed_count }}{% if selected_appointment.slot_capacity %}/{{ selected_appointment.slot_capacity }}{% endif %}</strong></div>
+                <div><span>ส่งสำเร็จ</span><strong data-event-sent>{{ selected_appointment.sent_count }}</strong></div>
+                <div><span>ส่งไม่สำเร็จ</span><strong data-event-failed>{{ selected_appointment.failed_count }}</strong></div>
+            </div>
+            {% if selected_appointment.is_full %}<div class="event-closed-message" data-event-full-message><strong>Event นี้เต็มแล้ว</strong><span>ครบ <b data-event-full-count>{{ selected_appointment.confirmed_count }}/{{ selected_appointment.slot_capacity }}</b> คน กรุณาสร้าง Event ใหม่เพื่อส่งนัดรอบถัดไป</span></div>
+            {% elif not selected_event_open %}<div class="event-closed-message"><strong>Event นี้ปิดรับแล้ว</strong><span>ไม่สามารถเพิ่มหรือส่งนัดให้ผู้สมัครใหม่ใน Event นี้ได้</span></div>{% endif %}
+            {% if selected_event_open %}<div class="event-closed-message" data-event-full-message hidden><strong>Event นี้เต็มแล้ว</strong><span>ครบ <b data-event-full-count></b> คน กรุณาสร้าง Event ใหม่เพื่อส่งนัดรอบถัดไป</span></div>{% endif %}
+        </section>
+        <nav class="audience-tabs" aria-label="สถานะการส่งของ Event">
+            <a href="?type={{ appointment_type }}&event={{ selected_appointment.pk }}&audience=unsent" class="{% if audience == 'unsent' %}active{% endif %}"><span>ยังไม่ส่ง</span><b>{{ audience_counts.unsent }}</b></a>
+            <a href="?type={{ appointment_type }}&event={{ selected_appointment.pk }}&audience=sent" class="{% if audience == 'sent' %}active{% endif %}"><span>ส่งแล้ว / รอส่ง</span><b data-audience-sent>{{ audience_counts.sent }}</b></a>
+            <a href="?type={{ appointment_type }}&event={{ selected_appointment.pk }}&audience=failed" class="{% if audience == 'failed' %}active{% endif %}"><span>ส่งไม่สำเร็จ</span><b data-audience-failed>{{ audience_counts.failed }}</b></a>
+        </nav>
+    {% endif %}
+
+    <section class="candidate-section" aria-labelledby="candidate-title">
+        <div class="section-heading">
+            <div><span>ขั้นตอนที่ 2</span><h2 id="candidate-title">{% if selected_appointment %}{% if audience == 'unsent' %}เลือกผู้สมัครที่ยังไม่ส่ง{% elif audience == 'failed' %}รายการที่ส่งไม่สำเร็จ{% else %}ผู้สมัครที่ส่งนัดแล้ว{% endif %}{% else %}สร้าง Event และเลือกผู้สมัคร{% endif %}</h2></div>
+        </div>
+        <form method="get" class="filter-panel compact-filter">
+            <input type="hidden" name="type" value="{{ appointment_type }}"><input type="hidden" name="event" value="{% if selected_appointment %}{{ selected_appointment.pk }}{% else %}new{% endif %}"><input type="hidden" name="audience" value="{{ audience }}">
+            <div class="filter-search"><label for="search">ค้นหาผู้สมัคร</label><input id="search" name="q" value="{{ query }}" placeholder="ชื่อ เบอร์โทร หรือชื่อ LINE"></div>
+            <div><label for="line-filter">LINE</label><select id="line-filter" name="line"><option value="">ทั้งหมด</option><option value="connected"{% if filters.line == "connected" %} selected{% endif %}>เชื่อมแล้ว</option><option value="missing"{% if filters.line == "missing" %} selected{% endif %}>ยังไม่เชื่อม</option></select></div>
+            {% if selected_appointment and audience != 'unsent' %}<div><label for="confirmation-filter">การตอบรับ</label><select id="confirmation-filter" name="confirmation"><option value="">ทั้งหมด</option><option value="waiting"{% if filters.confirmation == "waiting" %} selected{% endif %}>รอยืนยัน</option><option value="confirmed"{% if filters.confirmation == "confirmed" %} selected{% endif %}>ยืนยันแล้ว</option></select></div>{% endif %}
+            <div class="filter-actions"><button type="submit">ค้นหา</button>{% if has_filters %}<a href="?type={{ appointment_type }}&event={% if selected_appointment %}{{ selected_appointment.pk }}{% else %}new{% endif %}&audience={{ audience }}">ล้างตัวกรอง</a>{% endif %}</div>
+        </form>
+
+        <form method="post" id="schedule-form" data-type-label="{% if appointment_type == 'orientation' %}ปฐมนิเทศ{% else %}สัมภาษณ์{% endif %}" data-event-title="{% if selected_appointment %}{{ selected_appointment.title }}{% endif %}">
+            {% csrf_token %}{{ form.appointment_type }}{{ form.event_id }}
+            {% if form.errors %}<div role="alert" class="errors">{{ form.errors }}</div>{% endif %}
+            {% if not selected_appointment %}
+                <section class="schedule-fields{% if appointment_type == 'interview' %} interview-slot-mode{% endif %}" aria-label="รายละเอียด Event ใหม่">
+                    <div class="title-field">{{ form.title.label_tag }}{{ form.title }}</div><div>{{ form.date.label_tag }}{{ form.date }}</div>
+                    {% if appointment_type == "interview" %}
+                        {{ form.time }}<div class="capacity-summary" aria-live="polite"><span>จำนวนรับรวม</span><strong data-slot-capacity-value>0</strong><small>คำนวณจาก quota slot</small></div>
+                        <div class="slot-editor" data-slot-editor><div class="slot-editor-heading"><div><strong>ช่วงเวลาสัมภาษณ์</strong><small>ผู้สมัครจะเลือก slot ตอนกดยืนยันใน LINE</small></div><button type="button" data-add-slot>เพิ่ม slot</button></div>
+                            <div class="slot-rows" data-slot-rows>{% for slot in slot_rows %}<div class="slot-row"><span class="slot-index">{{ forloop.counter }}</span><label><span>เริ่มต้น</span><input type="time" name="slot_start" value="{{ slot.start }}"></label><label><span>สิ้นสุด</span><input type="time" name="slot_end" value="{{ slot.end }}"></label><label><span>รับได้</span><input type="number" min="1" name="slot_capacity" value="{{ slot.capacity }}"></label><button type="button" class="slot-remove" data-remove-slot aria-label="ลบ slot">ลบ</button></div>{% endfor %}</div>
+                            <p class="slot-total" data-slot-total>รับรวม 0 คน จาก 0 slot</p>
+                        </div>
+                    {% else %}<div>{{ form.time.label_tag }}{{ form.time }}</div>{% endif %}
+                    <div class="location-field">{{ form.location.label_tag }}{{ form.location }}</div><div class="url-field">{{ form.meeting_url.label_tag }}{{ form.meeting_url }}</div><div class="details-field">{{ form.details.label_tag }}{{ form.details }}</div>
+                </section>
+            {% endif %}
+
+            <div class="selection-bar"><strong>พบ {{ page_obj.paginator.count }} คน</strong>{% if not selected_appointment or audience == 'unsent' %}<span>เลือก <b id="selected-count">0</b> คน</span>{% endif %}</div>
+            <div class="table-scroll"><table>
+                <thead><tr><th>{% if not selected_appointment or audience == 'unsent' %}<input type="checkbox" id="select-all" aria-label="เลือกทุกคนในหน้านี้"{% if selected_appointment and not selected_event_open %} disabled{% endif %}>{% endif %}</th><th>ผู้สมัคร</th><th>LINE</th><th>Event นี้</th><th>การส่ง LINE</th><th>การตอบรับ</th></tr></thead>
+                <tbody>{% timezone "Asia/Bangkok" %}{% for person in page_obj %}{% with participant=person.latest_appointment_participant %}<tr>
+                    <td>{% if not selected_appointment or audience == 'unsent' %}<input type="checkbox" name="people" value="{{ person.pk }}" aria-label="เลือก {{ person.full_name }}" {% if person.pk|stringformat:"s" in selected_ids %}checked{% endif %}{% if selected_appointment and not selected_event_open %} disabled{% endif %}>{% endif %}</td>
+                    <td><strong>{{ person.full_name }}</strong><small>{{ person.phone|default:"-" }}</small></td>
+                    <td>{{ person.line_display_name|default:"-" }}{% if not person.line_user_id %}<small class="warning">ยังไม่เชื่อม LINE</small>{% endif %}</td>
+                    <td>{% if participant %}<strong>{{ participant.appointment.title }}</strong><small>{{ participant.appointment.starts_at|date:"d/m/Y" }}{% if participant.selected_slot %} · {{ participant.selected_slot.starts_at|date:"H:i" }}-{{ participant.selected_slot.ends_at|date:"H:i" }}{% elif appointment_type == 'interview' %} · ยังไม่เลือกเวลา{% else %} · {{ participant.appointment.starts_at|date:"H:i" }}{% endif %}</small>{% elif selected_appointment %}<span class="state-unsent">ยังไม่อยู่ใน Event นี้</span>{% else %}<span class="state-unsent">พร้อมส่งนัด</span>{% endif %}</td>
+                    <td>{% if participant %}<span data-status="{{ participant.pk }}" class="state-{{ participant.notification_status }}">{{ participant.get_notification_status_display }}</span>{% if participant.notification_status != 'sent' %}<button class="retry" type="button" data-notify="{{ participant.pk }}" data-at="{{ participant.appointment.starts_at|date:'c' }}" data-url="{% url 'school:appointment_notify' participant.pk %}"{% if not selected_event_open %} disabled{% endif %}>ส่ง LINE อีกครั้ง</button>{% endif %}{% else %}-{% endif %}</td>
+                    <td{% if participant %} data-confirmation="{{ participant.pk }}"{% endif %}>{% if participant.response_status == 'confirmed' %}<strong class="state-sent">ยืนยันแล้ว</strong><small>{{ participant.confirmed_at|date:"d/m/Y H:i" }}</small>{% elif participant %}<span class="state-pending">ยังไม่ยืนยัน</span>{% else %}-{% endif %}</td>
+                </tr>{% endwith %}{% empty %}<tr><td colspan="6"><div class="empty-state">{% if audience == 'unsent' and selected_appointment %}ส่งนัดให้ผู้สมัครใน Event นี้ครบทุกคนแล้ว{% elif audience == 'failed' %}ไม่มีรายการส่งไม่สำเร็จ{% else %}ไม่พบรายชื่อที่ตรงเงื่อนไข{% endif %}</div></td></tr>{% endfor %}{% endtimezone %}</tbody>
+            </table></div>
+            <footer class="schedule-footer"><span>หน้า {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span><nav aria-label="หน้ารายชื่อ">{% if page_obj.has_previous %}<a href="{{ page_query_prefix }}page={{ page_obj.previous_page_number }}">ก่อนหน้า</a>{% endif %} {% if page_obj.has_next %}<a href="{{ page_query_prefix }}page={{ page_obj.next_page_number }}">ถัดไป</a>{% endif %}</nav>{% if not selected_appointment or audience == 'unsent' %}<button type="submit" id="confirm-schedule" disabled>{% if selected_appointment %}เพิ่มเข้า Event และส่ง LINE{% else %}สร้าง Event และส่ง LINE{% endif %}</button>{% endif %}</footer>
+        </form>
+    </section>
+</main>
+{{ send_queue|json_script:"interview-queue" }}<div hidden data-confirmation-status-url="{% url 'school:appointment_confirmation_status' %}"{% if selected_appointment %} data-event-id="{{ selected_appointment.pk }}"{% endif %}></div>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'school/js/interviews.js' %}?v=20260920-events-1" defer></script>{% endblock %}

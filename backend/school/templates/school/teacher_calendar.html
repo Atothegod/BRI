@@ -1,0 +1,180 @@
+{% extends "school/teacher_dashboard_base.html" %}
+{% load static tz %}
+
+{% block dashboard_title %}ปฏิทินนัดเรียน{% endblock %}
+
+{% block dashboard_content %}
+<div class="teacher-content teacher-calendar-page">
+    <header class="teacher-page-heading teacher-calendar-hero" id="dashboard-top">
+        <div>
+            <span class="teacher-eyebrow">CLASS APPOINTMENTS</span>
+            <h1>ปฏิทินนัดเรียนนักศึกษา</h1>
+            <p>{% if selected_group %}จัดนัดสำหรับ {{ selected_group.group_name }}{% else %}จัดนัดสำหรับทุกกลุ่มที่คุณดูแล{% endif %}</p>
+        </div>
+        <a class="teacher-calendar-primary" href="#new-appointment">
+            <svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#calendar-days"></use></svg>
+            <span>สร้างนัดใหม่</span>
+        </a>
+    </header>
+
+    {% for message in messages %}
+    <p class="teacher-calendar-notice" role="status">{{ message }}</p>
+    {% endfor %}
+    <p id="teacher-send-summary" class="teacher-calendar-notice" role="status" hidden></p>
+
+    <section class="teacher-calendar-toolbar" aria-label="ตัวกรองปฏิทิน">
+        <div>
+            <span>กำลังดู</span>
+            <strong>{% if selected_group %}{{ selected_group.group_name }}{% else %}ทุกกลุ่ม{% endif %}</strong>
+        </div>
+        <nav class="teacher-calendar-group-pills" aria-label="เลือกกลุ่ม">
+            <a class="{% if not selected_group %}is-active{% endif %}" href="{% url 'school:teacher_calendar' %}?month={{ month_start|date:'Y-m' }}">ทุกกลุ่ม</a>
+            {% for group in groups %}
+            <a class="{% if selected_group.pk == group.pk %}is-active{% endif %}" href="{% url 'school:teacher_calendar' %}?group={{ group.pk }}&month={{ month_start|date:'Y-m' }}">{{ group.group_name }} <span>{{ group.active_student_count }}</span></a>
+            {% endfor %}
+        </nav>
+    </section>
+
+    <div class="teacher-calendar-layout">
+        <section class="teacher-section teacher-calendar-board" aria-labelledby="calendar-title">
+            <div class="teacher-calendar-board-head">
+                <div>
+                    <span class="teacher-eyebrow">MONTH VIEW</span>
+                    <h2 id="calendar-title">{{ month_start|date:"F Y" }}</h2>
+                </div>
+                <div class="teacher-calendar-month-actions">
+                    <a href="?{% if selected_group %}group={{ selected_group.pk }}&{% endif %}month={{ previous_month|date:'Y-m' }}" aria-label="เดือนก่อนหน้า">
+                        <svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-left"></use></svg>
+                    </a>
+                    <a href="{% url 'school:teacher_calendar' %}{% if selected_group %}?group={{ selected_group.pk }}{% endif %}">วันนี้</a>
+                    <a href="?{% if selected_group %}group={{ selected_group.pk }}&{% endif %}month={{ next_month|date:'Y-m' }}" aria-label="เดือนถัดไป">
+                        <svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
+                    </a>
+                </div>
+            </div>
+            <div class="teacher-calendar-weekdays" aria-hidden="true">
+                <span>อา.</span><span>จ.</span><span>อ.</span><span>พ.</span><span>พฤ.</span><span>ศ.</span><span>ส.</span>
+            </div>
+            <div class="teacher-calendar-grid">
+                {% timezone "Asia/Bangkok" %}
+                {% for week in calendar_rows %}
+                {% for day in week %}
+                <article class="teacher-calendar-day{% if not day.is_current_month %} is-muted{% endif %}{% if day.is_today %} is-today{% endif %}">
+                    <header>
+                        <time datetime="{{ day.date|date:'Y-m-d' }}">{{ day.date|date:"j" }}</time>
+                        {% if day.is_today %}<span>วันนี้</span>{% endif %}
+                    </header>
+                    <div class="teacher-calendar-events">
+                        {% for event in day.events %}
+                        <div class="teacher-calendar-event">
+                            <strong>{{ event.starts_at|date:"H:i" }} {{ event.title }}</strong>
+                            <small>{{ event.confirmed_count }}/{{ event.participant_count }} ยืนยันแล้ว</small>
+                        </div>
+                        {% empty %}
+                        <span class="teacher-calendar-empty-dot"></span>
+                        {% endfor %}
+                    </div>
+                </article>
+                {% endfor %}
+                {% endfor %}
+                {% endtimezone %}
+            </div>
+        </section>
+
+        <aside class="teacher-calendar-side">
+            <section class="teacher-section teacher-calendar-composer" id="new-appointment" aria-labelledby="new-appointment-title">
+                <div class="teacher-section-heading">
+                    <div>
+                        <span class="teacher-eyebrow">NEW APPOINTMENT</span>
+                        <h2 id="new-appointment-title">สร้างนัดและส่ง LINE</h2>
+                    </div>
+                    <span>{{ student_count }} คน</span>
+                </div>
+                <form method="post" data-teacher-calendar-form>
+                    {% csrf_token %}
+                    <label>
+                        <span>กลุ่ม</span>
+                        <select name="group" data-calendar-group-select>
+                            <option value="">ทุกกลุ่มที่ดูแล</option>
+                            {% for group in groups %}
+                            <option value="{{ group.pk }}"{% if selected_group.pk == group.pk %} selected{% endif %}>{{ group.group_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label>
+                        <span>หัวข้อนัด</span>
+                        <input name="title" required maxlength="255" placeholder="เช่น นัดเรียนเสริม / ติวบทที่ 3">
+                    </label>
+                    <div class="teacher-calendar-form-row">
+                        <label><span>วันที่</span><input name="date" type="date" required></label>
+                        <label><span>เวลา</span><input name="time" type="time" required></label>
+                    </div>
+                    <label>
+                        <span>สถานที่</span>
+                        <input name="location" maxlength="500" placeholder="ห้องเรียน / Zoom / Church">
+                    </label>
+                    <label>
+                        <span>ลิงก์เข้าร่วม</span>
+                        <input name="meeting_url" type="url" maxlength="1000" placeholder="https://...">
+                    </label>
+                    <label>
+                        <span>รายละเอียด</span>
+                        <textarea name="details" rows="3" placeholder="รายละเอียดสั้น ๆ ที่จะแสดงใน LINE"></textarea>
+                    </label>
+                    <div class="teacher-calendar-picker">
+                        <div class="teacher-calendar-picker-head">
+                            <strong>เลือกนักเรียน</strong>
+                            <button type="button" data-select-visible-students>เลือกทั้งหมด</button>
+                        </div>
+                        <div class="teacher-calendar-student-list">
+                            {% for student in students %}
+                            <label>
+                                <input type="checkbox" name="students" value="{{ student.pk }}">
+                                <span>{{ student.person.full_name }}<small>{{ student.student_id }} · {{ student.group.group_name }}{% if not student.person.line_user_id %} · ยังไม่เชื่อม LINE{% endif %}</small></span>
+                            </label>
+                            {% empty %}
+                            <div class="teacher-calendar-student-empty">ยังไม่มีนักเรียนในขอบเขตนี้</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <button class="teacher-calendar-submit" type="submit" disabled>
+                        <svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#check-circle"></use></svg>
+                        <span>สร้างนัดและส่ง LINE</span>
+                    </button>
+                </form>
+            </section>
+
+            <section class="teacher-section teacher-calendar-upcoming" aria-labelledby="upcoming-title">
+                <div class="teacher-section-heading">
+                    <div>
+                        <span class="teacher-eyebrow">UP NEXT</span>
+                        <h2 id="upcoming-title">นัดถัดไป</h2>
+                    </div>
+                    <span>{{ upcoming_appointments|length }} รายการ</span>
+                </div>
+                <div class="teacher-calendar-upcoming-list">
+                    {% timezone "Asia/Bangkok" %}
+                    {% for appointment in upcoming_appointments %}
+                    <article>
+                        <time datetime="{{ appointment.starts_at|date:'c' }}">{{ appointment.starts_at|date:"d M H:i" }}</time>
+                        <div>
+                            <strong>{{ appointment.title }}</strong>
+                            <small>{{ appointment.participant_count }} คน · ยืนยันแล้ว {{ appointment.confirmed_count }} คน</small>
+                        </div>
+                    </article>
+                    {% empty %}
+                    <div class="teacher-calendar-student-empty">ยังไม่มีนัดที่กำลังจะมาถึง</div>
+                    {% endfor %}
+                    {% endtimezone %}
+                </div>
+            </section>
+        </aside>
+    </div>
+</div>
+{{ send_queue|json_script:"teacher-appointment-queue" }}
+<div hidden data-notify-url-template="{% url 'school:teacher_calendar_notify' 0 %}"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'school/js/teacher_calendar.js' %}?v=20260918-calendar-1" defer></script>
+{% endblock %}

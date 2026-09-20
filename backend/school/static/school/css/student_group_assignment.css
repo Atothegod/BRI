@@ -1,0 +1,662 @@
+.student-group-page {
+    --assignment-forest: #12271d;
+    --assignment-sage: #425b46;
+    --assignment-gold: #c2a256;
+    --assignment-clay: #ad4e30;
+    --assignment-blue: #365f7f;
+    --assignment-border: #cbd6cc;
+    --assignment-soft: #eef3ef;
+    --assignment-muted: #526157;
+}
+
+.student-group-page .page-heading {
+    min-height: 142px;
+    color: #ffffff;
+    background: var(--assignment-forest);
+    border-color: #091a12;
+    border-left-color: var(--assignment-gold);
+    box-shadow: 0 14px 32px rgba(18, 39, 29, 0.16);
+}
+
+.student-group-page .page-heading span {
+    color: #e8d392;
+}
+
+.student-group-page .page-heading h1 {
+    color: #ffffff;
+}
+
+.student-group-page .page-heading p {
+    color: #e1eae3;
+}
+
+.assignment-stats {
+    display: grid;
+    margin: 16px 0;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.assignment-stats > div {
+    min-width: 0;
+    min-height: 96px;
+    padding: 15px 17px;
+    background: #ffffff;
+    border: 1px solid var(--assignment-border);
+    border-top: 4px solid var(--assignment-sage);
+    border-radius: 8px;
+    box-shadow: 0 8px 22px rgba(18, 39, 29, 0.05);
+}
+
+.assignment-stats > div:nth-child(2) {
+    border-top-color: var(--assignment-gold);
+}
+
+.assignment-stats > div:nth-child(3) {
+    border-top-color: var(--assignment-clay);
+}
+
+.assignment-stats > div:nth-child(4) {
+    border-top-color: var(--assignment-blue);
+}
+
+.assignment-stats span,
+.assignment-stats strong {
+    display: block;
+}
+
+.assignment-stats span {
+    color: var(--assignment-muted);
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+.assignment-stats strong {
+    margin-top: 7px;
+    color: var(--assignment-forest);
+    font-size: 1.7rem;
+    line-height: 1;
+}
+
+.assignment-board {
+    overflow: hidden;
+    background: #ffffff;
+    border: 1px solid var(--assignment-border);
+    border-radius: 8px;
+    box-shadow: 0 12px 30px rgba(18, 39, 29, 0.08);
+}
+
+.assignment-board-heading {
+    display: flex;
+    min-height: 78px;
+    padding: 15px 18px;
+    border-bottom: 1px solid #dce4dd;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+}
+
+.assignment-board-heading > div:first-child span {
+    display: block;
+    margin-bottom: 2px;
+    color: var(--assignment-sage);
+    font-size: 0.7rem;
+    font-weight: 800;
+}
+
+.assignment-board-heading h2 {
+    margin: 0;
+    color: var(--assignment-forest);
+    font-size: 1.18rem;
+    line-height: 1.25;
+}
+
+.assignment-board-legend {
+    display: flex;
+    min-height: 38px;
+    padding: 8px 10px;
+    color: #35453a;
+    background: #edf3ee;
+    border: 1px solid #d1ddd3;
+    border-radius: 6px;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.7rem;
+}
+
+.assignment-board-legend svg {
+    width: 17px;
+    height: 17px;
+    flex: 0 0 auto;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+}
+
+.assignment-board-status {
+    display: flex;
+    min-height: 42px;
+    padding: 9px 18px;
+    color: var(--assignment-muted);
+    background: #f8faf8;
+    border-bottom: 1px solid #dce4dd;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.72rem;
+}
+
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    flex: 0 0 auto;
+    background: var(--assignment-sage);
+    border-radius: 50%;
+}
+
+.assignment-board-status[data-state="saving"] {
+    color: #604913;
+    background: #fff8e7;
+}
+
+.assignment-board-status[data-state="saving"] .status-indicator {
+    background: var(--assignment-gold);
+    animation: board-status-pulse 0.8s ease-in-out infinite alternate;
+}
+
+.assignment-board-status[data-state="success"] {
+    color: #174329;
+    background: #e8f3eb;
+}
+
+.assignment-board-status[data-state="error"] {
+    color: #783118;
+    background: #fff0e9;
+}
+
+.assignment-board-status[data-state="error"] .status-indicator {
+    background: var(--assignment-clay);
+}
+
+.assignment-board-scroll {
+    width: 100%;
+    padding: 14px;
+    overflow-x: auto;
+    background: #f4f7f4;
+    scrollbar-color: #8ea091 #e2e8e3;
+    scrollbar-width: thin;
+}
+
+.assignment-board-columns {
+    display: flex;
+    width: max-content;
+    min-width: 100%;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.assignment-lane {
+    display: flex;
+    width: 304px;
+    min-width: 304px;
+    max-height: 66vh;
+    overflow: hidden;
+    background: #e8eee9;
+    border: 1px solid #c9d5cb;
+    border-top: 4px solid var(--assignment-sage);
+    border-radius: 8px;
+    flex-direction: column;
+    transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.assignment-lane--unassigned {
+    position: sticky;
+    left: 0;
+    z-index: 4;
+    border-top-color: var(--assignment-gold);
+    box-shadow: 8px 0 20px rgba(18, 39, 29, 0.09);
+}
+
+.assignment-lane--source-only {
+    border-top-color: #7f8b82;
+}
+
+.assignment-lane.is-drag-over,
+.assignment-lane.is-receiving {
+    border-color: var(--assignment-gold);
+    box-shadow: 0 0 0 3px rgba(194, 162, 86, 0.26);
+    transform: translateY(-2px);
+}
+
+.assignment-lane-heading {
+    display: flex;
+    min-height: 70px;
+    padding: 12px 13px;
+    background: #ffffff;
+    border-bottom: 1px solid #cfdbd1;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.assignment-lane-heading div {
+    min-width: 0;
+}
+
+.assignment-lane-heading span,
+.assignment-lane-heading h3 {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.assignment-lane-heading span {
+    color: var(--assignment-muted);
+    font-size: 0.66rem;
+    font-weight: 700;
+}
+
+.assignment-lane-heading h3 {
+    margin: 3px 0 0;
+    color: var(--assignment-forest);
+    font-size: 0.9rem;
+    line-height: 1.2;
+}
+
+.assignment-lane-heading > strong {
+    display: grid;
+    min-width: 30px;
+    height: 30px;
+    padding: 0 6px;
+    color: #ffffff;
+    background: var(--assignment-sage);
+    border-radius: 4px;
+    font-size: 0.72rem;
+    place-items: center;
+}
+
+.assignment-lane--unassigned .assignment-lane-heading > strong {
+    color: var(--assignment-forest);
+    background: #f2dfa7;
+}
+
+.assignment-lane-list {
+    display: grid;
+    min-height: 250px;
+    padding: 10px;
+    overflow-y: auto;
+    align-content: start;
+    gap: 8px;
+    overscroll-behavior: contain;
+    scrollbar-color: #9baa9d transparent;
+    scrollbar-width: thin;
+}
+
+.student-board-card {
+    min-width: 0;
+    padding: 11px;
+    background: #ffffff;
+    border: 1px solid #ccd7ce;
+    border-left: 4px solid var(--assignment-sage);
+    border-radius: 7px;
+    box-shadow: 0 3px 10px rgba(18, 39, 29, 0.05);
+    cursor: grab;
+    transition: border-color 140ms ease, box-shadow 140ms ease, opacity 140ms ease, transform 140ms ease;
+}
+
+.assignment-lane--unassigned .student-board-card {
+    border-left-color: var(--assignment-gold);
+}
+
+.student-board-card:hover,
+.student-board-card:focus-visible {
+    border-color: #8fa391;
+    box-shadow: 0 7px 16px rgba(18, 39, 29, 0.1);
+    outline: none;
+    transform: translateY(-1px);
+}
+
+.student-board-card:active {
+    cursor: grabbing;
+}
+
+.student-board-card.is-dragging {
+    opacity: 0.4;
+}
+
+.student-board-card.is-saving {
+    opacity: 0.58;
+    pointer-events: none;
+}
+
+.student-board-card.is-just-moved {
+    border-color: var(--assignment-gold);
+    box-shadow: 0 0 0 3px rgba(194, 162, 86, 0.24);
+}
+
+.student-board-card header {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) 30px;
+    align-items: center;
+    gap: 9px;
+}
+
+.student-board-avatar {
+    display: grid;
+    width: 36px;
+    height: 36px;
+    color: var(--assignment-forest);
+    background: #e1eae3;
+    border-radius: 50%;
+    font-size: 0.76rem;
+    font-weight: 850;
+    place-items: center;
+}
+
+.student-board-card header div {
+    min-width: 0;
+}
+
+.student-board-card header strong,
+.student-board-card header small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.student-board-card header strong {
+    color: var(--assignment-forest);
+    font-size: 0.78rem;
+}
+
+.student-board-card header small {
+    margin-top: 2px;
+    color: var(--assignment-muted);
+    font-size: 0.65rem;
+}
+
+.student-move-button {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    color: var(--assignment-sage);
+    background: #f6f8f6;
+    border: 1px solid #d2ddd4;
+    border-radius: 50%;
+    cursor: pointer;
+    place-items: center;
+}
+
+.student-move-button:hover,
+.student-move-button:focus-visible {
+    color: #ffffff;
+    background: var(--assignment-forest);
+    border-color: var(--assignment-forest);
+}
+
+.student-move-button svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+}
+
+.student-board-card footer {
+    display: flex;
+    margin-top: 9px;
+    padding-top: 8px;
+    color: var(--assignment-muted);
+    border-top: 1px solid #e2e8e3;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 0.63rem;
+}
+
+.student-board-card footer span,
+.student-board-card footer small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.student-payment-status {
+    display: inline-flex;
+    min-height: 22px;
+    padding: 3px 7px;
+    border: 1px solid;
+    border-radius: 4px;
+    align-items: center;
+    font-weight: 800;
+}
+
+.student-payment-status--paid {
+    color: #174329;
+    background: #e8f3eb;
+    border-color: #a9c9b2;
+}
+
+.student-payment-status--unpaid {
+    color: #704f0a;
+    background: #fff6dc;
+    border-color: #d9bd6d;
+}
+
+.assignment-lane-empty {
+    display: grid;
+    min-height: 140px;
+    padding: 20px;
+    color: #6c786f;
+    border: 2px dashed #bdc9bf;
+    border-radius: 7px;
+    place-items: center;
+    font-size: 0.7rem;
+    text-align: center;
+}
+
+.assignment-lane-empty[hidden] {
+    display: none;
+}
+
+.student-move-dialog {
+    width: min(480px, calc(100vw - 28px));
+    max-height: min(680px, calc(100vh - 36px));
+    padding: 0;
+    overflow: hidden;
+    color: var(--assignment-forest);
+    background: #ffffff;
+    border: 1px solid var(--assignment-border);
+    border-radius: 8px;
+    box-shadow: 0 26px 80px rgba(9, 26, 18, 0.34);
+}
+
+.student-move-dialog::backdrop {
+    background: rgba(9, 26, 18, 0.62);
+    backdrop-filter: blur(3px);
+}
+
+.student-move-dialog > header {
+    padding: 18px 20px;
+    color: #ffffff;
+    background: var(--assignment-forest);
+    border-bottom: 3px solid var(--assignment-gold);
+}
+
+.student-move-dialog > header span {
+    color: #e8d392;
+    font-size: 0.68rem;
+    font-weight: 800;
+}
+
+.student-move-dialog > header h2 {
+    margin: 3px 0 0;
+    color: #ffffff;
+    font-size: 1.14rem;
+}
+
+.student-move-dialog > header p {
+    margin: 6px 0 0;
+    color: #dce6de;
+    font-size: 0.72rem;
+}
+
+.student-move-options {
+    display: grid;
+    max-height: 430px;
+    padding: 12px;
+    overflow-y: auto;
+    gap: 7px;
+}
+
+.student-move-options button {
+    display: block;
+    width: 100%;
+    min-height: 54px;
+    padding: 9px 11px;
+    color: var(--assignment-forest);
+    background: #ffffff;
+    border: 1px solid #ccd7ce;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: left;
+}
+
+.student-move-options button:hover,
+.student-move-options button:focus-visible {
+    background: #edf3ee;
+    border-color: var(--assignment-sage);
+}
+
+.student-move-options button.is-current,
+.student-move-options button:disabled {
+    color: #667269;
+    background: #edf0ed;
+    border-color: #d8dfd9;
+    cursor: default;
+}
+
+.student-move-options span,
+.student-move-options small {
+    display: block;
+}
+
+.student-move-options span {
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.student-move-options small {
+    margin-top: 2px;
+    color: var(--assignment-muted);
+    font-size: 0.65rem;
+}
+
+.student-move-dialog > footer {
+    padding: 11px 12px;
+    background: #f4f7f4;
+    border-top: 1px solid #dce4dd;
+}
+
+.student-move-dialog > footer button {
+    width: 100%;
+    min-height: 42px;
+    color: var(--assignment-forest);
+    background: #ffffff;
+    border: 1px solid #9eaea1;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 750;
+}
+
+.student-group-page :focus-visible {
+    outline: 3px solid var(--assignment-gold);
+    outline-offset: 2px;
+}
+
+@keyframes board-status-pulse {
+    from { opacity: 0.45; }
+    to { opacity: 1; }
+}
+
+@media (max-width: 900px) {
+    .assignment-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .assignment-board-heading {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .assignment-board-legend {
+        width: 100%;
+    }
+}
+
+@media (max-width: 640px) {
+    .student-group-page .page-heading {
+        min-height: 154px;
+    }
+
+    .assignment-stats {
+        gap: 9px;
+    }
+
+    .assignment-stats > div {
+        min-height: 92px;
+        padding: 14px;
+    }
+
+    .assignment-stats strong {
+        font-size: 1.5rem;
+    }
+
+    .assignment-board-heading {
+        padding: 14px;
+    }
+
+    .assignment-board-legend {
+        align-items: flex-start;
+    }
+
+    .assignment-board-status {
+        padding-inline: 14px;
+    }
+
+    .assignment-board-scroll {
+        padding: 10px;
+        scroll-snap-type: x proximity;
+    }
+
+    .assignment-lane {
+        width: calc(100vw - 50px);
+        min-width: calc(100vw - 50px);
+        max-height: 62vh;
+        scroll-snap-align: start;
+    }
+
+    .assignment-lane--unassigned {
+        position: static;
+        box-shadow: none;
+    }
+
+    .student-move-button {
+        width: 34px;
+        height: 34px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .assignment-board-status[data-state="saving"] .status-indicator {
+        animation: none;
+    }
+
+    .assignment-lane,
+    .student-board-card {
+        transition: none;
+    }
+}

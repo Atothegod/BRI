@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% load static tz %}
+
+{% block title %}Student Dashboard | BRI School of Fivefold{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'school/css/student_portal.css' %}?v=20260918-student-1">
+{% endblock %}
+
+{% block content %}
+<main class="student-portal" data-student-portal>
+    <header class="student-topbar">
+        <a class="student-brand" href="{% url 'school:student_dashboard' %}" aria-label="BRI School of Fivefold">
+            {% include "school/includes/brand_logo.html" with variant="nav" %}
+        </a>
+        <nav aria-label="เมนูนักเรียน">
+            <a class="is-active" href="{% url 'school:student_dashboard' %}">Dashboard</a>
+            <a href="{% url 'school:student_homework_upload' %}">การบ้าน</a>
+        </nav>
+    </header>
+
+    {% if student_state == "ready" %}
+    <section class="student-hero" aria-labelledby="student-dashboard-title">
+        <div>
+            <span>BRI STUDENT DASHBOARD</span>
+            <h1 id="student-dashboard-title">สวัสดี {{ student.person.nickname|default:student.person.first_name }}</h1>
+            <p>{{ student.group.group_name|default:"ยังไม่มีกลุ่ม" }}{% if student.group.grade_level %} · {{ student.group.grade_level }}{% endif %}</p>
+        </div>
+        <div class="student-id-card">
+            <small>รหัสนักเรียน</small>
+            <strong>{{ student.student_id }}</strong>
+        </div>
+    </section>
+
+    <section class="student-metrics" aria-label="ภาพรวมการเรียน">
+        <article>
+            <span>เข้าเรียน</span>
+            <strong>{% if learning.attendance_percent is not None %}{{ learning.attendance_percent }}%{% else %}-{% endif %}</strong>
+            <small>{{ learning.attendance_attended }}/{{ learning.attendance_total }} ครั้ง</small>
+        </article>
+        <article>
+            <span>ส่งการบ้าน</span>
+            <strong>{% if learning.homework_percent is not None %}{{ learning.homework_percent }}%{% else %}-{% endif %}</strong>
+            <small>{{ learning.homework_submitted }}/{{ learning.homework_total }} งาน</small>
+        </article>
+        <article>
+            <span>สถานะชำระเงิน</span>
+            <strong>{% if student.is_paid %}ผ่าน{% else %}รอตรวจ{% endif %}</strong>
+            <small>{% if student.is_paid %}พร้อมเรียน{% elif student.payment_slip %}ส่งสลิปแล้ว{% else %}ยังไม่ส่งสลิป{% endif %}</small>
+        </article>
+    </section>
+
+    <div class="student-grid">
+        <section class="student-panel student-homework-preview" aria-labelledby="student-homework-title">
+            <div class="student-panel-heading">
+                <div>
+                    <span>HOMEWORK</span>
+                    <h2 id="student-homework-title">งานที่ต้องส่ง</h2>
+                </div>
+                <a href="{% url 'school:student_homework_upload' %}">ส่งการบ้าน</a>
+            </div>
+            <div class="student-task-list">
+                {% for row in assignment_rows %}
+                <article class="{% if row.is_done %}is-done{% elif row.is_late %}is-late{% endif %}">
+                    <time datetime="{{ row.assignment.due_date|date:'Y-m-d' }}">{{ row.assignment.due_date|date:"d M" }}</time>
+                    <div>
+                        <strong>{{ row.assignment.title }}</strong>
+                        <small>{% if row.is_done %}ส่งแล้ว{% elif row.is_late %}เลยกำหนดแล้ว{% else %}รอส่ง{% endif %}</small>
+                    </div>
+                </article>
+                {% empty %}
+                <div class="student-empty">ยังไม่มีการบ้านในกลุ่มนี้</div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="student-panel" aria-labelledby="student-appointments-title">
+            <div class="student-panel-heading">
+                <div>
+                    <span>APPOINTMENTS</span>
+                    <h2 id="student-appointments-title">นัดเรียนถัดไป</h2>
+                </div>
+            </div>
+            <div class="student-task-list">
+                {% timezone "Asia/Bangkok" %}
+                {% for participant in appointment_rows %}
+                <article>
+                    <time datetime="{{ participant.appointment.starts_at|date:'c' }}">{{ participant.appointment.starts_at|date:"d M H:i" }}</time>
+                    <div>
+                        <strong>{{ participant.appointment.title }}</strong>
+                        <small>{{ participant.get_response_status_display }}{% if participant.appointment.location %} · {{ participant.appointment.location }}{% endif %}</small>
+                    </div>
+                </article>
+                {% empty %}
+                <div class="student-empty">ยังไม่มีนัดเรียนที่กำลังจะมาถึง</div>
+                {% endfor %}
+                {% endtimezone %}
+            </div>
+        </section>
+
+        <section class="student-panel student-attendance-panel" aria-labelledby="student-attendance-title">
+            <div class="student-panel-heading">
+                <div>
+                    <span>ATTENDANCE</span>
+                    <h2 id="student-attendance-title">เช็กชื่อล่าสุด</h2>
+                </div>
+            </div>
+            <div class="student-attendance-list">
+                {% for record in recent_attendance %}
+                <article>
+                    <time datetime="{{ record.attendance_session.date|date:'Y-m-d' }}">{{ record.attendance_session.date|date:"d M" }}</time>
+                    <strong>{{ record.get_status_display }}</strong>
+                </article>
+                {% empty %}
+                <div class="student-empty">ยังไม่มีข้อมูลเช็กชื่อ</div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+    {% else %}
+    <section class="student-state" aria-labelledby="student-state-title">
+        {% include "school/includes/brand_logo.html" with variant="success" %}
+        {% if student_state == "missing_line" %}
+        <span>LINE REQUIRED</span>
+        <h1 id="student-state-title">เปิดหน้านี้ผ่าน LINE</h1>
+        <p>ระบบต้องเชื่อมบัญชี LINE ก่อนเพื่อแสดง dashboard ของนักเรียน</p>
+        {% elif student_state == "not_ready" %}
+        <span>STUDENT ACCESS</span>
+        <h1 id="student-state-title">ยังไม่เปิด dashboard นักเรียน</h1>
+        <p>บัญชี {{ person.full_name }} ยังไม่ได้อยู่ในสถานะนักเรียนที่พร้อมใช้งาน</p>
+        {% else %}
+        <span>NOT FOUND</span>
+        <h1 id="student-state-title">ไม่พบข้อมูลนักเรียน</h1>
+        <p>กรุณาตรวจสอบว่าลงทะเบียนด้วยบัญชี LINE เดียวกัน</p>
+        {% endif %}
+        <a href="{{ line_return_url }}" data-liff-close>กลับไปยัง LINE</a>
+    </section>
+    {% endif %}
+</main>
+{% endblock %}
+
+{% block extra_js %}
+{% include "school/includes/liff_bridge.html" %}
+{% endblock %}

@@ -1,0 +1,7 @@
+Source: kongvut/thai-province-data
+URL: https://github.com/kongvut/thai-province-data
+Raw file: api/latest/province_with_district_and_sub_district.json
+License: MIT
+
+This project stores a reduced static copy containing only Thai province,
+district, and subdistrict display names for the registration address dropdown.

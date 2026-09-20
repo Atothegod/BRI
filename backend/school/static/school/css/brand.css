@@ -1,0 +1,14 @@
+:root {
+    /* BRI color_theme.jpg: core palette; darker orange is for readable status text. */
+    --bri-forest: #12271d;
+    --bri-sage: #425b46;
+    --bri-gold: #c2a256;
+    --bri-ivory: #f3f0e8;
+    --bri-terracotta: #c25d37;
+    --bri-warning-ink: #a44928;
+    --bri-warning-soft: #fbf0eb;
+    --bri-border: #dce1dc;
+    --bri-success-soft: #edf2ed;
+    --bri-card-background: #f3f0e8;
+    --bri-page-background: #ffffff;
+}

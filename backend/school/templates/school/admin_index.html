@@ -1,0 +1,43 @@
+{% extends "admin/index.html" %}
+{% load static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'school/css/admin.css' %}?v=20260916-admin-nav-6">
+{% endblock %}
+
+{% block content %}
+{% if request.user.is_superuser %}
+<div class="bri-admin-dashboard">
+    <section class="bri-admin-hero" aria-labelledby="bri-admin-title">
+        <div>
+            <span class="bri-admin-eyebrow">BRI School Operations</span>
+            <h2 id="bri-admin-title">จัดการโรงเรียนได้จากที่เดียว</h2>
+            <p>ทางลัดสำหรับงานประจำวันของทีมรับสมัคร ผู้สอน และงานติดตามนักเรียน</p>
+        </div>
+        <a class="bri-admin-hero__action" href="{% url 'school:admin_overview_dashboard' %}">
+            เปิดภาพรวมโรงเรียน
+        </a>
+    </section>
+
+    <div class="bri-admin-quicklinks" aria-label="ทางลัดงานหลัก">
+        <a class="bri-admin-card bri-admin-card--students" href="{% url 'school:student_group_assignment' %}">
+            <span class="bri-admin-card__icon" aria-hidden="true">01</span>
+            <strong>จัดกลุ่มผู้เรียน</strong>
+            <span>จัดนักศึกษาเข้ากลุ่มผู้สอนและตรวจสถานะกลุ่ม</span>
+        </a>
+        <a class="bri-admin-card bri-admin-card--appointments" href="{% url 'school:appointment_schedule' %}">
+            <span class="bri-admin-card__icon" aria-hidden="true">02</span>
+            <strong>นัดหมายและ LINE</strong>
+            <span>สร้างนัดสัมภาษณ์ ปฐมนิเทศ และส่งแจ้งเตือน</span>
+        </a>
+        <a class="bri-admin-card bri-admin-card--overview" href="{% url 'school:admin_overview_dashboard' %}">
+            <span class="bri-admin-card__icon" aria-hidden="true">03</span>
+            <strong>ภาพรวมโรงเรียน</strong>
+            <span>ดูสถานะผู้สมัคร นักเรียน และการดำเนินงานล่าสุด</span>
+        </a>
+    </div>
+</div>
+{% endif %}
+{{ block.super }}
+{% endblock %}

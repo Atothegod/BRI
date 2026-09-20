@@ -4,8 +4,23 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
+def env_bool(name, default=False):
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.lower() in {"1", "true", "yes", "on"}
+
+
+def env_int(name, default=0):
+    value = os.environ.get(name)
+    if value is None or value == "":
+        return default
+    return int(value)
+
+
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-local-dev-key")
-DEBUG = os.environ.get("DJANGO_DEBUG", "0").lower() in {"1", "true", "yes", "on"}
+DEBUG = env_bool("DJANGO_DEBUG", False)
 
 ALLOWED_HOSTS = [
     host.strip()
@@ -28,31 +43,143 @@ USE_X_FORWARDED_HOST = os.environ.get("DJANGO_USE_X_FORWARDED_HOST", "1").lower(
     "on",
 }
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-SECURE_SSL_REDIRECT = os.environ.get("DJANGO_SECURE_SSL_REDIRECT", "0").lower() in {
-    "1",
-    "true",
-    "yes",
-    "on",
-}
-SESSION_COOKIE_SECURE = os.environ.get(
-    "DJANGO_SESSION_COOKIE_SECURE",
-    "0" if DEBUG else "1",
-).lower() in {"1", "true", "yes", "on"}
-CSRF_COOKIE_SECURE = os.environ.get(
-    "DJANGO_CSRF_COOKIE_SECURE",
-    "0" if DEBUG else "1",
-).lower() in {"1", "true", "yes", "on"}
+SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", False)
+SESSION_COOKIE_SECURE = env_bool("DJANGO_SESSION_COOKIE_SECURE", not DEBUG)
+CSRF_COOKIE_SECURE = env_bool("DJANGO_CSRF_COOKIE_SECURE", not DEBUG)
 
 INSTALLED_APPS = [
+    "unfold",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.sites",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
     "accounts",
     "school",
 ]
+
+UNFOLD = {
+    "SITE_TITLE": "BRI Admin",
+    "SITE_HEADER": "BRI School Admin",
+    "SITE_SUBHEADER": "School of Fivefold",
+    "SITE_URL": "/",
+    "SITE_LOGO": "/static/school/images/logo_white.png",
+    "THEME": "light",
+    "SHOW_HISTORY": True,
+    "SHOW_VIEW_ON_SITE": True,
+    "SHOW_BACK_BUTTON": True,
+    "COLORS": {
+        "base": {
+            "50": "#fdfbf6",
+            "100": "#f3f0e8",
+            "200": "#e4ded0",
+            "300": "#cfc4ae",
+            "400": "#a99d88",
+            "500": "#7f7565",
+            "600": "#5f584c",
+            "700": "#464036",
+            "800": "#2f2b24",
+            "900": "#1f1c18",
+            "950": "#11100d",
+        },
+        "primary": {
+            "50": "#eef4ef",
+            "100": "#dbe7dd",
+            "200": "#bdcfbf",
+            "300": "#93aa96",
+            "400": "#68856e",
+            "500": "#425b46",
+            "600": "#344c3a",
+            "700": "#283d2f",
+            "800": "#1d3024",
+            "900": "#12271d",
+            "950": "#07150f",
+        },
+        "font": {
+            "subtle-light": "#425b46",
+            "subtle-dark": "#d3ddd4",
+            "default-light": "#2f2b24",
+            "default-dark": "#f3f0e8",
+            "important-light": "#12271d",
+            "important-dark": "#ffffff",
+        },
+    },
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": False,
+        "navigation": [
+            {
+                "title": "ศูนย์ควบคุม",
+                "separator": False,
+                "items": [
+                    {
+                        "title": "หน้าแอดมิน",
+                        "icon": "home",
+                        "link": "/admin/",
+                    },
+                    {
+                        "title": "ภาพรวมโรงเรียน",
+                        "icon": "dashboard",
+                        "link": "/school-admin/dashboard/",
+                    },
+                ],
+            },
+            {
+                "title": "งานโรงเรียน",
+                "separator": True,
+                "items": [
+                    {
+                        "title": "จัดกลุ่มผู้เรียน",
+                        "icon": "groups",
+                        "link": "/school-admin/student-groups/",
+                    },
+                    {
+                        "title": "นัดหมายและ LINE",
+                        "icon": "event",
+                        "link": "/school-admin/appointments/",
+                    },
+                ],
+            },
+            {
+                "title": "ฐานข้อมูล",
+                "separator": True,
+                "items": [
+                    {
+                        "title": "ผู้สมัคร",
+                        "icon": "person",
+                        "link": "/admin/school/person/",
+                    },
+                    {
+                        "title": "นักเรียน",
+                        "icon": "school",
+                        "link": "/admin/school/student/",
+                    },
+                    {
+                        "title": "กลุ่มผู้สอน",
+                        "icon": "supervisor_account",
+                        "link": "/admin/school/teachergroup/",
+                    },
+                    {
+                        "title": "ผู้สอน",
+                        "icon": "co_present",
+                        "link": "/admin/accounts/teacher/",
+                    },
+                    {
+                        "title": "ผู้ใช้งาน",
+                        "icon": "manage_accounts",
+                        "link": "/admin/accounts/user/",
+                    },
+                ],
+            },
+        ],
+    },
+}
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -60,6 +187,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -69,7 +197,7 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -91,6 +219,8 @@ DATABASES = {
         "PASSWORD": os.environ.get("POSTGRES_PASSWORD", ""),
         "HOST": os.environ.get("POSTGRES_HOST", "db"),
         "PORT": os.environ.get("POSTGRES_PORT", "5432"),
+        "CONN_MAX_AGE": env_int("DJANGO_DB_CONN_MAX_AGE", 60),
+        "CONN_HEALTH_CHECKS": env_bool("DJANGO_DB_CONN_HEALTH_CHECKS", True),
     }
 }
 
@@ -122,11 +252,62 @@ MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "accounts.User"
 LOGIN_URL = "school:login"
-LOGIN_REDIRECT_URL = "school:teacher_dashboard"
-LINE_RETURN_URL = os.environ.get("LINE_RETURN_URL", "https://line.me/R/")
+LOGIN_REDIRECT_URL = "school:post_login_redirect"
+SITE_ID = 1
+
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
+]
+
+GOOGLE_OAUTH_CLIENT_ID = os.environ.get("GOOGLE_OAUTH_CLIENT_ID", "").strip()
+GOOGLE_OAUTH_CLIENT_SECRET = os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET", "").strip()
+GOOGLE_OAUTH_ENABLED = bool(GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET)
+
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
+SOCIALACCOUNT_QUERY_EMAIL = True
+SOCIALACCOUNT_ADAPTER = "accounts.adapters.TeacherGoogleSocialAccountAdapter"
+ACCOUNT_LOGIN_METHODS = {"username", "email"}
+
+GOOGLE_PROVIDER_SETTINGS = {
+    "SCOPE": ["profile", "email"],
+    "AUTH_PARAMS": {"access_type": "online"},
+    "OAUTH_PKCE_ENABLED": True,
+    "VERIFIED_EMAIL": True,
+}
+if GOOGLE_OAUTH_ENABLED:
+    GOOGLE_PROVIDER_SETTINGS["APPS"] = [
+        {
+            "client_id": GOOGLE_OAUTH_CLIENT_ID,
+            "secret": GOOGLE_OAUTH_CLIENT_SECRET,
+            "key": "",
+        }
+    ]
+SOCIALACCOUNT_PROVIDERS = {"google": GOOGLE_PROVIDER_SETTINGS}
+
+LINE_RETURN_URL = os.environ.get(
+    "LINE_RETURN_URL",
+    "https://line.me/R/oaMessage/%40522lxoja",
+)
 LINE_LIFF_ID = os.environ.get("LINE_LIFF_ID", "")
+LINE_PAYMENT_LIFF_URL = os.environ.get(
+    "LINE_PAYMENT_LIFF_URL", "https://liff.line.me/2011088039-wZDRAbFk"
+).strip() or "https://liff.line.me/2011088039-wZDRAbFk"
+LINE_ANNOUNCEMENT_LIFF_URL = os.environ.get(
+    "LINE_ANNOUNCEMENT_LIFF_URL", "https://liff.line.me/2011088039-52ryg2t9"
+).strip() or "https://liff.line.me/2011088039-52ryg2t9"
+LINE_LIFF_ENABLED = env_bool("LINE_LIFF_ENABLED", not DEBUG)
 LINE_LOGIN_CHANNEL_ID = os.environ.get("LINE_LOGIN_CHANNEL_ID", "")
-LINE_LIFF_ALLOW_UNVERIFIED_PROFILE = os.environ.get(
+LINE_LIFF_ALLOW_UNVERIFIED_PROFILE = env_bool(
     "LINE_LIFF_ALLOW_UNVERIFIED_PROFILE",
-    "1" if DEBUG else "0",
-).lower() in {"1", "true", "yes", "on"}
+    DEBUG,
+)
+LINE_MESSAGING_CHANNEL_ACCESS_TOKEN = os.environ.get(
+    "LINE_MESSAGING_CHANNEL_ACCESS_TOKEN",
+    "",
+).strip()
+PUBLIC_BASE_URL = os.environ.get(
+    "PUBLIC_BASE_URL",
+    "https://bri.brightromancechurch.org",
+).strip()

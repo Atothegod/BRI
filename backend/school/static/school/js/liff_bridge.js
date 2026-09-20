@@ -67,10 +67,6 @@
             withLoginOnExternalBrowser: true,
         });
 
-        if (redirectToLiffState()) {
-            return;
-        }
-
         if (!liff.isLoggedIn()) {
             liff.login({ redirectUri: window.location.href });
             return;
@@ -98,6 +94,10 @@
         }
 
         updateLineFields(data.profile || {});
+
+        if (redirectToLiffState()) {
+            return;
+        }
 
         if (config.dataset.reloadOnSync === "true" && config.dataset.lineKnown !== "true") {
             window.location.reload();

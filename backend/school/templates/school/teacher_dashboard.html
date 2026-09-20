@@ -1,73 +1,195 @@
-{% extends "base.html" %}
+{% extends "school/teacher_dashboard_base.html" %}
 {% load static %}
 
-{% block title %}Dashboard ผู้สอน | BRI School of Fivefold{% endblock %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/registration.css' %}">
-{% endblock %}
-
-{% block content %}
-<main class="dashboard-page">
-    <header class="dashboard-topbar">
-        <a class="mobile-brand" href="{% url 'school:teacher_dashboard' %}" aria-label="BRI School of Fivefold">
-            <strong>BRI</strong>
-            <span>Teacher</span>
-        </a>
-        <form method="post" action="{% url 'school:logout' %}">
-            {% csrf_token %}
-            <button class="button button--secondary" type="submit">ออกจากระบบ</button>
-        </form>
+{% block dashboard_content %}
+<div class="teacher-content">
+    <header class="teacher-page-heading" id="dashboard-top">
+        <div>
+            <span class="teacher-eyebrow">BRI TEACHER DASHBOARD</span>
+            <h1>สวัสดี {{ request.user.display_name }}</h1>
+            <p>{% if selected_group %}ภาพรวมของ {{ selected_group.group_name }}{% else %}ภาพรวมนักศึกษาทุกกลุ่มที่คุณดูแล{% endif %}</p>
+        </div>
+        <div class="teacher-heading-scope">
+            <svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#user"></use></svg>
+            <span>ดูแล <strong>{{ groups|length }}</strong> กลุ่ม</span>
+        </div>
     </header>
 
-    <section class="dashboard-shell" aria-labelledby="teacher-dashboard-title">
-        <div class="page-heading">
-            <div>
-                <span class="eyebrow">Teacher dashboard</span>
-                <h1 id="teacher-dashboard-title">นักเรียนในกลุ่มของคุณ</h1>
-                <p>{{ request.user.get_full_name|default:request.user.username }}</p>
-            </div>
+    <nav class="teacher-scope" aria-label="เลือกขอบเขตข้อมูล">
+        <div>
+            <span>ขอบเขตข้อมูล</span>
+            <strong>{% if selected_group %}{{ selected_group.group_name }}{% else %}ทุกกลุ่มที่ดูแล{% endif %}</strong>
+        </div>
+        <div class="teacher-scope-options">
+            <a class="{% if not selected_group %}is-active{% endif %}" href="{% url 'school:teacher_dashboard' %}#overview">ทุกกลุ่ม</a>
+            {% for group in groups %}
+            <a class="{% if selected_group.pk == group.pk %}is-active{% endif %}" href="{% url 'school:teacher_dashboard' %}?group={{ group.pk }}#overview">{{ group.group_name }} <span>{{ group.active_student_count }}</span></a>
+            {% endfor %}
+        </div>
+    </nav>
+
+    <section class="teacher-summary" aria-label="สรุปข้อมูลนักศึกษา">
+        <article class="teacher-summary-card teacher-summary-card--students">
+            <span>นักศึกษาทั้งหมด</span><strong>{{ student_count }}</strong>
+            <small>{% if selected_group %}ในกลุ่มนี้{% else %}จาก {{ groups|length }} กลุ่ม{% endif %}</small>
+        </article>
+        <article class="teacher-summary-card teacher-summary-card--attendance">
+            <span>เข้าเรียนเฉลี่ย</span><strong>{% if average_attendance is not None %}{{ average_attendance }}%{% else %}-{% endif %}</strong>
+            <small>{% if average_attendance is not None %}รวมมาเรียนและมาสาย{% else %}ยังไม่มีการเช็กชื่อ{% endif %}</small>
+        </article>
+        <article class="teacher-summary-card teacher-summary-card--homework">
+            <span>ส่งงานเฉลี่ย</span><strong>{% if average_homework is not None %}{{ average_homework }}%{% else %}-{% endif %}</strong>
+            <small>{% if average_homework is not None %}รวมงานที่ส่งล่าช้า{% else %}ยังไม่มีงานที่มอบหมาย{% endif %}</small>
+        </article>
+        <article class="teacher-summary-card teacher-summary-card--attention">
+            <span>ควรติดตาม</span><strong>{{ needs_attention_count }}</strong><small>เข้าเรียนน้อยหรือส่งงานไม่ครบ</small>
+        </article>
+    </section>
+
+    <section class="teacher-workspace-tabs" data-dashboard-tabs data-default-tab="overview" aria-label="ข้อมูลผู้สอน">
+        <input class="teacher-tab-input" type="radio" name="teacher-dashboard-tab" id="teacher-tab-overview" data-tab-input="overview" checked>
+        <input class="teacher-tab-input" type="radio" name="teacher-dashboard-tab" id="teacher-tab-students" data-tab-input="students">
+        <input class="teacher-tab-input" type="radio" name="teacher-dashboard-tab" id="teacher-tab-learning" data-tab-input="learning">
+
+        <div class="teacher-workspace-tab-list" role="tablist" aria-label="เลือกหมวดข้อมูล">
+            <label for="teacher-tab-overview" role="tab" tabindex="0" data-tab-label="overview">
+                <svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#landmark"></use></svg>ภาพรวม
+            </label>
+            <label for="teacher-tab-students" role="tab" tabindex="0" data-tab-label="students">
+                <svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#user"></use></svg>รายชื่อนักศึกษา
+            </label>
+            <label for="teacher-tab-learning" role="tab" tabindex="0" data-tab-label="learning">
+                <svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#calendar-days"></use></svg>งานและการเข้าเรียน
+            </label>
         </div>
 
-        <div class="summary-strip">
-            <div>
-                <span>กลุ่มที่ดูแล</span>
-                <strong>{{ groups|length }}</strong>
-            </div>
-            <div>
-                <span>นักเรียน</span>
-                <strong>{{ students|length }}</strong>
-            </div>
-        </div>
+        <div class="teacher-tab-panels">
+            <div class="teacher-tab-panel teacher-tab-panel--overview" id="overview" data-tab-panel="overview">
+                <div class="teacher-overview-grid">
+                    <section class="teacher-section teacher-health" aria-labelledby="learning-health-title">
+                        <div class="teacher-section-heading">
+                            <div><span class="teacher-eyebrow">LEARNING HEALTH</span><h2 id="learning-health-title">ภาพรวมการเรียน</h2></div>
+                            <span>{% if selected_group %}{{ selected_group.group_name }}{% else %}ทุกกลุ่ม{% endif %}</span>
+                        </div>
+                        <div class="teacher-health-body">
+                            <article class="teacher-health-metric">
+                                <div class="teacher-health-metric__heading">
+                                    <div><span>การเข้าเรียน</span><small>เป้าหมายอย่างน้อย 75%</small></div>
+                                    <strong>{% if average_attendance is not None %}{{ average_attendance }}%{% else %}-{% endif %}</strong>
+                                </div>
+                                <div class="teacher-health-track" role="img" aria-label="การเข้าเรียนเฉลี่ย {% if average_attendance is not None %}{{ average_attendance }} เปอร์เซ็นต์{% else %}ยังไม่มีข้อมูล{% endif %}"><span{% if average_attendance is not None %} style="width: {{ average_attendance }}%"{% endif %}></span></div>
+                            </article>
+                            <article class="teacher-health-metric">
+                                <div class="teacher-health-metric__heading">
+                                    <div><span>การส่งงาน</span><small>เป้าหมายอย่างน้อย 70%</small></div>
+                                    <strong>{% if average_homework is not None %}{{ average_homework }}%{% else %}-{% endif %}</strong>
+                                </div>
+                                <div class="teacher-health-track teacher-health-track--gold" role="img" aria-label="การส่งงานเฉลี่ย {% if average_homework is not None %}{{ average_homework }} เปอร์เซ็นต์{% else %}ยังไม่มีข้อมูล{% endif %}"><span{% if average_homework is not None %} style="width: {{ average_homework }}%"{% endif %}></span></div>
+                            </article>
+                        </div>
+                    </section>
 
-        <div class="table-shell">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>รหัส</th>
-                        <th>ชื่อ</th>
-                        <th>กลุ่ม</th>
-                        <th>สถานะชำระเงิน</th>
-                        <th>เกรด</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for student in students %}
-                    <tr>
-                        <td>{{ student.student_id }}</td>
-                        <td>{{ student.person.full_name }}</td>
-                        <td>{{ student.group.group_name }}</td>
-                        <td>{% if student.is_paid %}จ่ายแล้ว{% else %}รอตรวจสอบ{% endif %}</td>
-                        <td>{{ student.grade|default:"-" }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="5">ยังไม่มีนักเรียนในกลุ่มของคุณ</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                    <section class="teacher-section teacher-attention" aria-labelledby="attention-title">
+                        <div class="teacher-section-heading">
+                            <div><span class="teacher-eyebrow">FOLLOW UP</span><h2 id="attention-title">นักศึกษาที่ควรติดตาม</h2></div>
+                            <strong class="attention-count">{{ needs_attention_count }}</strong>
+                        </div>
+                        <div class="teacher-attention-list">
+                            {% for student in attention_students %}
+                            <article>
+                                <span class="attention-avatar">{{ student.person.first_name|slice:":1"|upper }}</span>
+                                <div><strong>{{ student.person.full_name }}</strong><small>{{ student.group.group_name }} · {{ student.attention_reasons|join:", " }}</small></div>
+                                <a href="#students" data-dashboard-jump="students" aria-label="ดูข้อมูล {{ student.person.full_name }}"><svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#chevron-right"></use></svg></a>
+                            </article>
+                            {% empty %}
+                            <div class="teacher-positive-empty">
+                                {% if not student_count %}
+                                <svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#user"></use></svg>
+                                <strong>ยังไม่มีนักศึกษาในขอบเขตนี้</strong><span>เมื่อมีรายชื่อ ข้อมูลติดตามจะแสดงที่นี่</span>
+                                {% elif not has_learning_data %}
+                                <svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#info"></use></svg>
+                                <strong>ยังไม่มีข้อมูลให้ประเมิน</strong><span>เริ่มเช็กชื่อหรือมอบหมายงานเพื่อดูผล</span>
+                                {% else %}
+                                <svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#check-circle"></use></svg>
+                                <strong>ยังไม่มีคนที่ต้องติดตาม</strong><span>ข้อมูลการเข้าเรียนและการส่งงานอยู่ในเกณฑ์</span>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </section>
+                </div>
+
+                <section class="teacher-section teacher-groups-overview" aria-labelledby="groups-overview-title">
+                    <div class="teacher-section-heading">
+                        <div><span class="teacher-eyebrow">GROUP SNAPSHOT</span><h2 id="groups-overview-title">กลุ่มที่กำลังดู</h2></div>
+                        <span>{{ dashboard_groups|length }} กลุ่ม</span>
+                    </div>
+                    <div class="teacher-group-cards">
+                        {% for group in dashboard_groups %}
+                        <article class="teacher-group-card">
+                            <header><div><strong>{{ group.group_name }}</strong><small>{{ group.grade_level|default:"ไม่ระบุรุ่น" }}</small></div><span>{{ group.active_student_count }} คน</span></header>
+                            <dl>
+                                <div><dt>เข้าเรียน</dt><dd>{% if group.dashboard_attendance is not None %}{{ group.dashboard_attendance }}%{% else %}-{% endif %}</dd></div>
+                                <div><dt>ส่งงาน</dt><dd>{% if group.dashboard_homework is not None %}{{ group.dashboard_homework }}%{% else %}-{% endif %}</dd></div>
+                                <div><dt>ควรติดตาม</dt><dd>{{ group.dashboard_attention_count }}</dd></div>
+                            </dl>
+                            {% if not selected_group %}<a href="?group={{ group.pk }}#overview">ดูเฉพาะกลุ่มนี้</a>{% endif %}
+                        </article>
+                        {% empty %}<div class="teacher-empty-state"><strong>ยังไม่มีกลุ่มที่รับผิดชอบ</strong><span>เมื่อผู้ดูแลกำหนดกลุ่ม ข้อมูลจะแสดงที่นี่</span></div>{% endfor %}
+                    </div>
+                </section>
+            </div>
+
+            <section class="teacher-section teacher-tab-panel teacher-tab-panel--students" id="students" data-tab-panel="students" aria-labelledby="student-list-title">
+                <div class="teacher-section-heading">
+                    <div><span class="teacher-eyebrow">STUDENT ROSTER</span><h2 id="student-list-title">นักเรียนในกลุ่มของคุณ</h2></div><span>{{ student_count }} คน</span>
+                </div>
+                <div class="teacher-table-shell">
+                    <table class="teacher-student-table">
+                        <thead><tr><th>นักศึกษา</th><th>กลุ่ม</th><th>การเข้าเรียน</th><th>การบ้าน</th><th>ข้อมูลติดต่อ</th><th>สถานะ</th></tr></thead>
+                        <tbody>
+                            {% for student in students %}
+                            <tr class="{% if student.needs_attention %}needs-attention{% endif %}">
+                                <td data-label="นักศึกษา"><div class="student-identity">
+                                    {% if student.person.photo %}<img src="{{ student.person.photo.url }}" alt="" width="40" height="40">{% else %}<span>{{ student.person.first_name|slice:":1"|upper }}</span>{% endif %}
+                                    <div><strong>{{ student.person.full_name }}</strong><small>{{ student.student_id }}</small></div>
+                                </div></td>
+                                <td data-label="กลุ่ม"><strong class="table-primary">{{ student.group.group_name }}</strong><small class="table-secondary">{{ student.group.grade_level|default:"ไม่ระบุรุ่น" }}</small></td>
+                                <td data-label="การเข้าเรียน">
+                                    {% if student.attendance_percent is not None %}<div class="metric-value"><strong>{{ student.attendance_percent }}%</strong><small>{{ student.attendance_attended }}/{{ student.attendance_total }} ครั้ง</small></div><span class="metric-track{% if student.attendance_percent < 75 %} is-low{% endif %}"><span style="width: {{ student.attendance_percent }}%"></span></span>{% else %}<span class="metric-empty">ยังไม่มีข้อมูล</span>{% endif %}
+                                </td>
+                                <td data-label="การบ้าน">
+                                    {% if student.homework_percent is not None %}<div class="metric-value"><strong>{{ student.homework_percent }}%</strong><small>{{ student.homework_submitted }}/{{ student.homework_total }} งาน</small></div><span class="metric-track{% if student.homework_percent < 70 %} is-low{% endif %}"><span style="width: {{ student.homework_percent }}%"></span></span>{% else %}<span class="metric-empty">ยังไม่มีข้อมูล</span>{% endif %}
+                                </td>
+                                <td data-label="ข้อมูลติดต่อ"><div class="student-contact"><span>{{ student.person.phone|default:"ไม่มีเบอร์โทร" }}</span><small>{{ student.person.email|default:student.person.line_display_name|default:"ไม่มีข้อมูลติดต่อ" }}</small></div></td>
+                                <td data-label="สถานะ"><div class="student-statuses">
+                                    {% if student.needs_attention %}<span class="status-label status-label--attention">ควรติดตาม</span>{% else %}<span class="status-label status-label--ok">ปกติ</span>{% endif %}
+                                    {% if student.is_paid %}<small>ชำระแล้ว</small>{% else %}<small>รอตรวจชำระ</small>{% endif %}
+                                </div></td>
+                            </tr>
+                            {% empty %}<tr><td class="teacher-empty-row" colspan="6"><strong>ยังไม่มีนักศึกษาในกลุ่มนี้</strong><span>เมื่อผู้ดูแลจัดนักศึกษาเข้ากลุ่ม รายชื่อจะแสดงที่นี่</span></td></tr>{% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <div class="teacher-learning-grid teacher-tab-panel teacher-tab-panel--learning" id="learning" data-tab-panel="learning">
+                <section class="teacher-section" aria-labelledby="homework-title">
+                    <div class="teacher-section-heading"><div><span class="teacher-eyebrow">HOMEWORK</span><h2 id="homework-title">งานที่ใกล้ถึงกำหนด</h2></div><span>{{ upcoming_assignments|length }} งาน</span></div>
+                    <div class="learning-list">
+                        {% for assignment in upcoming_assignments %}<article><span class="learning-date">{{ assignment.due_date|date:"d M" }}</span><div><strong>{{ assignment.title }}</strong><small>{{ assignment.group.group_name }} · ส่งแล้ว {{ assignment.submitted_count }}/{{ assignment.target_student_count }}</small></div></article>{% empty %}<div class="learning-empty">ยังไม่มีงานที่ใกล้ถึงกำหนด</div>{% endfor %}
+                    </div>
+                </section>
+                <section class="teacher-section" aria-labelledby="attendance-title">
+                    <div class="teacher-section-heading"><div><span class="teacher-eyebrow">ATTENDANCE</span><h2 id="attendance-title">การเช็กชื่อล่าสุด</h2></div><span>{{ recent_attendance_sessions|length }} ครั้ง</span></div>
+                    <div class="learning-list">
+                        {% for session in recent_attendance_sessions %}<article><span class="learning-date learning-date--attendance">{{ session.date|date:"d M" }}</span><div><strong>{{ session.group.group_name }}</strong><small>มา {{ session.present_count }} · สาย {{ session.late_count }} · ขาด {{ session.absent_count }}</small></div></article>{% empty %}<div class="learning-empty">ยังไม่มีประวัติการเช็กชื่อ</div>{% endfor %}
+                    </div>
+                </section>
+            </div>
         </div>
     </section>
-</main>
+</div>
 {% endblock %}
+
+{% block extra_js %}<script src="{% static 'school/js/dashboard_tabs.js' %}?v=20260916-dashboard-2"></script>{% endblock %}

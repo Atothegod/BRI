@@ -39,7 +39,6 @@ class Person(TimeStampedModel):
     photo = models.ImageField(upload_to="person_photos/", null=True, blank=True)
     phone = models.CharField(max_length=30, blank=True)
     email = models.EmailField(blank=True)
-    line_id = models.CharField(max_length=120, blank=True)
     line_user_id = models.CharField(max_length=80, blank=True)
     line_display_name = models.CharField(max_length=255, blank=True)
     line_picture_url = models.URLField(max_length=500, blank=True)
@@ -66,11 +65,6 @@ class Person(TimeStampedModel):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(
-                fields=["line_id"],
-                condition=~models.Q(line_id=""),
-                name="uniq_person_line_id_when_present",
-            ),
             models.UniqueConstraint(
                 fields=["line_user_id"],
                 condition=~models.Q(line_user_id=""),

@@ -598,7 +598,6 @@ class PersonForm(forms.Form):
             "occupation": data["occupation"],
             "phone": data["phone"],
             "email": data["email"],
-            "line_id": "",
             "line_display_name": line_display_name,
             "line_picture_url": line_picture_url,
             "line_connected_at": timezone.now() if line_user_id else None,

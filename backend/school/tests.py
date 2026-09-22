@@ -99,7 +99,6 @@ class PersonViewTests(TestCase):
         self.assertEqual(person.full_name, "สมชาย ใจดี")
         self.assertEqual(person.nickname, "ชาย")
         self.assertEqual(person.gender, "male")
-        self.assertEqual(person.line_id, "")
         self.assertEqual(person.line_user_id, "U1234567890")
         self.assertEqual(person.line_display_name, "Somchai LINE")
         self.assertIsNotNone(person.line_connected_at)
@@ -126,15 +125,6 @@ class PersonViewTests(TestCase):
         self.assertContains(success_response, "ประกาศผลผู้ที่ผ่านสัมภาษณ์")
         self.assertContains(success_response, "ยืนยันการเข้าเรียน ด้วยการชำระค่าเทอม")
         self.assertContains(success_response, "รับรหัสนักเรียนรอปฐมนิเทศน์")
-
-    def test_registration_ignores_submitted_line_id(self):
-        form_data = self.valid_form_data()
-        form_data["line_id"] = "legacy.line.id"
-
-        self.client.post(reverse("school:registration"), form_data)
-
-        person = Person.objects.get()
-        self.assertEqual(person.line_id, "")
 
     def test_registration_accepts_buddhist_birth_year(self):
         form_data = self.valid_form_data()

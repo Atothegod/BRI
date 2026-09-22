@@ -107,7 +107,6 @@ class PersonAdmin(UnfoldModelAdmin):
         "full_name",
         "phone",
         "email",
-        "line_id",
         "line_display_name",
         "line_user_id",
         "student_code",
@@ -129,7 +128,6 @@ class PersonAdmin(UnfoldModelAdmin):
         "gender",
         "phone",
         "email",
-        "line_id",
         "line_user_id",
         "line_display_name",
     )
@@ -148,7 +146,6 @@ class PersonAdmin(UnfoldModelAdmin):
                     "photo",
                     "phone",
                     "email",
-                    "line_id",
                     "line_user_id",
                     "line_display_name",
                     "line_picture_url",

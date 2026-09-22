@@ -109,9 +109,6 @@ class PersonAdmin(UnfoldModelAdmin):
         "contact_display",
         "line_account_display",
         "status",
-        "admission_type_display",
-        "student_code_display",
-        "paid_display",
         "country_display",
         "studied_bri_display",
         "goal_display",
@@ -212,18 +209,6 @@ class PersonAdmin(UnfoldModelAdmin):
             '{}<br><span style="color:#667085;">เชื่อมต่อแล้ว</span>',
             display_name,
         )
-
-    @admin.display(description="ประเภทผู้เรียน")
-    def admission_type_display(self, obj):
-        return obj.admission_type_name or "-"
-
-    @admin.display(ordering="student__student_id", description="รหัสนักเรียน")
-    def student_code_display(self, obj):
-        return obj.student_code or "-"
-
-    @admin.display(boolean=True, ordering="student__is_paid", description="ชำระเงิน")
-    def paid_display(self, obj):
-        return obj.has_paid
 
     @admin.display(description="ประเทศ")
     def country_display(self, obj):

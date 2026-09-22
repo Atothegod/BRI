@@ -474,9 +474,12 @@ def interview_schedule(request):
         next_round_participations = waiting_participations if (
             appointment_type == Appointment.Type.INTERVIEW and selected_appointment.is_full
         ) else AppointmentParticipant.objects.none()
+        waiting_display_participations = waiting_participations.exclude(
+            pk__in=next_round_participations.values("pk"),
+        )
         audience_counts = {
             "unsent": people.exclude(pk__in=participant_people).exclude(pk__in=confirmed_people).count(),
-            "waiting": waiting_participations.count(),
+            "waiting": waiting_display_participations.count(),
             "confirmed": confirmed_participations.count(),
             "failed": participations.filter(notification_status=AppointmentParticipant.NotificationStatus.FAILED).count(),
             "next_round": next_round_participations.count(),
@@ -499,7 +502,7 @@ def interview_schedule(request):
         elif audience == "next_round":
             people = people.filter(pk__in=next_round_participations.values("person_id"))
         else:
-            people = people.filter(pk__in=waiting_participations.values("person_id"))
+            people = people.filter(pk__in=waiting_display_participations.values("person_id"))
     if query:
         people = people.filter(Q(first_name__icontains=query) | Q(last_name__icontains=query) | Q(phone__icontains=query) | Q(line_display_name__icontains=query))
     if filters["line"] == "connected":
@@ -542,10 +545,38 @@ def interview_schedule(request):
             if participant.response_status == AppointmentParticipant.ResponseStatus.CONFIRMED:
                 confirmed_by_person.setdefault(participant.person_id, participant)
             latest_by_person.setdefault(participant.person_id, participant)
+    relevant_appointment_ids = {
+        participant.appointment_id
+        for participant in [*event_by_person.values(), *latest_by_person.values(), *confirmed_by_person.values()]
+        if participant.appointment.appointment_type == Appointment.Type.INTERVIEW
+    }
+    full_interview_appointment_ids = set()
+    if relevant_appointment_ids:
+        for appointment in Appointment.objects.filter(pk__in=relevant_appointment_ids).prefetch_related("slots").annotate(
+            confirmed_count=Count(
+                "participants",
+                filter=Q(participants__response_status=AppointmentParticipant.ResponseStatus.CONFIRMED),
+                distinct=True,
+            ),
+        ):
+            if appointment_is_full(appointment, appointment.confirmed_count):
+                full_interview_appointment_ids.add(appointment.pk)
     for person in page.object_list:
         person.latest_appointment_participant = event_by_person.get(person.pk)
         person.overall_appointment_participant = confirmed_by_person.get(person.pk) or latest_by_person.get(person.pk)
         person.confirmed_appointment_participant = confirmed_by_person.get(person.pk)
+        person.event_waiting_next_round = bool(
+            person.latest_appointment_participant
+            and person.latest_appointment_participant.response_status == AppointmentParticipant.ResponseStatus.WAITING
+            and person.latest_appointment_participant.notification_status != AppointmentParticipant.NotificationStatus.FAILED
+            and person.latest_appointment_participant.appointment_id in full_interview_appointment_ids
+        )
+        person.overall_waiting_next_round = bool(
+            person.overall_appointment_participant
+            and person.overall_appointment_participant.response_status == AppointmentParticipant.ResponseStatus.WAITING
+            and person.overall_appointment_participant.notification_status != AppointmentParticipant.NotificationStatus.FAILED
+            and person.overall_appointment_participant.appointment_id in full_interview_appointment_ids
+        )
     selected_event_open = bool(
         selected_appointment
         and selected_appointment.status == Appointment.Status.SCHEDULED
@@ -658,13 +689,18 @@ def interview_confirmation_status(request):
         ).first()
         if appointment:
             capacity = appointment_capacity(appointment)
+            is_full = bool(capacity and appointment.confirmed_count >= capacity)
+            next_round_count = appointment.waiting_count if (
+                appointment.appointment_type == Appointment.Type.INTERVIEW and is_full
+            ) else 0
             event = {
                 "confirmed_count": appointment.confirmed_count,
                 "capacity": capacity,
-                "is_full": bool(capacity and appointment.confirmed_count >= capacity),
+                "is_full": is_full,
                 "sent_count": appointment.sent_count,
                 "failed_count": appointment.failed_count,
-                "waiting_count": appointment.waiting_count,
+                "waiting_count": max(appointment.waiting_count - next_round_count, 0),
+                "next_round_count": next_round_count,
                 "invited_count": appointment.invited_count,
             }
     return JsonResponse({"participants": {str(item["pk"]): {

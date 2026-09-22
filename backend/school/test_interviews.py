@@ -308,15 +308,33 @@ class AppointmentScheduleTests(TestCase):
         third_person = Person.objects.create(
             first_name="Applicant 2", last_name="Test", line_user_id="Utest2",
         )
-        self.schedule(people=[self.people[0].pk, self.people[1].pk, third_person.pk], slot_capacity=["2"])
+        failed_person = Person.objects.create(
+            first_name="Applicant 3", last_name="Test", line_user_id="Utest3",
+        )
+        self.schedule(
+            people=[self.people[0].pk, self.people[1].pk, third_person.pk, failed_person.pk],
+            slot_capacity=["2"],
+        )
         appointment = Appointment.objects.get()
         slot = appointment.slots.get()
-        first, second, third = appointment.participants.order_by("pk")
+        first, second, third, failed = appointment.participants.order_by("pk")
         for participant in (first, second):
             participant.response_status = AppointmentParticipant.ResponseStatus.CONFIRMED
             participant.selected_slot = slot
             participant.confirmed_at = timezone.now()
             participant.save(update_fields=["response_status", "selected_slot", "confirmed_at"])
+        third.notification_status = AppointmentParticipant.NotificationStatus.SENT
+        third.save(update_fields=["notification_status"])
+        failed.notification_status = AppointmentParticipant.NotificationStatus.FAILED
+        failed.save(update_fields=["notification_status"])
+
+        waiting = self.client.get(self.url, {
+            "type": "interview",
+            "event": appointment.pk,
+            "audience": "waiting",
+        })
+        self.assertContains(waiting, "Event นี้เต็มแล้ว ผู้ที่ยังไม่ยืนยันถูกแยกไปแท็บรอนัดรอบถัดไป")
+        self.assertNotContains(waiting, third_person.full_name)
 
         next_round = self.client.get(self.url, {
             "type": "interview",
@@ -324,9 +342,18 @@ class AppointmentScheduleTests(TestCase):
             "audience": "next_round",
         })
         self.assertContains(next_round, "รอนัดรอบถัดไป")
+        self.assertContains(next_round, "รอบสัมเต็มแล้ว")
         self.assertContains(next_round, "สร้าง Event ใหม่จากกลุ่มนี้")
         self.assertContains(next_round, third_person.full_name)
         self.assertNotContains(next_round, self.people[0].full_name)
+        self.assertNotContains(next_round, failed_person.full_name)
+
+        failed_page = self.client.get(self.url, {
+            "type": "interview",
+            "event": appointment.pk,
+            "audience": "failed",
+        })
+        self.assertContains(failed_page, failed_person.full_name)
 
         create_next = self.client.get(self.url, {
             "type": "interview",
@@ -337,6 +364,14 @@ class AppointmentScheduleTests(TestCase):
         self.assertContains(create_next, "สร้าง Event ใหม่ให้ผู้สมัครที่รอนัดรอบถัดไป")
         self.assertContains(create_next, third_person.full_name)
         self.assertNotContains(create_next, self.people[0].full_name)
+        self.assertNotContains(create_next, failed_person.full_name)
+
+        live_status = self.client.post(reverse("school:appointment_confirmation_status"), {
+            "participants": [third.pk, failed.pk], "event_id": appointment.pk,
+        }).json()["event"]
+        self.assertEqual(live_status["waiting_count"], 0)
+        self.assertEqual(live_status["next_round_count"], 1)
+        self.assertEqual(live_status["failed_count"], 1)
 
         response = self.schedule(
             people=[third_person.pk],

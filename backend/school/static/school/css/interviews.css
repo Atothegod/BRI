@@ -109,6 +109,7 @@ tr.has-confirmed-appointment { background: #f8fbf7; }
 .errors { background: #fff4f2; color: #b42318; padding: 12px; }
 .warning, .state-failed, .state-pending { color: var(--bri-warning-ink); }
 .state-sent { color: var(--bri-sage); }
+.state-next-round { color: #8b5e00; font-weight: 800; }
 .state-unsent { color: #667168; }
 .empty-state { padding: 26px; color: #667168; text-align: center; background: #fafbf9; }
 .confirmation-page { display: grid; min-height: 100vh; min-height: 100dvh; padding: 24px 16px; background: #f6f8f5; place-items: center; }
@@ -155,6 +156,81 @@ tr.has-confirmed-appointment { background: #f8fbf7; }
 @media(max-width: 420px) { .appointment-summary div { grid-template-columns: 1fr; gap: 3px; } }
 @media(max-width: 1000px) { .event-list { grid-template-columns: repeat(4, minmax(230px, 280px)); } .selected-event { grid-template-columns: 1fr; } .event-metrics { justify-self: stretch; } .event-metrics div:first-child { border-left: 0; padding-left: 0; } }
 @media(max-width: 900px) { .filter-panel, .filter-panel.compact-filter { grid-template-columns: repeat(2, minmax(0, 1fr)); } .filter-search { grid-column: 1 / -1; } .compact-filter .filter-actions { grid-column: 1 / -1; } }
+@media(min-width: 641px) and (max-width: 1024px) {
+    .confirmation-page {
+        align-items: start;
+        padding: 32px 24px;
+        place-items: start center;
+    }
+    .confirmation-shell {
+        width: min(760px, calc(100vw - 48px));
+        padding: 30px;
+        text-align: left;
+    }
+    .confirmation-brand {
+        margin-inline: 0;
+    }
+    .confirmation-shell h1 {
+        font-size: 36px;
+        line-height: 1.18;
+    }
+    .appointment-summary {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        border: 0;
+        border-radius: 0;
+        overflow: visible;
+    }
+    .appointment-summary div {
+        grid-template-columns: 1fr;
+        gap: 4px;
+        min-width: 0;
+        padding: 13px 14px;
+        background: #fff;
+        border: 1px solid var(--bri-border);
+        border-radius: 8px;
+    }
+    .appointment-summary div:last-child {
+        border-bottom: 1px solid var(--bri-border);
+    }
+    .slot-picker {
+        grid-template-columns: 150px minmax(0, 1fr);
+        gap: 14px;
+    }
+    .calendar-tile {
+        min-height: 100%;
+        border-radius: 8px;
+    }
+    .slot-choice-list {
+        gap: 10px;
+    }
+    .slot-choice-heading {
+        display: grid;
+        gap: 2px;
+        margin-bottom: 2px;
+    }
+    .slot-choice-heading span {
+        color: var(--bri-forest);
+        font-weight: 800;
+    }
+    .slot-choice-heading small {
+        color: #5f6b63;
+        font-size: 13px;
+        font-weight: 650;
+    }
+    .slot-choice {
+        min-height: 68px;
+        padding: 13px 14px;
+        border-width: 2px;
+        border-radius: 8px;
+    }
+    .confirm-button {
+        min-height: 52px;
+        border-radius: 8px;
+        font-size: 17px;
+    }
+}
 @media(max-width: 640px) { .interviews { padding: 16px; } .section-heading { align-items: start; flex-direction: column; gap: 4px; } .section-heading > small { text-align: left; } .event-list { margin-inline: -16px; padding-inline: 16px; } .selected-event-main h2 { font-size: 23px; } .event-metrics { grid-template-columns: repeat(3, 1fr); } .event-metrics div { min-width: 0; padding: 5px 9px; } .event-metrics strong { font-size: 20px; } .event-closed-message { align-items: start; flex-direction: column; } .event-actions { margin-left: 0; } .event-action-link, .event-action-link.primary { width: 100%; justify-content: center; } .next-round-source { align-items: start; flex-direction: column; } .audience-tabs { grid-template-columns: 1fr; } .filter-panel, .filter-panel.compact-filter { grid-template-columns: 1fr; } .filter-search, .filter-actions, .compact-filter .filter-actions { grid-column: auto; } .filter-actions { justify-content: flex-start; } .schedule-fields, .schedule-fields.interview-slot-mode { grid-template-columns: 1fr; padding: 18px; } .title-field, .location-field, .details-field, .url-field { grid-column: 1 / -1; } .schedule-fields > div { min-width: 0; } .slot-editor-heading { align-items: stretch; flex-direction: column; } .slot-row { grid-template-columns: 34px 1fr 1fr; } .slot-row label:nth-of-type(3) { grid-column: 2 / -1; } .slot-remove { grid-column: 1 / -1; width: 100%; } .slot-picker { grid-template-columns: 1fr; } .calendar-tile { min-height: 112px; } #confirm-schedule { width: 100%; } .type-tabs { display: flex; } .type-tabs a { flex: 1; min-width: 0; } }
 @media(max-width: 640px) {
     .confirmation-page {

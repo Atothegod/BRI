@@ -180,10 +180,12 @@
                 const eventFailed = document.querySelector('[data-event-failed]');
                 const audienceWaiting = document.querySelector('[data-audience-waiting]');
                 const audienceFailed = document.querySelector('[data-audience-failed]');
+                const audienceNextRound = document.querySelector('[data-audience-next-round]');
                 if (eventSent) eventSent.textContent = data.event.sent_count;
                 if (eventFailed) eventFailed.textContent = data.event.failed_count;
                 if (audienceWaiting) audienceWaiting.textContent = data.event.waiting_count ?? data.event.invited_count;
                 if (audienceFailed) audienceFailed.textContent = data.event.failed_count;
+                if (audienceNextRound) audienceNextRound.textContent = data.event.next_round_count ?? 0;
             }
         } catch (_) {
             // The next visibility change or polling interval retries quietly.

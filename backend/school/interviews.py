@@ -19,8 +19,8 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods, require_POST
 
 from .date_formats import thai_date
-from .line import build_appointment_invitation_flex_message, send_line_push_message
-from .models import Appointment, AppointmentParticipant, AppointmentSlot, Person
+from .line import build_appointment_invitation_flex_message, line_push_unavailable_reason, send_line_push_message
+from .models import Appointment, AppointmentParticipant, AppointmentSlot, Person, Student, line_notification_sent
 from .views import is_school_admin
 
 THAI_TIMEZONE = ZoneInfo("Asia/Bangkok")
@@ -198,6 +198,114 @@ def waiting_participations_for_next_round(appointment):
         appointment=appointment,
         response_status=AppointmentParticipant.ResponseStatus.WAITING,
     ).exclude(notification_status=AppointmentParticipant.NotificationStatus.FAILED)
+
+
+def latest_interview_participations(person_ids):
+    latest_by_person = {}
+    if not person_ids:
+        return latest_by_person
+    participants = (
+        AppointmentParticipant.objects.filter(
+            person_id__in=person_ids,
+            appointment__appointment_type=Appointment.Type.INTERVIEW,
+        )
+        .select_related("appointment", "selected_slot")
+        .order_by("person_id", "-pk")
+    )
+    for participant in participants:
+        latest_by_person.setdefault(participant.person_id, participant)
+    return latest_by_person
+
+
+def update_interview_result(person, result):
+    if result == "pass_online":
+        person.status = Person.Status.PASSED
+        person.admission_type = Person.AdmissionType.ONLINE
+        person.save(update_fields=["status", "admission_type"])
+        return "ผ่านแบบ online"
+    if result == "pass_onsite":
+        person.status = Person.Status.PASSED
+        person.admission_type = Person.AdmissionType.INTERVIEW
+        person.save(update_fields=["status", "admission_type"])
+        return "ผ่านแบบ onsite"
+    if result == "fail":
+        person.status = Person.Status.FAILED
+        person.admission_type = ""
+        person.save(update_fields=["status", "admission_type"])
+        return "ไม่ผ่าน"
+    return ""
+
+
+@login_required(login_url="admin:login")
+@never_cache
+@require_http_methods(["GET", "POST"])
+def interview_results(request):
+    if not is_school_admin(request.user):
+        raise PermissionDenied
+    if request.method == "POST":
+        person = Person.objects.filter(pk=request.POST.get("person")).first()
+        result_label = update_interview_result(person, request.POST.get("result")) if person else ""
+        if not person or not result_label:
+            messages.error(request, "ไม่พบผู้สมัครหรือสถานะผลสัมภาษณ์ไม่ถูกต้อง")
+        elif person.status == Person.Status.PASSED:
+            person.refresh_from_db()
+            if line_notification_sent(person, "interview_passed"):
+                messages.success(request, f"บันทึกผล {person.full_name}: {result_label} และส่ง LINE ประกาศผลแล้ว")
+            else:
+                reason = line_push_unavailable_reason(person)
+                if reason == "missing_line_user_id":
+                    messages.warning(request, f"บันทึกผล {person.full_name}: {result_label} แล้ว แต่ยังไม่ได้ส่ง LINE เพราะผู้สมัครยังไม่เชื่อม LINE")
+                elif reason == "missing_channel_access_token":
+                    messages.warning(request, f"บันทึกผล {person.full_name}: {result_label} แล้ว แต่ยังไม่ได้ส่ง LINE เพราะยังไม่ได้ตั้ง LINE token")
+                else:
+                    messages.warning(request, f"บันทึกผล {person.full_name}: {result_label} แล้ว แต่ LINE ยังส่งไม่สำเร็จ")
+        else:
+            messages.success(request, f"บันทึกผล {person.full_name}: {result_label} แล้ว")
+        redirect_to = request.POST.get("next") or reverse("school:interview_results")
+        return redirect(redirect_to)
+
+    query = request.GET.get("q", "").strip()
+    status = request.GET.get("status", "pending")
+    people = Person.objects.all().order_by("first_name", "last_name", "pk")
+    if status == "passed":
+        people = people.filter(status=Person.Status.PASSED)
+    elif status == "failed":
+        people = people.filter(status=Person.Status.FAILED)
+    elif status == "all":
+        pass
+    else:
+        status = "pending"
+        people = people.filter(status=Person.Status.IN_PROGRESS)
+    if query:
+        people = people.filter(
+            Q(first_name__icontains=query)
+            | Q(last_name__icontains=query)
+            | Q(nickname__icontains=query)
+            | Q(phone__icontains=query)
+            | Q(line_display_name__icontains=query)
+        )
+    counts = {
+        "pending": Person.objects.filter(status=Person.Status.IN_PROGRESS).count(),
+        "passed": Person.objects.filter(status=Person.Status.PASSED).count(),
+        "failed": Person.objects.filter(status=Person.Status.FAILED).count(),
+        "all": Person.objects.count(),
+    }
+    page = Paginator(people, 60).get_page(request.GET.get("page"))
+    latest_by_person = latest_interview_participations([person.pk for person in page.object_list])
+    for person in page.object_list:
+        person.latest_interview_participant = latest_by_person.get(person.pk)
+        person.has_result_line_notification = line_notification_sent(person, "interview_passed")
+        person.student_record = getattr(person, "student", None)
+    query_params = request.GET.copy()
+    query_params.pop("page", None)
+    return render(request, "school/interview_results.html", {
+        "page_obj": page,
+        "query": query,
+        "status": status,
+        "counts": counts,
+        "page_query_prefix": f"?{query_params.urlencode()}&" if query_params else "?",
+        "next_url": request.get_full_path(),
+    })
 
 
 @login_required(login_url="admin:login")

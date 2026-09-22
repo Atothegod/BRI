@@ -359,7 +359,7 @@ class LineProactiveNotificationTests(TestCase):
         PUBLIC_BASE_URL="https://bri.example",
     )
     @patch("school.line.request.urlopen")
-    def test_passing_interview_pushes_result_link_to_line_user(self, mock_urlopen):
+    def test_passing_interview_creates_student_without_line_push(self, mock_urlopen):
         person = Person.objects.create(
             first_name="Notify",
             last_name="Passed",
@@ -370,20 +370,10 @@ class LineProactiveNotificationTests(TestCase):
         person.save(update_fields=["status"])
 
         student = Student.objects.get(person=person)
-        self.assertTrue(mock_urlopen.called)
-        line_request = mock_urlopen.call_args.args[0]
-        payload = json.loads(line_request.data.decode("utf-8"))
-        self.assertEqual(payload["to"], "Unotifypass")
-        self.assertEqual(payload["messages"][0]["type"], "flex")
-        self.assertIn("ผ่านการคัดเลือก", payload["messages"][0]["altText"])
-        self.assertIn(
-            "https://liff.line.me/2011088039-52ryg2t9",
-            json.dumps(payload["messages"][0], ensure_ascii=False),
-        )
-        self.assertNotIn(student.student_id, json.dumps(payload["messages"][0], ensure_ascii=False))
-        self.assertIn("รอชำระเงิน", json.dumps(payload["messages"][0], ensure_ascii=False))
+        self.assertFalse(mock_urlopen.called)
         person.refresh_from_db()
-        self.assertIn("interview_passed", person.extra_data["line_notifications"])
+        self.assertNotIn("line_notifications", person.extra_data)
+        self.assertTrue(student.student_id)
 
     @override_settings(
         LINE_MESSAGING_CHANNEL_ACCESS_TOKEN="line-token",

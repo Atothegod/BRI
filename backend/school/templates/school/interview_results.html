@@ -2,7 +2,7 @@
 {% load static tz school_dates %}
 {% block title %}บันทึกผลสัมภาษณ์ | BRI{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/interview_results.css' %}?v=20260922-interview-results-2">
+<link rel="stylesheet" href="{% static 'school/css/interview_results.css' %}?v=20260922-interview-results-4">
 {% endblock %}
 {% block content %}
 <main class="interview-results">
@@ -10,6 +10,7 @@
         <div>
             <span>BRI INTERVIEW RESULTS</span>
             <h1>บันทึกผลสัมภาษณ์</h1>
+            <a class="result-page-link" href="{% url 'school:interview_announcements' %}">ไปหน้ายิงประกาศผล</a>
         </div>
         <form method="get" class="results-search">
             <input type="hidden" name="status" value="{{ status }}">
@@ -47,7 +48,7 @@
                         <div><dt>LINE</dt><dd>{{ person.line_display_name|default:"-" }}</dd></div>
                         <div><dt>นัดล่าสุด</dt><dd>{% if participant %}{{ participant.appointment.starts_at|thai_date }}{% if participant.selected_slot %} · {{ participant.selected_slot.starts_at|date:"H:i" }}-{{ participant.selected_slot.ends_at|date:"H:i" }}{% endif %}{% else %}-{% endif %}</dd></div>
                         <div><dt>สถานะ</dt><dd>{{ person.get_status_display }}{% if person.status == 'passed' and person.admission_type_name %} · {{ person.admission_type_name }}{% endif %}</dd></div>
-                        <div><dt>LINE ประกาศผล</dt><dd>{% if person.has_result_line_notification %}ส่งแล้ว{% elif person.status == 'passed' %}ยังไม่สำเร็จ{% else %}-{% endif %}</dd></div>
+                        <div><dt>LINE ประกาศผล</dt><dd>{% if person.has_result_line_notification %}ส่งแล้ว{% elif person.status == 'passed' or person.status == 'failed' %}ยังไม่ส่ง{% else %}-{% endif %}</dd></div>
                     </dl>
                     <div class="result-extra">
                         <div><span>Goal</span><p>{{ person.extra_data.goal|default:"-" }}</p></div>
@@ -57,12 +58,13 @@
                 <form method="post" class="result-actions" data-result-form data-person-name="{{ person.full_name }}">
                     {% csrf_token %}
                     <input type="hidden" name="person" value="{{ person.pk }}">
+                    <input type="hidden" name="result" value="">
                     <input type="hidden" name="next" value="{{ next_url }}">
                     <input type="hidden" name="confirmed_result" value="">
-                    <p class="result-confirm-note">กดยืนยันอีกครั้งก่อนบันทึกผล ระบบจะส่ง LINE เมื่อเลือกผ่าน</p>
-                    <button type="submit" name="result" value="pass_onsite" class="pass" data-result-label="ผ่าน onsite" data-confirm-message="ยืนยันให้ {{ person.full_name }} ผ่าน onsite ใช่ไหม? ระบบจะบันทึกผลและส่ง LINE ประกาศผลทันที">ผ่าน onsite</button>
-                    <button type="submit" name="result" value="pass_online" class="pass secondary" data-result-label="ผ่าน online" data-confirm-message="ยืนยันให้ {{ person.full_name }} ผ่าน online ใช่ไหม? ระบบจะบันทึกผลและส่ง LINE ประกาศผลทันที">ผ่าน online</button>
-                    <button type="submit" name="result" value="fail" class="fail" data-result-label="ไม่ผ่าน" data-confirm-message="ยืนยันบันทึกผล {{ person.full_name }} เป็นไม่ผ่านใช่ไหม?">ไม่ผ่าน</button>
+                    <button type="button" class="pass" data-result-button data-result-value="pass_onsite" data-result-label="ผ่าน onsite" data-confirm-message="ระบบจะบันทึกผลเท่านั้น ยังไม่ส่ง LINE ประกาศผล">ผ่าน onsite</button>
+                    <button type="button" class="pass secondary" data-result-button data-result-value="pass_online" data-result-label="ผ่าน online" data-confirm-message="ระบบจะบันทึกผลเท่านั้น ยังไม่ส่ง LINE ประกาศผล">ผ่าน online</button>
+                    <button type="button" class="fail" data-result-button data-result-value="fail" data-result-label="ไม่ผ่าน" data-confirm-message="ระบบจะบันทึกผลไม่ผ่านเท่านั้น ยังไม่ส่ง LINE ประกาศผล">ไม่ผ่าน</button>
+                    <button type="button" class="pending" data-result-button data-result-value="pending" data-result-label="รอตัดสินอีกครั้ง" data-confirm-message="ระบบจะย้อนสถานะกลับไปรอตัดสิน และยังไม่ส่ง LINE ประกาศผล">รอตัดสินอีกครั้ง</button>
                 </form>
             </article>
             {% endwith %}
@@ -80,22 +82,48 @@
         </nav>
     </footer>
 </main>
+<dialog class="result-confirm-dialog" data-result-dialog>
+    <div class="result-confirm-box">
+        <span>ยืนยันการบันทึกผล</span>
+        <h2 data-confirm-title>บันทึกผลสัมภาษณ์</h2>
+        <p data-confirm-message>ระบบจะบันทึกผลเท่านั้น</p>
+        <div class="result-confirm-actions">
+            <button type="button" class="result-confirm-cancel" data-confirm-cancel>ยกเลิก</button>
+            <button type="button" class="result-confirm-submit" data-confirm-submit>ยืนยันบันทึกผล</button>
+        </div>
+    </div>
+</dialog>
 {% endblock %}
 {% block extra_js %}
 <script>
-document.querySelectorAll("[data-result-form]").forEach((form) => {
-    form.addEventListener("submit", (event) => {
-        const button = event.submitter;
-        if (!button || !button.dataset.confirmMessage) {
-            event.preventDefault();
-            return;
+const resultDialog = document.querySelector("[data-result-dialog]");
+const confirmTitle = resultDialog?.querySelector("[data-confirm-title]");
+const confirmMessage = resultDialog?.querySelector("[data-confirm-message]");
+const confirmSubmit = resultDialog?.querySelector("[data-confirm-submit]");
+const confirmCancel = resultDialog?.querySelector("[data-confirm-cancel]");
+let pendingResultForm = null;
+let pendingResultButton = null;
+
+document.querySelectorAll("[data-result-button]").forEach((button) => {
+    button.addEventListener("click", () => {
+        pendingResultForm = button.closest("[data-result-form]");
+        pendingResultButton = button;
+        const personName = pendingResultForm?.dataset.personName || "ผู้สมัคร";
+        confirmTitle.textContent = `${button.dataset.resultLabel} · ${personName}`;
+        confirmMessage.textContent = button.dataset.confirmMessage;
+        if (typeof resultDialog.showModal === "function") {
+            resultDialog.showModal();
+        } else if (window.confirm(`${confirmTitle.textContent}\n${confirmMessage.textContent}`)) {
+            confirmSubmit.click();
         }
-        if (!window.confirm(button.dataset.confirmMessage)) {
-            event.preventDefault();
-            return;
-        }
-        form.elements.confirmed_result.value = button.value;
     });
+});
+confirmCancel?.addEventListener("click", () => resultDialog.close());
+confirmSubmit?.addEventListener("click", () => {
+    if (!pendingResultForm || !pendingResultButton) return;
+    pendingResultForm.elements.result.value = pendingResultButton.dataset.resultValue;
+    pendingResultForm.elements.confirmed_result.value = pendingResultButton.dataset.resultValue;
+    pendingResultForm.submit();
 });
 </script>
 {% endblock %}

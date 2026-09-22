@@ -4,6 +4,7 @@ body { margin: 0; color: #12271d; background: #f7f8f4; font-family: var(--font-p
 .results-heading { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 460px); gap: 20px; align-items: end; padding: 24px 0; }
 .results-heading span { color: #8a6b18; font-size: 13px; font-weight: 900; letter-spacing: .04em; }
 .results-heading h1 { margin: 4px 0 0; font-size: 38px; line-height: 1.1; }
+.result-page-link { display: inline-flex; align-items: center; min-height: 38px; margin-top: 12px; padding: 7px 11px; color: #12271d; text-decoration: none; background: #f3f0e8; border: 1px solid #d8ccb5; border-radius: 6px; font-weight: 900; }
 .results-search { display: grid; gap: 7px; }
 .results-search label { color: #425b46; font-weight: 800; }
 .results-search div { display: flex; gap: 8px; }
@@ -34,11 +35,28 @@ button { min-height: 44px; padding: 10px 14px; color: #fff; background: #425b46;
 .result-extra div { padding: 10px 12px; background: #fbfaf6; border: 1px solid #ebe4d1; border-radius: 6px; }
 .result-extra span { display: block; color: #8a6b18; font-size: 13px; font-weight: 900; }
 .result-extra p { margin: 3px 0 0; color: #2f2b24; overflow-wrap: anywhere; }
-.result-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.result-confirm-note { grid-column: 1 / -1; margin: 0; padding: 9px 11px; color: #74411f; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 6px; font-size: 14px; font-weight: 800; }
+.result-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .result-actions .pass { background: #12271d; border-color: #12271d; }
 .result-actions .pass.secondary { color: #12271d; background: #f3f0e8; border-color: #cfc4ae; }
 .result-actions .fail { color: #9f1d1d; background: #fff; border-color: #f0b8a6; }
+.result-actions .pending { color: #6f5c27; background: #fffaf0; border-color: #e8d8ad; }
+.result-confirm-dialog { width: min(92vw, 440px); padding: 0; color: #12271d; background: transparent; border: 0; }
+.result-confirm-dialog::backdrop { background: rgba(18, 39, 29, .48); }
+.result-confirm-box { padding: 22px; background: #fff; border: 1px solid #d8ccb5; border-top: 4px solid #c2a256; border-radius: 8px; box-shadow: 0 22px 54px rgba(18, 39, 29, .24); }
+.result-confirm-box > span { color: #8a6b18; font-size: 13px; font-weight: 900; letter-spacing: .04em; }
+.result-confirm-box h2 { margin: 4px 0 8px; font-size: 26px; line-height: 1.15; }
+.result-confirm-box p { margin: 0; color: #5f6b63; font-weight: 700; }
+.result-confirm-actions { display: grid; grid-template-columns: 1fr 1.25fr; gap: 8px; margin-top: 18px; }
+.result-confirm-cancel { color: #12271d; background: #fff; border-color: #cfd8cf; }
+.result-confirm-submit { background: #12271d; border-color: #12271d; }
+.announcement-toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; margin-bottom: 14px; padding: 12px 14px; background: #fff; border: 1px solid #dfe5dc; border-radius: 8px; }
+.announcement-toolbar label { display: inline-flex; gap: 8px; align-items: center; font-weight: 900; }
+.announcement-toolbar input[type=checkbox] { width: 20px; height: 20px; accent-color: #425b46; }
+.announcement-toolbar button { background: #12271d; border-color: #12271d; }
+.announcement-status { display: inline-flex; align-items: center; min-height: 30px; padding: 4px 8px; border-radius: 5px; font-size: 13px; font-weight: 900; }
+.announcement-status.ready { color: #20633d; background: #e8f5ec; }
+.announcement-status.sent { color: #425b46; background: #edf2ed; }
+.announcement-status.blocked { color: #9a3412; background: #ffedd5; }
 .result-empty { grid-column: 1 / -1; padding: 28px; color: #667168; text-align: center; background: #fff; border: 1px solid #dfe5dc; border-radius: 8px; }
 .result-pagination { display: flex; gap: 14px; justify-content: space-between; align-items: center; padding-top: 22px; color: #5f6b63; }
 .result-pagination nav { display: flex; gap: 10px; }
@@ -52,4 +70,5 @@ button { min-height: 44px; padding: 10px 14px; color: #fff; background: #425b46;
     .results-heading h1 { font-size: 31px; }
     .results-search div, .result-pagination { align-items: stretch; flex-direction: column; }
     .result-tabs, .result-meta, .result-actions { grid-template-columns: 1fr; }
+    .result-confirm-actions { grid-template-columns: 1fr; }
 }

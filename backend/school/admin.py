@@ -208,42 +208,25 @@ class PersonAdmin(UnfoldModelAdmin):
     def vision_calling_display(self, obj):
         return (obj.extra_data or {}).get("vision_calling") or "-"
 
-    def save_model(self, request, obj, form, change):
-        previous_status = None
-        if change and obj.pk:
-            previous_status = (
-                Person.objects.filter(pk=obj.pk)
-                .values_list("status", flat=True)
-                .first()
-            )
-
-        super().save_model(request, obj, form, change)
-
-        if obj.status == Person.Status.PASSED and previous_status != Person.Status.PASSED:
-            obj.refresh_from_db()
-            self._message_line_notification_status(request, obj)
-
     @admin.action(description="Mark selected people as passed interview students")
     def mark_as_passed_interview(self, request, queryset):
-        stats = {"sent": 0, "missing_line_user_id": 0, "missing_channel_access_token": 0, "failed": 0}
+        updated = 0
         for person in queryset:
             person.status = Person.Status.PASSED
             person.admission_type = Person.AdmissionType.INTERVIEW
             person.save(update_fields=["status", "admission_type"])
-            person.refresh_from_db()
-            stats[self._line_notification_status(person)] += 1
-        self._message_line_notification_summary(request, stats)
+            updated += 1
+        self.message_user(request, f"บันทึกผ่าน onsite {updated} คนแล้ว ยังไม่ได้ส่ง LINE", messages.SUCCESS)
 
     @admin.action(description="Mark selected people as online students")
     def mark_as_passed_online(self, request, queryset):
-        stats = {"sent": 0, "missing_line_user_id": 0, "missing_channel_access_token": 0, "failed": 0}
+        updated = 0
         for person in queryset:
             person.status = Person.Status.PASSED
             person.admission_type = Person.AdmissionType.ONLINE
             person.save(update_fields=["status", "admission_type"])
-            person.refresh_from_db()
-            stats[self._line_notification_status(person)] += 1
-        self._message_line_notification_summary(request, stats)
+            updated += 1
+        self.message_user(request, f"บันทึกผ่าน online {updated} คนแล้ว ยังไม่ได้ส่ง LINE", messages.SUCCESS)
 
     @admin.action(description="Mark selected people as failed")
     def mark_as_failed(self, request, queryset):
@@ -267,17 +250,6 @@ class PersonAdmin(UnfoldModelAdmin):
             return "sent"
         reason = line_push_unavailable_reason(person)
         return reason or "failed"
-
-    def _message_line_notification_status(self, request, person):
-        status = self._line_notification_status(person)
-        if status == "sent":
-            self.message_user(request, "ส่ง LINE แจ้งผลผ่านให้ผู้สมัครแล้ว", messages.SUCCESS)
-        elif status == "missing_line_user_id":
-            self.message_user(request, "ยังไม่ได้ส่ง LINE: ผู้สมัครยังไม่มี LINE user id", messages.WARNING)
-        elif status == "missing_channel_access_token":
-            self.message_user(request, "ยังไม่ได้ส่ง LINE: ยังไม่ได้ตั้ง LINE_MESSAGING_CHANNEL_ACCESS_TOKEN", messages.WARNING)
-        else:
-            self.message_user(request, "ส่ง LINE แจ้งผลผ่านไม่สำเร็จ กรุณาดู backend logs", messages.WARNING)
 
     def _message_line_notification_summary(self, request, stats):
         parts = []

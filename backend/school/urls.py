@@ -17,6 +17,7 @@ urlpatterns = [
     ),
     path("school-admin/appointments/", interviews.interview_schedule, name="appointment_schedule"),
     path("school-admin/interview-results/", interviews.interview_results, name="interview_results"),
+    path("school-admin/interview-announcements/", interviews.interview_announcements, name="interview_announcements"),
     path("school-admin/appointments/<int:pk>/notify/", interviews.interview_notify, name="appointment_notify"),
     path("school-admin/appointments/status/", interviews.interview_confirmation_status, name="appointment_confirmation_status"),
     path("appointments/confirm/", interviews.interview_confirmation, name="appointment_confirmation"),

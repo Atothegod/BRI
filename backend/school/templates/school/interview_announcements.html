@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}ยิงประกาศผลสัมภาษณ์ | BRI{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'school/css/interview_results.css' %}?v=20260922-interview-results-4">
+{% endblock %}
+{% block content %}
+<main class="interview-results">
+    <header class="results-heading">
+        <div>
+            <span>BRI RESULT ANNOUNCEMENTS</span>
+            <h1>ยิงประกาศผลสัมภาษณ์</h1>
+            <a class="result-page-link" href="{% url 'school:interview_results' %}">กลับไปบันทึกผลสัมภาษณ์</a>
+        </div>
+        <form method="get" class="results-search">
+            <input type="hidden" name="audience" value="{{ audience }}">
+            <label for="announcement-search">ค้นหาผู้สมัคร</label>
+            <div>
+                <input id="announcement-search" name="q" value="{{ query }}" placeholder="ชื่อ เบอร์โทร หรือชื่อ LINE">
+                <button type="submit">ค้นหา</button>
+            </div>
+        </form>
+    </header>
+
+    {% for message in messages %}<p class="result-notice {{ message.tags }}" role="status">{{ message }}</p>{% endfor %}
+
+    <nav class="result-tabs" aria-label="สถานะการยิงประกาศ">
+        <a href="?audience=ready{% if query %}&q={{ query|urlencode }}{% endif %}" class="{% if audience == 'ready' %}active{% endif %}"><span>พร้อมยิง</span><b>{{ counts.ready }}</b></a>
+        <a href="?audience=sent{% if query %}&q={{ query|urlencode }}{% endif %}" class="{% if audience == 'sent' %}active{% endif %}"><span>ส่งแล้ว</span><b>{{ counts.sent }}</b></a>
+        <a href="?audience=blocked{% if query %}&q={{ query|urlencode }}{% endif %}" class="{% if audience == 'blocked' %}active{% endif %}"><span>ติดปัญหา LINE</span><b>{{ counts.blocked }}</b></a>
+        <a href="?audience=all{% if query %}&q={{ query|urlencode }}{% endif %}" class="{% if audience == 'all' %}active{% endif %}"><span>ทั้งหมด</span><b>{{ counts.all }}</b></a>
+    </nav>
+
+    <form method="post" data-announcement-form>
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next_url }}">
+        <input type="hidden" name="confirmed_send" value="">
+        <div class="announcement-toolbar">
+            <label><input type="checkbox" data-select-all-announcements> เลือกทั้งหมดในหน้านี้</label>
+            <button type="button" data-send-announcements>ส่งประกาศผลที่เลือก</button>
+        </div>
+        <section class="result-grid" aria-label="รายชื่อสำหรับยิงประกาศ">
+            {% for person in page_obj %}
+                <article class="result-card result-card--{{ person.status }}">
+                    <div class="result-card-main">
+                        <div class="result-person">
+                            <span class="result-avatar">{{ person.full_name|slice:":1" }}</span>
+                            <div>
+                                <h2>{{ person.full_name }}</h2>
+                                <p>{{ person.nickname|default:"-" }} · {{ person.phone|default:"ไม่มีเบอร์" }}</p>
+                            </div>
+                        </div>
+                        <dl class="result-meta">
+                            <div><dt>ผลสัมภาษณ์</dt><dd>{{ person.get_status_display }}{% if person.status == 'passed' and person.admission_type_name %} · {{ person.admission_type_name }}{% endif %}</dd></div>
+                            <div><dt>LINE</dt><dd>{{ person.line_display_name|default:"-" }}</dd></div>
+                            <div><dt>สถานะประกาศ</dt><dd>{% if person.has_result_line_notification %}<span class="announcement-status sent">ส่งแล้ว</span>{% elif person.line_issue %}<span class="announcement-status blocked">{% if person.line_issue == "missing_line_user_id" %}ยังไม่เชื่อม LINE{% elif person.line_issue == "missing_channel_access_token" %}ยังไม่ได้ตั้ง LINE token{% else %}ส่งไม่ได้{% endif %}</span>{% else %}<span class="announcement-status ready">พร้อมยิง</span>{% endif %}</dd></div>
+                            <div><dt>เลือกส่ง</dt><dd><label>{% if person.can_send_result_line %}<input type="checkbox" name="people" value="{{ person.pk }}" data-announcement-checkbox> เลือกคนนี้{% else %}-{% endif %}</label></dd></div>
+                        </dl>
+                    </div>
+                </article>
+            {% empty %}
+                <div class="result-empty">ไม่พบรายชื่อที่ตรงเงื่อนไข</div>
+            {% endfor %}
+        </section>
+    </form>
+
+    <footer class="result-pagination">
+        <span>หน้า {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        <nav aria-label="หน้ารายชื่อ">
+            {% if page_obj.has_previous %}<a href="{{ page_query_prefix }}page={{ page_obj.previous_page_number }}">ก่อนหน้า</a>{% endif %}
+            {% if page_obj.has_next %}<a href="{{ page_query_prefix }}page={{ page_obj.next_page_number }}">ถัดไป</a>{% endif %}
+        </nav>
+    </footer>
+</main>
+<dialog class="result-confirm-dialog" data-send-dialog>
+    <div class="result-confirm-box">
+        <span>ยืนยันการยิงประกาศ</span>
+        <h2>ส่ง LINE ประกาศผล</h2>
+        <p data-send-message>ตรวจรายชื่อให้เรียบร้อยก่อนส่ง</p>
+        <div class="result-confirm-actions">
+            <button type="button" class="result-confirm-cancel" data-send-cancel>ยกเลิก</button>
+            <button type="button" class="result-confirm-submit" data-send-confirm>ยืนยันส่งประกาศ</button>
+        </div>
+    </div>
+</dialog>
+{% endblock %}
+{% block extra_js %}
+<script>
+const announcementForm = document.querySelector("[data-announcement-form]");
+const announcementBoxes = [...document.querySelectorAll("[data-announcement-checkbox]")];
+const selectAllAnnouncements = document.querySelector("[data-select-all-announcements]");
+const sendDialog = document.querySelector("[data-send-dialog]");
+const sendMessage = document.querySelector("[data-send-message]");
+
+selectAllAnnouncements?.addEventListener("change", () => {
+    announcementBoxes.forEach((box) => { box.checked = selectAllAnnouncements.checked; });
+});
+document.querySelector("[data-send-announcements]")?.addEventListener("click", () => {
+    const count = announcementBoxes.filter((box) => box.checked).length;
+    if (!count) {
+        sendMessage.textContent = "กรุณาเลือกรายชื่ออย่างน้อย 1 คนก่อนส่งประกาศ";
+    } else {
+        sendMessage.textContent = `กำลังจะส่ง LINE ประกาศผลให้ ${count} คน`;
+    }
+    if (typeof sendDialog.showModal === "function") {
+        sendDialog.showModal();
+    } else if (count && window.confirm(sendMessage.textContent)) {
+        announcementForm.elements.confirmed_send.value = "yes";
+        announcementForm.submit();
+    }
+});
+document.querySelector("[data-send-cancel]")?.addEventListener("click", () => sendDialog.close());
+document.querySelector("[data-send-confirm]")?.addEventListener("click", () => {
+    const count = announcementBoxes.filter((box) => box.checked).length;
+    if (!count) return;
+    announcementForm.elements.confirmed_send.value = "yes";
+    announcementForm.submit();
+});
+</script>
+{% endblock %}

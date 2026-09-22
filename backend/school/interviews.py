@@ -19,8 +19,22 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods, require_POST
 
 from .date_formats import thai_date
-from .line import build_appointment_invitation_flex_message, line_push_unavailable_reason, send_line_push_message
-from .models import Appointment, AppointmentParticipant, AppointmentSlot, Person, line_notification_sent
+from .line import (
+    build_appointment_invitation_flex_message,
+    line_push_unavailable_reason,
+    notify_interview_failed,
+    notify_interview_passed,
+    send_line_push_message,
+)
+from .models import (
+    Appointment,
+    AppointmentParticipant,
+    AppointmentSlot,
+    Person,
+    Student,
+    line_notification_sent,
+    mark_line_notification_sent,
+)
 from .views import is_school_admin
 
 THAI_TIMEZONE = ZoneInfo("Asia/Bangkok")
@@ -36,7 +50,7 @@ def appointment_candidates(appointment_type):
     if appointment_type == Appointment.Type.CLASS:
         return queryset.filter(status=Person.Status.PASSED, student__is_active=True)
     if appointment_type == Appointment.Type.ORIENTATION:
-        return queryset.filter(status=Person.Status.PASSED, student__is_paid=True)
+        return queryset.filter(status=Person.Status.PASSED, student__is_active=True, student__is_paid=True)
     return queryset.filter(status=Person.Status.IN_PROGRESS)
 
 
@@ -233,7 +247,40 @@ def update_interview_result(person, result):
         person.admission_type = ""
         person.save(update_fields=["status", "admission_type"])
         return "ไม่ผ่าน"
+    if result == "pending":
+        person.status = Person.Status.IN_PROGRESS
+        person.admission_type = ""
+        person.save(update_fields=["status", "admission_type"])
+        return "รอตัดสินอีกครั้ง"
     return ""
+
+
+def interview_result_notification_key(person):
+    if person.status == Person.Status.PASSED:
+        return "interview_passed"
+    if person.status == Person.Status.FAILED:
+        return "interview_failed"
+    return ""
+
+
+def interview_result_notification_sent(person):
+    key = interview_result_notification_key(person)
+    return bool(key and line_notification_sent(person, key))
+
+
+def send_interview_result_notification(person):
+    if person.status == Person.Status.PASSED:
+        student, _ = Student.objects.get_or_create(person=person)
+        sent = notify_interview_passed(person, student)
+        key = "interview_passed"
+    elif person.status == Person.Status.FAILED:
+        sent = notify_interview_failed(person)
+        key = "interview_failed"
+    else:
+        return False
+    if sent:
+        mark_line_notification_sent(person, key)
+    return sent
 
 
 @login_required(login_url="admin:login")
@@ -251,18 +298,6 @@ def interview_results(request):
             messages.error(request, "ยังไม่ได้ยืนยันการบันทึกผล กรุณากดยืนยันก่อนส่งผลสัมภาษณ์")
         elif not person or not result_label:
             messages.error(request, "ไม่พบผู้สมัครหรือสถานะผลสัมภาษณ์ไม่ถูกต้อง")
-        elif person.status == Person.Status.PASSED:
-            person.refresh_from_db()
-            if line_notification_sent(person, "interview_passed"):
-                messages.success(request, f"บันทึกผล {person.full_name}: {result_label} และส่ง LINE ประกาศผลแล้ว")
-            else:
-                reason = line_push_unavailable_reason(person)
-                if reason == "missing_line_user_id":
-                    messages.warning(request, f"บันทึกผล {person.full_name}: {result_label} แล้ว แต่ยังไม่ได้ส่ง LINE เพราะผู้สมัครยังไม่เชื่อม LINE")
-                elif reason == "missing_channel_access_token":
-                    messages.warning(request, f"บันทึกผล {person.full_name}: {result_label} แล้ว แต่ยังไม่ได้ส่ง LINE เพราะยังไม่ได้ตั้ง LINE token")
-                else:
-                    messages.warning(request, f"บันทึกผล {person.full_name}: {result_label} แล้ว แต่ LINE ยังส่งไม่สำเร็จ")
         else:
             messages.success(request, f"บันทึกผล {person.full_name}: {result_label} แล้ว")
         redirect_to = request.POST.get("next") or reverse("school:interview_results")
@@ -298,7 +333,7 @@ def interview_results(request):
     latest_by_person = latest_interview_participations([person.pk for person in page.object_list])
     for person in page.object_list:
         person.latest_interview_participant = latest_by_person.get(person.pk)
-        person.has_result_line_notification = line_notification_sent(person, "interview_passed")
+        person.has_result_line_notification = interview_result_notification_sent(person)
         person.student_record = getattr(person, "student", None)
     query_params = request.GET.copy()
     query_params.pop("page", None)
@@ -306,6 +341,88 @@ def interview_results(request):
         "page_obj": page,
         "query": query,
         "status": status,
+        "counts": counts,
+        "page_query_prefix": f"?{query_params.urlencode()}&" if query_params else "?",
+        "next_url": request.get_full_path(),
+    })
+
+
+@login_required(login_url="admin:login")
+@never_cache
+@require_http_methods(["GET", "POST"])
+def interview_announcements(request):
+    if not is_school_admin(request.user):
+        raise PermissionDenied
+    if request.method == "POST":
+        selected_ids = request.POST.getlist("people")
+        if request.POST.get("confirmed_send") != "yes":
+            messages.error(request, "กรุณายืนยันก่อนส่งประกาศผล")
+        elif not selected_ids:
+            messages.error(request, "กรุณาเลือกรายชื่อที่ต้องการส่งประกาศ")
+        else:
+            stats = {"sent": 0, "already_sent": 0, "missing_line_user_id": 0, "missing_channel_access_token": 0, "failed": 0}
+            people = Person.objects.filter(
+                pk__in=selected_ids,
+                status__in=[Person.Status.PASSED, Person.Status.FAILED],
+            ).order_by("pk")
+            for person in people:
+                if interview_result_notification_sent(person):
+                    stats["already_sent"] += 1
+                    continue
+                if send_interview_result_notification(person):
+                    stats["sent"] += 1
+                    continue
+                stats[line_push_unavailable_reason(person) or "failed"] += 1
+            summary = [f"ส่งสำเร็จ {stats['sent']} คน"]
+            if stats["already_sent"]:
+                summary.append(f"เคยส่งแล้ว {stats['already_sent']} คน")
+            if stats["missing_line_user_id"]:
+                summary.append(f"ยังไม่เชื่อม LINE {stats['missing_line_user_id']} คน")
+            if stats["missing_channel_access_token"]:
+                summary.append("ยังไม่ได้ตั้ง LINE token")
+            if stats["failed"]:
+                summary.append(f"ส่งไม่สำเร็จ {stats['failed']} คน")
+            level = messages.SUCCESS if stats["sent"] and not (stats["missing_line_user_id"] or stats["missing_channel_access_token"] or stats["failed"]) else messages.WARNING
+            messages.add_message(request, level, " · ".join(summary))
+        return redirect(request.POST.get("next") or reverse("school:interview_announcements"))
+
+    query = request.GET.get("q", "").strip()
+    audience = request.GET.get("audience") or "ready"
+    if audience not in {"ready", "sent", "blocked", "all"}:
+        audience = "ready"
+    people = Person.objects.filter(status__in=[Person.Status.PASSED, Person.Status.FAILED]).order_by("-updated_at", "-pk")
+    if query:
+        people = people.filter(
+            Q(first_name__icontains=query)
+            | Q(last_name__icontains=query)
+            | Q(nickname__icontains=query)
+            | Q(phone__icontains=query)
+            | Q(line_display_name__icontains=query)
+        )
+    people_list = list(people)
+    for person in people_list:
+        person.has_result_line_notification = interview_result_notification_sent(person)
+        person.line_issue = "" if person.has_result_line_notification else line_push_unavailable_reason(person)
+        person.can_send_result_line = not person.has_result_line_notification and not person.line_issue
+    counts = {
+        "ready": sum(1 for person in people_list if person.can_send_result_line),
+        "sent": sum(1 for person in people_list if person.has_result_line_notification),
+        "blocked": sum(1 for person in people_list if not person.has_result_line_notification and person.line_issue),
+        "all": len(people_list),
+    }
+    if audience == "ready":
+        people_list = [person for person in people_list if person.can_send_result_line]
+    elif audience == "sent":
+        people_list = [person for person in people_list if person.has_result_line_notification]
+    elif audience == "blocked":
+        people_list = [person for person in people_list if not person.has_result_line_notification and person.line_issue]
+    page = Paginator(people_list, 100).get_page(request.GET.get("page"))
+    query_params = request.GET.copy()
+    query_params.pop("page", None)
+    return render(request, "school/interview_announcements.html", {
+        "page_obj": page,
+        "query": query,
+        "audience": audience,
         "counts": counts,
         "page_query_prefix": f"?{query_params.urlencode()}&" if query_params else "?",
         "next_url": request.get_full_path(),

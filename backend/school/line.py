@@ -236,6 +236,83 @@ def build_interview_passed_flex_message(person, student):
     }
 
 
+def build_interview_failed_flex_message(person):
+    result_link = result_url()
+    return {
+        "type": "flex",
+        "altText": f"BRI ประกาศผลสัมภาษณ์ของ {person.full_name} แล้ว ดูผลได้ที่นี่",
+        "contents": {
+            "type": "bubble",
+            "size": "mega",
+            "header": {
+                "type": "box",
+                "layout": "vertical",
+                "paddingAll": "20px",
+                "backgroundColor": "#12271D",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "BRI Admission Result",
+                        "color": "#C2A256",
+                        "size": "xs",
+                        "weight": "bold",
+                    },
+                    {
+                        "type": "text",
+                        "text": "ประกาศผลสัมภาษณ์แล้ว",
+                        "color": "#FFFFFF",
+                        "size": "lg",
+                        "weight": "bold",
+                        "wrap": True,
+                        "margin": "sm",
+                    },
+                ],
+            },
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "backgroundColor": "#F3F0E8",
+                "spacing": "md",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": person.full_name,
+                        "weight": "bold",
+                        "size": "md",
+                        "color": "#12271D",
+                        "wrap": True,
+                    },
+                    {
+                        "type": "text",
+                        "text": "กดดูประกาศผลเพื่ออ่านรายละเอียด",
+                        "size": "sm",
+                        "color": "#5F6B63",
+                        "wrap": True,
+                    },
+                ],
+            },
+            "footer": {
+                "type": "box",
+                "layout": "vertical",
+                "backgroundColor": "#F3F0E8",
+                "contents": [
+                    {
+                        "type": "button",
+                        "style": "primary",
+                        "height": "sm",
+                        "color": "#425B46",
+                        "action": {
+                            "type": "uri",
+                            "label": "ดูประกาศผล",
+                            "uri": result_link,
+                        },
+                    },
+                ],
+            },
+        },
+    }
+
+
 def build_payment_approved_flex_message(person, student):
     if not student.is_paid:
         raise ValueError("Payment approval message requires is_paid=True")
@@ -348,6 +425,13 @@ def notify_interview_passed(person, student):
     return send_line_push_message(
         person.line_user_id,
         [build_interview_passed_flex_message(person, student)],
+    )
+
+
+def notify_interview_failed(person):
+    return send_line_push_message(
+        person.line_user_id,
+        [build_interview_failed_flex_message(person)],
     )
 
 

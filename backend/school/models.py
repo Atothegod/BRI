@@ -324,34 +324,12 @@ def mark_line_notification_sent(person, key):
     person.extra_data = extra_data
 
 
-@receiver(pre_save, sender=Person)
-def remember_previous_person_status(sender, instance, **kwargs):
-    instance._previous_status = None
-    if instance.pk:
-        instance._previous_status = (
-            Person.objects.filter(pk=instance.pk)
-            .values_list("status", flat=True)
-            .first()
-        )
-
-
 @receiver(post_save, sender=Person)
 def handle_passed_person(sender, instance, **kwargs):
     if instance.status != Person.Status.PASSED:
         return
 
-    student, _ = Student.objects.get_or_create(person=instance)
-    previous_status = getattr(instance, "_previous_status", None)
-    if previous_status == Person.Status.PASSED or line_notification_sent(
-        instance,
-        "interview_passed",
-    ):
-        return
-
-    from .line import notify_interview_passed
-
-    if notify_interview_passed(instance, student):
-        mark_line_notification_sent(instance, "interview_passed")
+    Student.objects.get_or_create(person=instance)
 
 
 @receiver(pre_save, sender=Student)

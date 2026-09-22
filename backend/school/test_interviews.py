@@ -118,6 +118,13 @@ class AppointmentScheduleTests(TestCase):
         self.assertEqual(self.schedule("orientation", people=[self.people[1].pk]).status_code, 200)
         self.assertEqual(Appointment.objects.count(), 1)
 
+        inactive = Person.objects.create(first_name="Inactive", last_name="Student", line_user_id="Uinactive")
+        inactive.status = Person.Status.PASSED
+        inactive.save(update_fields=["status"])
+        Student.objects.filter(person=inactive).update(is_paid=True, is_active=False)
+        self.assertEqual(self.schedule("orientation", people=[inactive.pk]).status_code, 200)
+        self.assertEqual(Appointment.objects.count(), 1)
+
     @patch("school.interviews.send_line_push_message", return_value=True)
     def test_notify_is_idempotent_and_uses_event_message(self, send):
         self.schedule()
@@ -501,6 +508,7 @@ class AppointmentScheduleTests(TestCase):
         self.assertContains(response, "สร้างผู้นำรุ่นใหม่")
         self.assertContains(response, "ผ่าน onsite")
         self.assertContains(response, "ผ่าน online")
+        self.assertContains(response, "รอตัดสินอีกครั้ง")
 
         unconfirmed = self.client.post(url, {
             "person": person.pk,
@@ -524,15 +532,32 @@ class AppointmentScheduleTests(TestCase):
         self.assertEqual(person.status, Person.Status.PASSED)
         self.assertEqual(person.admission_type, Person.AdmissionType.ONLINE)
         self.assertTrue(Student.objects.filter(person=person).exists())
+        self.assertFalse(mock_urlopen.called)
+        self.assertNotIn("line_notifications", person.extra_data)
+
+        announcement_url = reverse("school:interview_announcements")
+        announcement_page = self.client.get(announcement_url, {"q": "Result"})
+        self.assertContains(announcement_page, "Result Applicant")
+        self.assertContains(announcement_page, "พร้อมยิง")
+
+        announcement = self.client.post(announcement_url, {
+            "people": [person.pk],
+            "confirmed_send": "yes",
+            "next": f"{announcement_url}?q=Result",
+        })
+
+        self.assertRedirects(announcement, f"{announcement_url}?q=Result", fetch_redirect_response=False)
         self.assertTrue(mock_urlopen.called)
         payload = json.loads(mock_urlopen.call_args.args[0].data.decode("utf-8"))
         self.assertIn("ผ่านสัมภาษณ์ (ออนไลน์)", json.dumps(payload, ensure_ascii=False))
+        person.refresh_from_db()
         self.assertIn("interview_passed", person.extra_data["line_notifications"])
 
         search_again = self.client.get(url, {"q": "Result"})
         self.assertContains(search_again, "Result Applicant")
         self.assertContains(search_again, "ผ่านแบบออนไลน์")
 
+    @override_settings(LINE_MESSAGING_CHANNEL_ACCESS_TOKEN="line-token")
     @patch("school.line.request.urlopen")
     def test_interview_results_page_can_mark_failed_without_line_notice(self, mock_urlopen):
         person = Person.objects.create(
@@ -554,3 +579,29 @@ class AppointmentScheduleTests(TestCase):
         self.assertEqual(person.status, Person.Status.FAILED)
         self.assertEqual(person.admission_type, "")
         self.assertFalse(mock_urlopen.called)
+
+        announcement_url = reverse("school:interview_announcements")
+        announcement = self.client.post(announcement_url, {
+            "people": [person.pk],
+            "confirmed_send": "yes",
+            "next": announcement_url,
+        })
+
+        self.assertRedirects(announcement, announcement_url, fetch_redirect_response=False)
+        self.assertTrue(mock_urlopen.called)
+        payload = json.loads(mock_urlopen.call_args.args[0].data.decode("utf-8"))
+        self.assertIn("ประกาศผลสัมภาษณ์แล้ว", json.dumps(payload, ensure_ascii=False))
+        person.refresh_from_db()
+        self.assertIn("interview_failed", person.extra_data["line_notifications"])
+
+        reset = self.client.post(url, {
+            "person": person.pk,
+            "result": "pending",
+            "confirmed_result": "pending",
+            "next": url,
+        })
+
+        self.assertRedirects(reset, url, fetch_redirect_response=False)
+        person.refresh_from_db()
+        self.assertEqual(person.status, Person.Status.IN_PROGRESS)
+        self.assertEqual(person.admission_type, "")

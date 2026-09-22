@@ -443,7 +443,7 @@ def interview_schedule(request):
         audience = "unsent"
     if audience == "next_round" and selected_appointment is None and source_appointment is None:
         audience = "unsent"
-    people = appointment_candidates(appointment_type).order_by("first_name", "pk")
+    people = appointment_candidates(appointment_type).order_by("-created_at", "-pk")
     participations = AppointmentParticipant.objects.none()
     confirmed_people = confirmed_interview_people() if appointment_type == Appointment.Type.INTERVIEW else Person.objects.none().values("pk")
     if selected_appointment is None:

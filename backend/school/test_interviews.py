@@ -97,6 +97,15 @@ class AppointmentScheduleTests(TestCase):
         self.assertEqual(appointment.participants.count(), 120)
         self.assertEqual(len(self.client.session["appointment_send_queue"]), 120)
 
+    def test_appointment_people_are_sorted_newest_first(self):
+        older = Person.objects.create(first_name="Older", last_name="Applicant", line_user_id="Uolder")
+        newer = Person.objects.create(first_name="Newer", last_name="Applicant", line_user_id="Unewer")
+
+        response = self.client.get(self.url, {"type": "interview", "event": "new"})
+
+        page_people = list(response.context["page_obj"].object_list)
+        self.assertLess(page_people.index(newer), page_people.index(older))
+
     def test_orientation_only_allows_paid_passed_students(self):
         Person.objects.filter(pk=self.people[0].pk).update(status=Person.Status.PASSED)
         Student.objects.create(person=self.people[0], is_paid=True)

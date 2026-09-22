@@ -554,6 +554,7 @@ class PersonForm(forms.Form):
             None,
         )
         if not province:
+            self.add_error("province", "กรุณาเลือกจังหวัดจากรายการ")
             return cleaned_data
         cleaned_data["province"] = province["province"]
 
@@ -566,6 +567,7 @@ class PersonForm(forms.Form):
             None,
         )
         if not district:
+            self.add_error("district", "กรุณาเลือกอำเภอ / เขตจากรายการ")
             return cleaned_data
         cleaned_data["district"] = district["district"]
 
@@ -578,6 +580,7 @@ class PersonForm(forms.Form):
             "",
         )
         if not subdistrict:
+            self.add_error("sub_district", "กรุณาเลือกตำบล / แขวงจากรายการ")
             return cleaned_data
         cleaned_data["sub_district"] = subdistrict
         return cleaned_data

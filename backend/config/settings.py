@@ -338,6 +338,11 @@ LOGGING = {
             "level": "WARNING",
             "propagate": False,
         },
+        "django.security.DisallowedHost": {
+            "handlers": ["console"],
+            "level": "CRITICAL",
+            "propagate": False,
+        },
         "school": {
             "handlers": ["console"],
             "level": os.environ.get("SCHOOL_LOG_LEVEL", "INFO"),

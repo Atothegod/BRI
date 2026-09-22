@@ -1,5 +1,6 @@
 from django.contrib import admin, messages
 from django.db.models import Q
+from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin as UnfoldModelAdmin
 
@@ -104,15 +105,13 @@ class BRIStudyHistoryFilter(admin.SimpleListFilter):
 @admin.register(Person)
 class PersonAdmin(UnfoldModelAdmin):
     list_display = (
-        "full_name",
-        "phone",
-        "email",
-        "line_display_name",
-        "line_user_id",
-        "student_code",
-        "has_paid",
+        "applicant_display",
+        "contact_display",
+        "line_account_display",
         "status",
         "admission_type_display",
+        "student_code_display",
+        "paid_display",
         "country_display",
         "studied_bri_display",
         "goal_display",
@@ -120,9 +119,10 @@ class PersonAdmin(UnfoldModelAdmin):
         "interview_at",
         "interview_notification_state",
         "interview_confirmed_at",
-        "user",
+        "created_at",
     )
     list_filter = ("status", "admission_type", BRIStudyHistoryFilter, CountryCodeFilter, "gender")
+    ordering = ("-created_at", "-id")
     search_fields = (
         "first_name",
         "last_name",
@@ -183,9 +183,47 @@ class PersonAdmin(UnfoldModelAdmin):
         "send_interview_passed_line_notification",
     )
 
+    @admin.display(ordering="nickname", description="ผู้สมัคร")
+    def applicant_display(self, obj):
+        nickname = obj.nickname or "-"
+        full_name = obj.full_name or "-"
+        return format_html(
+            '<strong>{}</strong><br><span style="color:#667085;">{}</span>',
+            nickname,
+            full_name,
+        )
+
+    @admin.display(ordering="phone", description="ติดต่อ")
+    def contact_display(self, obj):
+        phone = obj.phone or "-"
+        email = obj.email or "-"
+        return format_html(
+            '{}<br><span style="color:#667085;">{}</span>',
+            phone,
+            email,
+        )
+
+    @admin.display(ordering="line_display_name", description="LINE")
+    def line_account_display(self, obj):
+        display_name = obj.line_display_name or "-"
+        if not obj.line_user_id:
+            return display_name
+        return format_html(
+            '{}<br><span style="color:#667085;">เชื่อมต่อแล้ว</span>',
+            display_name,
+        )
+
     @admin.display(description="ประเภทผู้เรียน")
     def admission_type_display(self, obj):
         return obj.admission_type_name or "-"
+
+    @admin.display(ordering="student__student_id", description="รหัสนักเรียน")
+    def student_code_display(self, obj):
+        return obj.student_code or "-"
+
+    @admin.display(boolean=True, ordering="student__is_paid", description="ชำระเงิน")
+    def paid_display(self, obj):
+        return obj.has_paid
 
     @admin.display(description="ประเทศ")
     def country_display(self, obj):

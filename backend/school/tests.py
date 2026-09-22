@@ -257,6 +257,11 @@ class PersonViewTests(TestCase):
         Person.objects.create(first_name="Unknown", last_name="Applicant")
         model_admin = PersonAdmin(Person, admin.site)
 
+        self.assertIn("applicant_display", model_admin.list_display)
+        self.assertIn("contact_display", model_admin.list_display)
+        self.assertIn("line_account_display", model_admin.list_display)
+        self.assertNotIn("line_user_id", model_admin.list_display)
+        self.assertEqual(model_admin.ordering, ("-created_at", "-id"))
         self.assertEqual(model_admin.country_display(person), "United States")
         self.assertEqual(model_admin.studied_bri_display(person), "เคย")
         self.assertEqual(model_admin.goal_display(person), "อยากเติบโตในของประทาน")
@@ -267,6 +272,29 @@ class PersonViewTests(TestCase):
         request = RequestFactory().get("/admin/school/person/", {"studied_bri": "yes"})
         filter_spec = BRIStudyHistoryFilter(request, request.GET.copy(), Person, model_admin)
         self.assertEqual(list(filter_spec.queryset(request, Person.objects.all())), [person])
+
+    def test_person_admin_display_prioritizes_nickname(self):
+        person = Person.objects.create(
+            first_name="Somchai",
+            last_name="Applicant",
+            nickname="ชาย",
+            phone="0812345678",
+            email="somchai@example.com",
+            line_user_id="Uadminline",
+            line_display_name="Somchai LINE",
+        )
+        model_admin = PersonAdmin(Person, admin.site)
+
+        applicant_html = str(model_admin.applicant_display(person))
+        contact_html = str(model_admin.contact_display(person))
+        line_html = str(model_admin.line_account_display(person))
+
+        self.assertIn("ชาย", applicant_html)
+        self.assertIn("Somchai Applicant", applicant_html)
+        self.assertIn("0812345678", contact_html)
+        self.assertIn("somchai@example.com", contact_html)
+        self.assertIn("Somchai LINE", line_html)
+        self.assertIn("เชื่อมต่อแล้ว", line_html)
 
     def test_registration_allows_blank_mentor_name(self):
         form_data = self.valid_form_data()

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% load static tz school_dates %}
+{% block title %}บันทึกผลสัมภาษณ์ | BRI{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'school/css/interview_results.css' %}?v=20260922-interview-results-1">
+<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20260916-school-admin-4">
+{% endblock %}
+{% block content %}
+{% include "school/includes/school_admin_nav.html" %}
+<main class="interview-results">
+    <header class="results-heading">
+        <div>
+            <span>BRI INTERVIEW RESULTS</span>
+            <h1>บันทึกผลสัมภาษณ์</h1>
+        </div>
+        <form method="get" class="results-search">
+            <input type="hidden" name="status" value="{{ status }}">
+            <label for="result-search">ค้นหาผู้สมัคร</label>
+            <div>
+                <input id="result-search" name="q" value="{{ query }}" placeholder="ชื่อ เบอร์โทร หรือชื่อ LINE">
+                <button type="submit">ค้นหา</button>
+            </div>
+        </form>
+    </header>
+
+    {% for message in messages %}<p class="result-notice {{ message.tags }}" role="status">{{ message }}</p>{% endfor %}
+
+    <nav class="result-tabs" aria-label="สถานะผลสัมภาษณ์">
+        <a href="?status=pending{% if query %}&q={{ query|urlencode }}{% endif %}" class="{% if status == 'pending' %}active{% endif %}"><span>รอตัดสิน</span><b>{{ counts.pending }}</b></a>
+        <a href="?status=passed{% if query %}&q={{ query|urlencode }}{% endif %}" class="{% if status == 'passed' %}active{% endif %}"><span>ผ่านแล้ว</span><b>{{ counts.passed }}</b></a>
+        <a href="?status=failed{% if query %}&q={{ query|urlencode }}{% endif %}" class="{% if status == 'failed' %}active{% endif %}"><span>ไม่ผ่าน</span><b>{{ counts.failed }}</b></a>
+        <a href="?status=all{% if query %}&q={{ query|urlencode }}{% endif %}" class="{% if status == 'all' %}active{% endif %}"><span>ทั้งหมด</span><b>{{ counts.all }}</b></a>
+    </nav>
+
+    <section class="result-grid" aria-label="รายชื่อผู้สมัคร">
+        {% timezone "Asia/Bangkok" %}
+        {% for person in page_obj %}
+            {% with participant=person.latest_interview_participant %}
+            <article class="result-card result-card--{{ person.status }}">
+                <div class="result-card-main">
+                    <div class="result-person">
+                        <span class="result-avatar">{{ person.full_name|slice:":1" }}</span>
+                        <div>
+                            <h2>{{ person.full_name }}</h2>
+                            <p>{{ person.nickname|default:"-" }} · {{ person.phone|default:"ไม่มีเบอร์" }}</p>
+                        </div>
+                    </div>
+                    <dl class="result-meta">
+                        <div><dt>LINE</dt><dd>{{ person.line_display_name|default:"-" }}</dd></div>
+                        <div><dt>นัดล่าสุด</dt><dd>{% if participant %}{{ participant.appointment.starts_at|thai_date }}{% if participant.selected_slot %} · {{ participant.selected_slot.starts_at|date:"H:i" }}-{{ participant.selected_slot.ends_at|date:"H:i" }}{% endif %}{% else %}-{% endif %}</dd></div>
+                        <div><dt>สถานะ</dt><dd>{{ person.get_status_display }}{% if person.status == 'passed' and person.admission_type_name %} · {{ person.admission_type_name }}{% endif %}</dd></div>
+                        <div><dt>LINE ประกาศผล</dt><dd>{% if person.has_result_line_notification %}ส่งแล้ว{% elif person.status == 'passed' %}ยังไม่สำเร็จ{% else %}-{% endif %}</dd></div>
+                    </dl>
+                </div>
+                <form method="post" class="result-actions">
+                    {% csrf_token %}
+                    <input type="hidden" name="person" value="{{ person.pk }}">
+                    <input type="hidden" name="next" value="{{ next_url }}">
+                    <button type="submit" name="result" value="pass_onsite" class="pass">ผ่าน onsite</button>
+                    <button type="submit" name="result" value="pass_online" class="pass secondary">ผ่าน online</button>
+                    <button type="submit" name="result" value="fail" class="fail">ไม่ผ่าน</button>
+                </form>
+            </article>
+            {% endwith %}
+        {% empty %}
+            <div class="result-empty">ไม่พบรายชื่อที่ตรงเงื่อนไข</div>
+        {% endfor %}
+        {% endtimezone %}
+    </section>
+
+    <footer class="result-pagination">
+        <span>หน้า {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        <nav aria-label="หน้ารายชื่อ">
+            {% if page_obj.has_previous %}<a href="{{ page_query_prefix }}page={{ page_obj.previous_page_number }}">ก่อนหน้า</a>{% endif %}
+            {% if page_obj.has_next %}<a href="{{ page_query_prefix }}page={{ page_obj.next_page_number }}">ถัดไป</a>{% endif %}
+        </nav>
+    </footer>
+</main>
+{% endblock %}

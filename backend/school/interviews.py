@@ -20,7 +20,7 @@ from django.views.decorators.http import require_http_methods, require_POST
 
 from .date_formats import thai_date
 from .line import build_appointment_invitation_flex_message, line_push_unavailable_reason, send_line_push_message
-from .models import Appointment, AppointmentParticipant, AppointmentSlot, Person, Student, line_notification_sent
+from .models import Appointment, AppointmentParticipant, AppointmentSlot, Person, line_notification_sent
 from .views import is_school_admin
 
 THAI_TIMEZONE = ZoneInfo("Asia/Bangkok")
@@ -265,7 +265,7 @@ def interview_results(request):
         return redirect(redirect_to)
 
     query = request.GET.get("q", "").strip()
-    status = request.GET.get("status", "pending")
+    status = request.GET.get("status") or ("all" if query else "pending")
     people = Person.objects.all().order_by("first_name", "last_name", "pk")
     if status == "passed":
         people = people.filter(status=Person.Status.PASSED)

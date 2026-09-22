@@ -35,6 +35,7 @@ button { min-height: 44px; padding: 10px 14px; color: #fff; background: #425b46;
 .result-extra span { display: block; color: #8a6b18; font-size: 13px; font-weight: 900; }
 .result-extra p { margin: 3px 0 0; color: #2f2b24; overflow-wrap: anywhere; }
 .result-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.result-confirm-note { grid-column: 1 / -1; margin: 0; padding: 9px 11px; color: #74411f; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 6px; font-size: 14px; font-weight: 800; }
 .result-actions .pass { background: #12271d; border-color: #12271d; }
 .result-actions .pass.secondary { color: #12271d; background: #f3f0e8; border-color: #cfc4ae; }
 .result-actions .fail { color: #9f1d1d; background: #fff; border-color: #f0b8a6; }

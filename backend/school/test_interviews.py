@@ -496,14 +496,26 @@ class AppointmentScheduleTests(TestCase):
 
         response = self.client.get(url, {"q": "Result"})
         self.assertContains(response, "Result Applicant")
+        self.assertNotContains(response, "school-admin-navbar")
         self.assertContains(response, "อยากรับใช้ให้ชัดขึ้น")
         self.assertContains(response, "สร้างผู้นำรุ่นใหม่")
         self.assertContains(response, "ผ่าน onsite")
         self.assertContains(response, "ผ่าน online")
 
+        unconfirmed = self.client.post(url, {
+            "person": person.pk,
+            "result": "pass_online",
+            "next": f"{url}?q=Result",
+        })
+        self.assertRedirects(unconfirmed, f"{url}?q=Result", fetch_redirect_response=False)
+        person.refresh_from_db()
+        self.assertEqual(person.status, Person.Status.IN_PROGRESS)
+        self.assertFalse(mock_urlopen.called)
+
         result = self.client.post(url, {
             "person": person.pk,
             "result": "pass_online",
+            "confirmed_result": "pass_online",
             "next": f"{url}?q=Result",
         })
 
@@ -533,6 +545,7 @@ class AppointmentScheduleTests(TestCase):
         response = self.client.post(url, {
             "person": person.pk,
             "result": "fail",
+            "confirmed_result": "fail",
             "next": url,
         })
 

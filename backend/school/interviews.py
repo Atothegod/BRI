@@ -244,8 +244,12 @@ def interview_results(request):
         raise PermissionDenied
     if request.method == "POST":
         person = Person.objects.filter(pk=request.POST.get("person")).first()
-        result_label = update_interview_result(person, request.POST.get("result")) if person else ""
-        if not person or not result_label:
+        requested_result = request.POST.get("result")
+        result_confirmed = request.POST.get("confirmed_result") == requested_result
+        result_label = update_interview_result(person, requested_result) if person and result_confirmed else ""
+        if person and requested_result and not result_confirmed:
+            messages.error(request, "ยังไม่ได้ยืนยันการบันทึกผล กรุณากดยืนยันก่อนส่งผลสัมภาษณ์")
+        elif not person or not result_label:
             messages.error(request, "ไม่พบผู้สมัครหรือสถานะผลสัมภาษณ์ไม่ถูกต้อง")
         elif person.status == Person.Status.PASSED:
             person.refresh_from_db()

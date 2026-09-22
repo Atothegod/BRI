@@ -2,11 +2,9 @@
 {% load static tz school_dates %}
 {% block title %}บันทึกผลสัมภาษณ์ | BRI{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/interview_results.css' %}?v=20260922-interview-results-1">
-<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20260916-school-admin-4">
+<link rel="stylesheet" href="{% static 'school/css/interview_results.css' %}?v=20260922-interview-results-2">
 {% endblock %}
 {% block content %}
-{% include "school/includes/school_admin_nav.html" %}
 <main class="interview-results">
     <header class="results-heading">
         <div>
@@ -56,13 +54,15 @@
                         <div><span>Vision calling</span><p>{{ person.extra_data.vision_calling|default:"-" }}</p></div>
                     </div>
                 </div>
-                <form method="post" class="result-actions">
+                <form method="post" class="result-actions" data-result-form data-person-name="{{ person.full_name }}">
                     {% csrf_token %}
                     <input type="hidden" name="person" value="{{ person.pk }}">
                     <input type="hidden" name="next" value="{{ next_url }}">
-                    <button type="submit" name="result" value="pass_onsite" class="pass">ผ่าน onsite</button>
-                    <button type="submit" name="result" value="pass_online" class="pass secondary">ผ่าน online</button>
-                    <button type="submit" name="result" value="fail" class="fail">ไม่ผ่าน</button>
+                    <input type="hidden" name="confirmed_result" value="">
+                    <p class="result-confirm-note">กดยืนยันอีกครั้งก่อนบันทึกผล ระบบจะส่ง LINE เมื่อเลือกผ่าน</p>
+                    <button type="submit" name="result" value="pass_onsite" class="pass" data-result-label="ผ่าน onsite" data-confirm-message="ยืนยันให้ {{ person.full_name }} ผ่าน onsite ใช่ไหม? ระบบจะบันทึกผลและส่ง LINE ประกาศผลทันที">ผ่าน onsite</button>
+                    <button type="submit" name="result" value="pass_online" class="pass secondary" data-result-label="ผ่าน online" data-confirm-message="ยืนยันให้ {{ person.full_name }} ผ่าน online ใช่ไหม? ระบบจะบันทึกผลและส่ง LINE ประกาศผลทันที">ผ่าน online</button>
+                    <button type="submit" name="result" value="fail" class="fail" data-result-label="ไม่ผ่าน" data-confirm-message="ยืนยันบันทึกผล {{ person.full_name }} เป็นไม่ผ่านใช่ไหม?">ไม่ผ่าน</button>
                 </form>
             </article>
             {% endwith %}
@@ -80,4 +80,22 @@
         </nav>
     </footer>
 </main>
+{% endblock %}
+{% block extra_js %}
+<script>
+document.querySelectorAll("[data-result-form]").forEach((form) => {
+    form.addEventListener("submit", (event) => {
+        const button = event.submitter;
+        if (!button || !button.dataset.confirmMessage) {
+            event.preventDefault();
+            return;
+        }
+        if (!window.confirm(button.dataset.confirmMessage)) {
+            event.preventDefault();
+            return;
+        }
+        form.elements.confirmed_result.value = button.value;
+    });
+});
+</script>
 {% endblock %}

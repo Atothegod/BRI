@@ -245,6 +245,8 @@ class PersonViewTests(TestCase):
                 "country_code": "US",
                 "country_name_en": "United States",
                 "has_studied_bri": True,
+                "goal": "อยากเติบโตในของประทาน",
+                "vision_calling": "รับใช้คนรุ่นใหม่",
             },
         )
         Person.objects.create(
@@ -257,6 +259,8 @@ class PersonViewTests(TestCase):
 
         self.assertEqual(model_admin.country_display(person), "United States")
         self.assertEqual(model_admin.studied_bri_display(person), "เคย")
+        self.assertEqual(model_admin.goal_display(person), "อยากเติบโตในของประทาน")
+        self.assertEqual(model_admin.vision_calling_display(person), "รับใช้คนรุ่นใหม่")
         self.assertIn(CountryCodeFilter, model_admin.list_filter)
         self.assertIn(BRIStudyHistoryFilter, model_admin.list_filter)
 

@@ -115,6 +115,8 @@ class PersonAdmin(UnfoldModelAdmin):
         "admission_type_display",
         "country_display",
         "studied_bri_display",
+        "goal_display",
+        "vision_calling_display",
         "interview_at",
         "interview_notification_state",
         "interview_confirmed_at",
@@ -150,6 +152,8 @@ class PersonAdmin(UnfoldModelAdmin):
                     "line_display_name",
                     "line_picture_url",
                     "line_connected_at",
+                    "goal_display",
+                    "vision_calling_display",
                     "extra_data",
                 )
             },
@@ -162,7 +166,16 @@ class PersonAdmin(UnfoldModelAdmin):
             },
         ),
     )
-    readonly_fields = ("line_connected_at", "interview_at", "interview_details", "interview_notification_state", "interview_notified_at", "interview_confirmed_at")
+    readonly_fields = (
+        "line_connected_at",
+        "goal_display",
+        "vision_calling_display",
+        "interview_at",
+        "interview_details",
+        "interview_notification_state",
+        "interview_notified_at",
+        "interview_confirmed_at",
+    )
     actions = (
         "mark_as_passed_interview",
         "mark_as_passed_online",
@@ -186,6 +199,14 @@ class PersonAdmin(UnfoldModelAdmin):
         if value is False or value == "false":
             return "ยังไม่เคย"
         return "-"
+
+    @admin.display(description="Goal")
+    def goal_display(self, obj):
+        return (obj.extra_data or {}).get("goal") or "-"
+
+    @admin.display(description="Vision calling")
+    def vision_calling_display(self, obj):
+        return (obj.extra_data or {}).get("vision_calling") or "-"
 
     def save_model(self, request, obj, form, change):
         previous_status = None

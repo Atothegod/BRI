@@ -437,6 +437,10 @@ class AppointmentScheduleTests(TestCase):
             phone="0890000000",
             line_user_id="Uresult",
             line_display_name="Result LINE",
+            extra_data={
+                "goal": "อยากรับใช้ให้ชัดขึ้น",
+                "vision_calling": "สร้างผู้นำรุ่นใหม่",
+            },
         )
         appointment = Appointment.objects.create(
             appointment_type=Appointment.Type.INTERVIEW,
@@ -448,6 +452,8 @@ class AppointmentScheduleTests(TestCase):
 
         response = self.client.get(url, {"q": "Result"})
         self.assertContains(response, "Result Applicant")
+        self.assertContains(response, "อยากรับใช้ให้ชัดขึ้น")
+        self.assertContains(response, "สร้างผู้นำรุ่นใหม่")
         self.assertContains(response, "ผ่าน onsite")
         self.assertContains(response, "ผ่าน online")
 

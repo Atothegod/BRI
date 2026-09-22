@@ -30,6 +30,10 @@ button { min-height: 44px; padding: 10px 14px; color: #fff; background: #425b46;
 .result-meta div { min-width: 0; padding: 9px 10px; background: #f7f8f6; border-radius: 6px; }
 .result-meta dt { color: #667168; font-size: 13px; font-weight: 800; }
 .result-meta dd { margin: 2px 0 0; color: #12271d; font-weight: 800; overflow-wrap: anywhere; }
+.result-extra { display: grid; gap: 8px; margin-top: 10px; }
+.result-extra div { padding: 10px 12px; background: #fbfaf6; border: 1px solid #ebe4d1; border-radius: 6px; }
+.result-extra span { display: block; color: #8a6b18; font-size: 13px; font-weight: 900; }
+.result-extra p { margin: 3px 0 0; color: #2f2b24; overflow-wrap: anywhere; }
 .result-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .result-actions .pass { background: #12271d; border-color: #12271d; }
 .result-actions .pass.secondary { color: #12271d; background: #f3f0e8; border-color: #cfc4ae; }

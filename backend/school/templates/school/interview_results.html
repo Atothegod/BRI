@@ -51,6 +51,10 @@
                         <div><dt>สถานะ</dt><dd>{{ person.get_status_display }}{% if person.status == 'passed' and person.admission_type_name %} · {{ person.admission_type_name }}{% endif %}</dd></div>
                         <div><dt>LINE ประกาศผล</dt><dd>{% if person.has_result_line_notification %}ส่งแล้ว{% elif person.status == 'passed' %}ยังไม่สำเร็จ{% else %}-{% endif %}</dd></div>
                     </dl>
+                    <div class="result-extra">
+                        <div><span>Goal</span><p>{{ person.extra_data.goal|default:"-" }}</p></div>
+                        <div><span>Vision calling</span><p>{{ person.extra_data.vision_calling|default:"-" }}</p></div>
+                    </div>
                 </div>
                 <form method="post" class="result-actions">
                     {% csrf_token %}

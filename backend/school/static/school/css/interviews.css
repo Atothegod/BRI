@@ -64,7 +64,7 @@ h1 { font-size: 38px; margin: 24px 0; font-weight: 800; }
 .next-round-source strong { display: block; font-size: 18px; }
 .next-round-source a { flex: 0 0 auto; font-weight: 800; }
 button, input, textarea, select { font: inherit; letter-spacing: 0; }
-input:not([type=checkbox]), textarea, select { width: 100%; padding: 10px 12px; border: 1px solid #89978b; border-radius: 4px; min-height: 44px; background: #fff; color: var(--bri-forest); }
+input:not([type=checkbox]):not([type=radio]), textarea, select { width: 100%; padding: 10px 12px; border: 1px solid #89978b; border-radius: 4px; min-height: 44px; background: #fff; color: var(--bri-forest); }
 input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--bri-sage); cursor: pointer; }
 button { padding: 10px 16px; min-height: 44px; border: 1px solid var(--bri-sage); border-radius: 4px; background: var(--bri-sage); color: #fff; cursor: pointer; }
 button:disabled { opacity: .5; cursor: default; }
@@ -128,17 +128,17 @@ tr.has-confirmed-appointment { background: #f8fbf7; }
 .confirm-button { width: 100%; background: var(--bri-forest); border-color: var(--bri-forest); font-weight: 700; }
 .confirmation-success { padding: 14px; color: var(--bri-sage); background: var(--bri-success-soft); border-radius: 6px; font-weight: 700; }
 .confirmation-form { display: grid; gap: 16px; }
-.slot-picker { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 12px; align-items: stretch; margin-bottom: 2px; text-align: left; }
+.slot-picker { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 12px; align-items: stretch; min-width: 0; margin-bottom: 2px; text-align: left; }
 .calendar-tile { display: grid; align-content: center; min-height: 132px; padding: 12px; text-align: center; color: #fff; background: var(--bri-forest); border-radius: 8px; }
 .calendar-tile span, .calendar-tile small { color: #d7c891; font-weight: 700; }
 .calendar-tile strong { display: block; font-size: 44px; line-height: 1; color: #fff; }
-.slot-choice-list { display: grid; gap: 8px; }
+.slot-choice-list { display: grid; min-width: 0; gap: 8px; }
 .slot-choice-heading { display: none; }
-.slot-choice { display: flex; gap: 10px; align-items: center; min-height: 58px; margin: 0; padding: 10px 12px; background: #fff; border: 1px solid var(--bri-border); border-radius: 6px; cursor: pointer; }
+.slot-choice { display: flex; width: 100%; min-width: 0; gap: 10px; align-items: center; min-height: 58px; margin: 0; padding: 10px 12px; background: #fff; border: 1px solid var(--bri-border); border-radius: 6px; cursor: pointer; }
 .slot-choice:has(input:checked) { border-color: var(--bri-sage); box-shadow: 0 0 0 2px rgba(66, 91, 70, .14); }
 .slot-choice.full { color: #8b918c; background: #f2f3f1; cursor: default; }
-.slot-choice input { flex: 0 0 auto; }
-.slot-choice span { min-width: 0; }
+.slot-choice input[type=radio] { flex: 0 0 auto; width: 20px; height: 20px; min-height: 0; padding: 0; accent-color: var(--bri-sage); }
+.slot-choice span { flex: 1 1 auto; min-width: 0; }
 .slot-choice strong, .slot-choice small { display: block; }
 .slot-choice small { color: #5f6b63; font-weight: 500; }
 .slot-choice.full small { color: #8b918c; }
@@ -229,6 +229,37 @@ tr.has-confirmed-appointment { background: #f8fbf7; }
         min-height: 52px;
         border-radius: 8px;
         font-size: 17px;
+    }
+}
+@media(min-width: 641px) and (max-width: 820px) {
+    .confirmation-page {
+        padding: 24px 18px;
+    }
+    .confirmation-shell {
+        width: min(100%, 680px);
+        padding: 28px 24px;
+    }
+    .slot-picker {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    .calendar-tile {
+        display: flex;
+        gap: 14px;
+        align-items: center;
+        justify-content: flex-start;
+        min-height: 78px;
+        text-align: left;
+    }
+    .calendar-tile strong {
+        font-size: 38px;
+    }
+    .calendar-tile small {
+        margin-left: auto;
+        white-space: nowrap;
+    }
+    .slot-choice {
+        min-height: 72px;
     }
 }
 @media(max-width: 640px) { .interviews { padding: 16px; } .section-heading { align-items: start; flex-direction: column; gap: 4px; } .section-heading > small { text-align: left; } .event-list { margin-inline: -16px; padding-inline: 16px; } .selected-event-main h2 { font-size: 23px; } .event-metrics { grid-template-columns: repeat(3, 1fr); } .event-metrics div { min-width: 0; padding: 5px 9px; } .event-metrics strong { font-size: 20px; } .event-closed-message { align-items: start; flex-direction: column; } .event-actions { margin-left: 0; } .event-action-link, .event-action-link.primary { width: 100%; justify-content: center; } .next-round-source { align-items: start; flex-direction: column; } .audience-tabs { grid-template-columns: 1fr; } .filter-panel, .filter-panel.compact-filter { grid-template-columns: 1fr; } .filter-search, .filter-actions, .compact-filter .filter-actions { grid-column: auto; } .filter-actions { justify-content: flex-start; } .schedule-fields, .schedule-fields.interview-slot-mode { grid-template-columns: 1fr; padding: 18px; } .title-field, .location-field, .details-field, .url-field { grid-column: 1 / -1; } .schedule-fields > div { min-width: 0; } .slot-editor-heading { align-items: stretch; flex-direction: column; } .slot-row { grid-template-columns: 34px 1fr 1fr; } .slot-row label:nth-of-type(3) { grid-column: 2 / -1; } .slot-remove { grid-column: 1 / -1; width: 100%; } .slot-picker { grid-template-columns: 1fr; } .calendar-tile { min-height: 112px; } #confirm-schedule { width: 100%; } .type-tabs { display: flex; } .type-tabs a { flex: 1; min-width: 0; } }

@@ -1,4 +1,5 @@
 from django.contrib import admin, messages
+from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin as UnfoldModelAdmin
 
@@ -77,6 +78,29 @@ class CountryCodeFilter(admin.SimpleListFilter):
         return queryset
 
 
+class BRIStudyHistoryFilter(admin.SimpleListFilter):
+    title = _("เคยเรียน BRI")
+    parameter_name = "studied_bri"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("yes", "เคย"),
+            ("no", "ยังไม่เคย"),
+            ("unknown", "ไม่ระบุ"),
+        )
+
+    def queryset(self, request, queryset):
+        studied_yes = Q(extra_data__has_studied_bri=True) | Q(extra_data__has_studied_bri="true")
+        studied_no = Q(extra_data__has_studied_bri=False) | Q(extra_data__has_studied_bri="false")
+        if self.value() == "yes":
+            return queryset.filter(studied_yes)
+        if self.value() == "no":
+            return queryset.filter(studied_no)
+        if self.value() == "unknown":
+            return queryset.exclude(studied_yes | studied_no)
+        return queryset
+
+
 @admin.register(Person)
 class PersonAdmin(UnfoldModelAdmin):
     list_display = (
@@ -91,12 +115,13 @@ class PersonAdmin(UnfoldModelAdmin):
         "status",
         "admission_type_display",
         "country_display",
+        "studied_bri_display",
         "interview_at",
         "interview_notification_state",
         "interview_confirmed_at",
         "user",
     )
-    list_filter = ("status", "admission_type", CountryCodeFilter, "gender")
+    list_filter = ("status", "admission_type", BRIStudyHistoryFilter, CountryCodeFilter, "gender")
     search_fields = (
         "first_name",
         "last_name",
@@ -155,6 +180,15 @@ class PersonAdmin(UnfoldModelAdmin):
     @admin.display(description="ประเทศ")
     def country_display(self, obj):
         return (obj.extra_data or {}).get("country_name_en") or "-"
+
+    @admin.display(description="เคยเรียน BRI")
+    def studied_bri_display(self, obj):
+        value = (obj.extra_data or {}).get("has_studied_bri")
+        if value is True or value == "true":
+            return "เคย"
+        if value is False or value == "false":
+            return "ยังไม่เคย"
+        return "-"
 
     def save_model(self, request, obj, form, change):
         previous_status = None

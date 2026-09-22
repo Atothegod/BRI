@@ -28,7 +28,7 @@ ADMIN_APPOINTMENT_TYPES = (
     Appointment.Type.INTERVIEW,
     Appointment.Type.ORIENTATION,
 )
-APPOINTMENT_AUDIENCES = ("unsent", "waiting", "confirmed", "failed", "confirmed_other")
+APPOINTMENT_AUDIENCES = ("unsent", "waiting", "confirmed", "failed", "confirmed_other", "next_round")
 
 
 def appointment_candidates(appointment_type):
@@ -193,6 +193,13 @@ def appointment_is_full(appointment, confirmed_count=None):
     return confirmed_count >= capacity
 
 
+def waiting_participations_for_next_round(appointment):
+    return AppointmentParticipant.objects.filter(
+        appointment=appointment,
+        response_status=AppointmentParticipant.ResponseStatus.WAITING,
+    ).exclude(notification_status=AppointmentParticipant.NotificationStatus.FAILED)
+
+
 @login_required(login_url="admin:login")
 @never_cache
 def interview_schedule(request):
@@ -235,6 +242,22 @@ def interview_schedule(request):
                 selected_appointment.is_full = appointment_is_full(selected_appointment, selected_appointment.confirmed_count)
     elif request.method != "POST" and requested_event != "new" and appointments:
         selected_appointment = appointments[0]
+    source_appointment = None
+    if appointment_type == Appointment.Type.INTERVIEW and selected_appointment is None:
+        try:
+            source_event_id = int(request.GET.get("source_event", ""))
+        except (TypeError, ValueError):
+            source_event_id = None
+        if source_event_id:
+            source_appointment = Appointment.objects.filter(
+                pk=source_event_id,
+                appointment_type=Appointment.Type.INTERVIEW,
+            ).prefetch_related("slots").annotate(
+                confirmed_count=Count("participants", filter=Q(participants__response_status="confirmed"), distinct=True),
+            ).first()
+            if source_appointment:
+                source_appointment.slot_capacity = appointment_capacity(source_appointment)
+                source_appointment.is_full = appointment_is_full(source_appointment, source_appointment.confirmed_count)
 
     form = AppointmentScheduleForm(
         request.POST or None,
@@ -308,11 +331,19 @@ def interview_schedule(request):
             audience = "waiting"
         else:
             audience = "unsent"
+    if audience == "next_round" and appointment_type != Appointment.Type.INTERVIEW:
+        audience = "unsent"
+    if audience == "next_round" and selected_appointment is None and source_appointment is None:
+        audience = "unsent"
     people = appointment_candidates(appointment_type).order_by("first_name", "pk")
     participations = AppointmentParticipant.objects.none()
     confirmed_people = confirmed_interview_people() if appointment_type == Appointment.Type.INTERVIEW else Person.objects.none().values("pk")
     if selected_appointment is None:
-        if audience == "confirmed_other" and appointment_type == Appointment.Type.INTERVIEW:
+        if audience == "next_round" and source_appointment is not None:
+            people = people.filter(
+                pk__in=waiting_participations_for_next_round(source_appointment).values("person_id"),
+            ).exclude(pk__in=confirmed_people)
+        elif audience == "confirmed_other" and appointment_type == Appointment.Type.INTERVIEW:
             people = people.filter(pk__in=confirmed_people)
         elif audience == "unsent":
             people = people.exclude(pk__in=confirmed_people)
@@ -321,23 +352,26 @@ def interview_schedule(request):
         "waiting": 0,
         "confirmed": 0,
         "failed": 0,
+        "next_round": people.count() if audience == "next_round" and source_appointment is not None else 0,
         "confirmed_other": appointment_candidates(appointment_type).filter(pk__in=confirmed_people).count()
         if appointment_type == Appointment.Type.INTERVIEW else 0,
     }
     if selected_appointment is not None:
         participations = AppointmentParticipant.objects.filter(appointment=selected_appointment)
         participant_people = participations.values("person_id")
-        waiting_participations = participations.filter(
-            response_status=AppointmentParticipant.ResponseStatus.WAITING,
-        ).exclude(notification_status=AppointmentParticipant.NotificationStatus.FAILED)
+        waiting_participations = waiting_participations_for_next_round(selected_appointment)
         confirmed_participations = participations.filter(
             response_status=AppointmentParticipant.ResponseStatus.CONFIRMED,
         )
+        next_round_participations = waiting_participations if (
+            appointment_type == Appointment.Type.INTERVIEW and selected_appointment.is_full
+        ) else AppointmentParticipant.objects.none()
         audience_counts = {
             "unsent": people.exclude(pk__in=participant_people).exclude(pk__in=confirmed_people).count(),
             "waiting": waiting_participations.count(),
             "confirmed": confirmed_participations.count(),
             "failed": participations.filter(notification_status=AppointmentParticipant.NotificationStatus.FAILED).count(),
+            "next_round": next_round_participations.count(),
             "confirmed_other": people.filter(pk__in=confirmed_people).exclude(
                 pk__in=confirmed_participations.values("person_id"),
             ).count() if appointment_type == Appointment.Type.INTERVIEW else 0,
@@ -354,6 +388,8 @@ def interview_schedule(request):
             people = people.filter(pk__in=participations.filter(
                 notification_status=AppointmentParticipant.NotificationStatus.FAILED,
             ).values("person_id"))
+        elif audience == "next_round":
+            people = people.filter(pk__in=next_round_participations.values("person_id"))
         else:
             people = people.filter(pk__in=waiting_participations.values("person_id"))
     if query:
@@ -374,8 +410,10 @@ def interview_schedule(request):
     query_params["type"] = appointment_type
     query_params["event"] = selected_appointment.pk if selected_appointment else "new"
     query_params["audience"] = audience
+    if source_appointment is not None:
+        query_params["source_event"] = source_appointment.pk
     filter_query = query_params.urlencode()
-    page = Paginator(people, 50).get_page(request.GET.get("page"))
+    page = Paginator(people, 200).get_page(request.GET.get("page"))
     page_person_ids = [person.pk for person in page.object_list]
     event_by_person = {}
     latest_by_person = {}
@@ -421,6 +459,7 @@ def interview_schedule(request):
         "candidate_description": "นักศึกษาที่ผ่านการคัดเลือกและชำระเงินแล้ว" if appointment_type == Appointment.Type.ORIENTATION else "ผู้สมัครที่อยู่ระหว่างดำเนินการ",
         "appointments": appointments,
         "selected_appointment": selected_appointment,
+        "source_appointment": source_appointment,
         "selected_event_open": selected_event_open,
         "audience": audience,
         "audience_counts": audience_counts,

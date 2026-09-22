@@ -2,7 +2,7 @@
 {% load static tz school_dates %}
 {% block title %}จัดการนัดหมาย | BRI{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20260920-pipeline-1">
+<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20260922-next-round-1">
 <link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20260916-school-admin-4">
 {% endblock %}
 {% block content %}
@@ -48,7 +48,7 @@
                 <div><span>ส่งสำเร็จ</span><strong data-event-sent>{{ selected_appointment.sent_count }}</strong></div>
                 <div><span>ส่งไม่สำเร็จ</span><strong data-event-failed>{{ selected_appointment.failed_count }}</strong></div>
             </div>
-            {% if selected_appointment.is_full %}<div class="event-closed-message" data-event-full-message><strong>Event นี้เต็มแล้ว</strong><span>ครบ <b data-event-full-count>{{ selected_appointment.confirmed_count }}/{{ selected_appointment.slot_capacity }}</b> คน กรุณาสร้าง Event ใหม่เพื่อส่งนัดรอบถัดไป</span></div>
+            {% if selected_appointment.is_full %}<div class="event-closed-message" data-event-full-message><strong>Event นี้เต็มแล้ว</strong><span>ครบ <b data-event-full-count>{{ selected_appointment.confirmed_count }}/{{ selected_appointment.slot_capacity }}</b> คน กรุณาสร้าง Event ใหม่เพื่อส่งนัดรอบถัดไป</span>{% if appointment_type == 'interview' and audience_counts.next_round %}<span class="event-actions"><a class="event-action-link" href="?type={{ appointment_type }}&event={{ selected_appointment.pk }}&audience=next_round">ดู {{ audience_counts.next_round }} คนที่รอนัดรอบถัดไป</a><a class="event-action-link primary" href="?type={{ appointment_type }}&event=new&source_event={{ selected_appointment.pk }}&audience=next_round">สร้าง Event ใหม่จากกลุ่มนี้</a></span>{% endif %}</div>
             {% elif not selected_event_open %}<div class="event-closed-message"><strong>Event นี้ปิดรับแล้ว</strong><span>ไม่สามารถเพิ่มหรือส่งนัดให้ผู้สมัครใหม่ใน Event นี้ได้</span></div>{% endif %}
             {% if selected_event_open %}<div class="event-closed-message" data-event-full-message hidden><strong>Event นี้เต็มแล้ว</strong><span>ครบ <b data-event-full-count></b> คน กรุณาสร้าง Event ใหม่เพื่อส่งนัดรอบถัดไป</span></div>{% endif %}
         </section>
@@ -57,20 +57,28 @@
             <a href="?type={{ appointment_type }}&event={{ selected_appointment.pk }}&audience=waiting" class="{% if audience == 'waiting' %}active{% endif %}"><span>รอยืนยัน</span><b data-audience-waiting>{{ audience_counts.waiting }}</b></a>
             <a href="?type={{ appointment_type }}&event={{ selected_appointment.pk }}&audience=confirmed" class="{% if audience == 'confirmed' %}active{% endif %}"><span>ยืนยันแล้ว</span><b>{{ audience_counts.confirmed }}</b></a>
             <a href="?type={{ appointment_type }}&event={{ selected_appointment.pk }}&audience=failed" class="{% if audience == 'failed' %}active{% endif %}"><span>ส่งไม่สำเร็จ</span><b data-audience-failed>{{ audience_counts.failed }}</b></a>
+            {% if appointment_type == 'interview' and selected_appointment.is_full %}<a href="?type={{ appointment_type }}&event={{ selected_appointment.pk }}&audience=next_round" class="{% if audience == 'next_round' %}active{% endif %}"><span>รอนัดรอบถัดไป</span><b>{{ audience_counts.next_round }}</b></a>{% endif %}
             {% if appointment_type == 'interview' %}<a href="?type={{ appointment_type }}&event={{ selected_appointment.pk }}&audience=confirmed_other" class="{% if audience == 'confirmed_other' %}active{% endif %}"><span>ยืนยันรอบอื่นแล้ว</span><b>{{ audience_counts.confirmed_other }}</b></a>{% endif %}
         </nav>
     {% endif %}
 
     <section class="candidate-section" aria-labelledby="candidate-title">
+        {% if source_appointment %}
+            <div class="next-round-source" role="status">
+                <div><span>กำลังสร้างรอบใหม่จาก Event ที่เต็มแล้ว</span><strong>{{ source_appointment.title }}</strong><small>{{ source_appointment.starts_at|thai_date:"weekday" }} · เลือกเฉพาะผู้สมัครที่ยังไม่ยืนยันและรอนัดรอบถัดไป</small></div>
+                <a href="?type={{ appointment_type }}&event={{ source_appointment.pk }}&audience=next_round">กลับไปดู Event เดิม</a>
+            </div>
+        {% endif %}
         <div class="section-heading">
-            <div><span>ขั้นตอนที่ 2</span><h2 id="candidate-title">{% if selected_appointment %}{% if audience == 'unsent' %}เลือกผู้สมัครที่พร้อมส่งนัด{% elif audience == 'waiting' %}ผู้สมัครที่รอยืนยัน{% elif audience == 'confirmed' %}ผู้สมัครที่ยืนยันแล้ว{% elif audience == 'confirmed_other' %}ผู้สมัครที่ยืนยันรอบอื่นแล้ว{% elif audience == 'failed' %}รายการที่ส่งไม่สำเร็จ{% else %}ผู้สมัครใน Event นี้{% endif %}{% else %}สร้าง Event และเลือกผู้สมัคร{% endif %}</h2></div>
+            <div><span>ขั้นตอนที่ 2</span><h2 id="candidate-title">{% if selected_appointment %}{% if audience == 'unsent' %}เลือกผู้สมัครที่พร้อมส่งนัด{% elif audience == 'waiting' %}ผู้สมัครที่รอยืนยัน{% elif audience == 'confirmed' %}ผู้สมัครที่ยืนยันแล้ว{% elif audience == 'confirmed_other' %}ผู้สมัครที่ยืนยันรอบอื่นแล้ว{% elif audience == 'next_round' %}ผู้สมัครที่รอนัดรอบถัดไป{% elif audience == 'failed' %}รายการที่ส่งไม่สำเร็จ{% else %}ผู้สมัครใน Event นี้{% endif %}{% elif source_appointment %}สร้าง Event ใหม่ให้ผู้สมัครที่รอนัดรอบถัดไป{% else %}สร้าง Event และเลือกผู้สมัคร{% endif %}</h2></div>
         </div>
         <form method="get" class="filter-panel compact-filter">
             <input type="hidden" name="type" value="{{ appointment_type }}"><input type="hidden" name="event" value="{% if selected_appointment %}{{ selected_appointment.pk }}{% else %}new{% endif %}"><input type="hidden" name="audience" value="{{ audience }}">
+            {% if source_appointment %}<input type="hidden" name="source_event" value="{{ source_appointment.pk }}">{% endif %}
             <div class="filter-search"><label for="search">ค้นหาผู้สมัคร</label><input id="search" name="q" value="{{ query }}" placeholder="ชื่อ เบอร์โทร หรือชื่อ LINE"></div>
             <div><label for="line-filter">LINE</label><select id="line-filter" name="line"><option value="">ทั้งหมด</option><option value="connected"{% if filters.line == "connected" %} selected{% endif %}>เชื่อมแล้ว</option><option value="missing"{% if filters.line == "missing" %} selected{% endif %}>ยังไม่เชื่อม</option></select></div>
             {% if selected_appointment and audience != 'unsent' %}<div><label for="confirmation-filter">การตอบรับ</label><select id="confirmation-filter" name="confirmation"><option value="">ทั้งหมด</option><option value="waiting"{% if filters.confirmation == "waiting" %} selected{% endif %}>รอยืนยัน</option><option value="confirmed"{% if filters.confirmation == "confirmed" %} selected{% endif %}>ยืนยันแล้ว</option></select></div>{% endif %}
-            <div class="filter-actions"><button type="submit">ค้นหา</button>{% if has_filters %}<a href="?type={{ appointment_type }}&event={% if selected_appointment %}{{ selected_appointment.pk }}{% else %}new{% endif %}&audience={{ audience }}">ล้างตัวกรอง</a>{% endif %}</div>
+            <div class="filter-actions"><button type="submit">ค้นหา</button>{% if has_filters %}<a href="?type={{ appointment_type }}&event={% if selected_appointment %}{{ selected_appointment.pk }}{% else %}new{% endif %}&audience={{ audience }}{% if source_appointment %}&source_event={{ source_appointment.pk }}{% endif %}">ล้างตัวกรอง</a>{% endif %}</div>
         </form>
 
         <form method="post" id="schedule-form" data-type-label="{% if appointment_type == 'orientation' %}ปฐมนิเทศ{% else %}สัมภาษณ์{% endif %}" data-event-title="{% if selected_appointment %}{{ selected_appointment.title }}{% endif %}">
@@ -101,9 +109,9 @@
                     <td>{% if participant %}<strong>{{ participant.appointment.title }}</strong><small>{{ participant.appointment.starts_at|thai_date }}{% if participant.selected_slot %} · {{ participant.selected_slot.starts_at|date:"H:i" }}-{{ participant.selected_slot.ends_at|date:"H:i" }}{% elif appointment_type == 'interview' %} · ยังไม่เลือกเวลา{% else %} · {{ participant.appointment.starts_at|date:"H:i" }}{% endif %}</small>{% elif selected_appointment %}<span class="state-unsent">ยังไม่อยู่ใน Event นี้</span>{% else %}<span class="state-unsent">พร้อมส่งนัด</span>{% endif %}</td>
                     <td>{% if participant %}<span data-status="{{ participant.pk }}" class="state-{{ participant.notification_status }}">{{ participant.get_notification_status_display }}</span>{% if participant.notification_status != 'sent' %}<button class="retry" type="button" data-notify="{{ participant.pk }}" data-at="{{ participant.appointment.starts_at|date:'c' }}" data-url="{% url 'school:appointment_notify' participant.pk %}"{% if not selected_event_open %} disabled{% endif %}>ส่ง LINE อีกครั้ง</button>{% endif %}{% else %}-{% endif %}</td>
                     <td{% if participant %} data-confirmation="{{ participant.pk }}"{% endif %}>{% if participant.response_status == 'confirmed' %}<strong class="state-sent">ยืนยันแล้ว</strong><small>{{ participant.confirmed_at|thai_date:"time" }}</small>{% elif participant %}<span class="state-pending">ยังไม่ยืนยัน</span>{% else %}-{% endif %}</td>
-                </tr>{% endwith %}{% empty %}<tr><td colspan="7"><div class="empty-state">{% if audience == 'unsent' and selected_appointment %}ไม่มีผู้สมัครที่พร้อมส่งนัดใน Event นี้{% elif audience == 'waiting' %}ไม่มีผู้สมัครที่รอยืนยัน{% elif audience == 'confirmed' %}ยังไม่มีผู้สมัครยืนยัน Event นี้{% elif audience == 'confirmed_other' %}ไม่มีผู้สมัครที่ยืนยันรอบอื่นแล้ว{% elif audience == 'failed' %}ไม่มีรายการส่งไม่สำเร็จ{% else %}ไม่พบรายชื่อที่ตรงเงื่อนไข{% endif %}</div></td></tr>{% endfor %}{% endtimezone %}</tbody>
+                </tr>{% endwith %}{% empty %}<tr><td colspan="7"><div class="empty-state">{% if audience == 'unsent' and selected_appointment %}ไม่มีผู้สมัครที่พร้อมส่งนัดใน Event นี้{% elif audience == 'waiting' %}ไม่มีผู้สมัครที่รอยืนยัน{% elif audience == 'confirmed' %}ยังไม่มีผู้สมัครยืนยัน Event นี้{% elif audience == 'confirmed_other' %}ไม่มีผู้สมัครที่ยืนยันรอบอื่นแล้ว{% elif audience == 'next_round' %}ไม่มีผู้สมัครที่รอนัดรอบถัดไป{% elif audience == 'failed' %}ไม่มีรายการส่งไม่สำเร็จ{% else %}ไม่พบรายชื่อที่ตรงเงื่อนไข{% endif %}</div></td></tr>{% endfor %}{% endtimezone %}</tbody>
             </table></div>
-            <footer class="schedule-footer"><span>หน้า {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span><nav aria-label="หน้ารายชื่อ">{% if page_obj.has_previous %}<a href="{{ page_query_prefix }}page={{ page_obj.previous_page_number }}">ก่อนหน้า</a>{% endif %} {% if page_obj.has_next %}<a href="{{ page_query_prefix }}page={{ page_obj.next_page_number }}">ถัดไป</a>{% endif %}</nav>{% if not selected_appointment or audience == 'unsent' %}<button type="submit" id="confirm-schedule" disabled>{% if selected_appointment %}เพิ่มเข้า Event และส่ง LINE{% else %}สร้าง Event และส่ง LINE{% endif %}</button>{% endif %}</footer>
+            <footer class="schedule-footer"><span>หน้า {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span><nav aria-label="หน้ารายชื่อ">{% if page_obj.has_previous %}<a href="{{ page_query_prefix }}page={{ page_obj.previous_page_number }}">ก่อนหน้า</a>{% endif %} {% if page_obj.has_next %}<a href="{{ page_query_prefix }}page={{ page_obj.next_page_number }}">ถัดไป</a>{% endif %}</nav>{% if not selected_appointment or audience == 'unsent' %}<button type="submit" id="confirm-schedule" disabled>{% if selected_appointment %}เพิ่มเข้า Event และส่ง LINE{% elif source_appointment %}สร้าง Event รอบถัดไปและส่ง LINE{% else %}สร้าง Event และส่ง LINE{% endif %}</button>{% endif %}</footer>
         </form>
     </section>
 </main>

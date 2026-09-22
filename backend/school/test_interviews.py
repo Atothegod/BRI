@@ -79,6 +79,24 @@ class AppointmentScheduleTests(TestCase):
             self.assertEqual(person.interview_at, self.at)
             self.assertEqual(person.interview_notification_state, "pending")
 
+    def test_bulk_interview_can_prepare_more_than_one_hundred_people(self):
+        people = [
+            Person(first_name=f"Bulk {index:03d}", last_name="Applicant", line_user_id=f"Ubulk{index:03d}")
+            for index in range(120)
+        ]
+        Person.objects.bulk_create(people)
+        ids = list(Person.objects.filter(first_name__startswith="Bulk ").values_list("pk", flat=True))
+
+        list_page = self.client.get(self.url, {"type": "interview", "event": "new"})
+        self.assertEqual(list_page.context["page_obj"].paginator.per_page, 200)
+
+        response = self.schedule(people=ids, slot_capacity=["120"])
+
+        self.assertEqual(response.status_code, 302)
+        appointment = Appointment.objects.get()
+        self.assertEqual(appointment.participants.count(), 120)
+        self.assertEqual(len(self.client.session["appointment_send_queue"]), 120)
+
     def test_orientation_only_allows_paid_passed_students(self):
         Person.objects.filter(pk=self.people[0].pk).update(status=Person.Status.PASSED)
         Student.objects.create(person=self.people[0], is_paid=True)
@@ -276,6 +294,56 @@ class AppointmentScheduleTests(TestCase):
         self.assertEqual(live_status["confirmed_count"], 1)
         self.assertEqual(live_status["capacity"], 1)
         self.assertTrue(live_status["is_full"])
+
+    def test_full_event_separates_waiting_people_for_next_round(self):
+        third_person = Person.objects.create(
+            first_name="Applicant 2", last_name="Test", line_user_id="Utest2",
+        )
+        self.schedule(people=[self.people[0].pk, self.people[1].pk, third_person.pk], slot_capacity=["2"])
+        appointment = Appointment.objects.get()
+        slot = appointment.slots.get()
+        first, second, third = appointment.participants.order_by("pk")
+        for participant in (first, second):
+            participant.response_status = AppointmentParticipant.ResponseStatus.CONFIRMED
+            participant.selected_slot = slot
+            participant.confirmed_at = timezone.now()
+            participant.save(update_fields=["response_status", "selected_slot", "confirmed_at"])
+
+        next_round = self.client.get(self.url, {
+            "type": "interview",
+            "event": appointment.pk,
+            "audience": "next_round",
+        })
+        self.assertContains(next_round, "รอนัดรอบถัดไป")
+        self.assertContains(next_round, "สร้าง Event ใหม่จากกลุ่มนี้")
+        self.assertContains(next_round, third_person.full_name)
+        self.assertNotContains(next_round, self.people[0].full_name)
+
+        create_next = self.client.get(self.url, {
+            "type": "interview",
+            "event": "new",
+            "source_event": appointment.pk,
+            "audience": "next_round",
+        })
+        self.assertContains(create_next, "สร้าง Event ใหม่ให้ผู้สมัครที่รอนัดรอบถัดไป")
+        self.assertContains(create_next, third_person.full_name)
+        self.assertNotContains(create_next, self.people[0].full_name)
+
+        response = self.schedule(
+            people=[third_person.pk],
+            title="สัมภาษณ์รอบถัดไป",
+            date=(self.at + timedelta(days=7)).strftime("%Y-%m-%d"),
+            slot_start=["09:30"],
+            slot_end=["10:30"],
+            slot_capacity=["1"],
+        )
+        self.assertRedirects(
+            response,
+            f"{self.url}?type=interview&event={Appointment.objects.latest('pk').pk}&audience=waiting",
+            fetch_redirect_response=False,
+        )
+        self.assertEqual(Appointment.objects.count(), 2)
+        self.assertTrue(Appointment.objects.latest("pk").participants.filter(person=third_person).exists())
 
     @override_settings(PUBLIC_BASE_URL="https://bri.example")
     def test_public_urls_use_appointment_names_and_legacy_routes_redirect(self):

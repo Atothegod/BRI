@@ -13,7 +13,7 @@ from allauth.socialaccount.models import SocialAccount, SocialLogin
 
 from accounts.adapters import TeacherGoogleSocialAccountAdapter
 
-from .admin import CountryCodeFilter, PersonAdmin
+from .admin import BRIStudyHistoryFilter, CountryCodeFilter, PersonAdmin
 from .models import (
     AttendanceRecord,
     AttendanceSession,
@@ -247,16 +247,32 @@ class PersonViewTests(TestCase):
         self.assertEqual(Person.objects.count(), 0)
         self.assertEqual(Person.objects.count(), 0)
 
-    def test_person_admin_exposes_country_display_and_filter(self):
+    def test_person_admin_exposes_extra_data_display_and_filters(self):
         person = Person.objects.create(
             first_name="Country",
             last_name="Applicant",
-            extra_data={"country_code": "US", "country_name_en": "United States"},
+            extra_data={
+                "country_code": "US",
+                "country_name_en": "United States",
+                "has_studied_bri": True,
+            },
         )
+        Person.objects.create(
+            first_name="New",
+            last_name="Applicant",
+            extra_data={"has_studied_bri": False},
+        )
+        Person.objects.create(first_name="Unknown", last_name="Applicant")
         model_admin = PersonAdmin(Person, admin.site)
 
         self.assertEqual(model_admin.country_display(person), "United States")
+        self.assertEqual(model_admin.studied_bri_display(person), "เคย")
         self.assertIn(CountryCodeFilter, model_admin.list_filter)
+        self.assertIn(BRIStudyHistoryFilter, model_admin.list_filter)
+
+        request = RequestFactory().get("/admin/school/person/", {"studied_bri": "yes"})
+        filter_spec = BRIStudyHistoryFilter(request, request.GET.copy(), Person, model_admin)
+        self.assertEqual(list(filter_spec.queryset(request, Person.objects.all())), [person])
 
     def test_registration_allows_blank_mentor_name(self):
         form_data = self.valid_form_data()

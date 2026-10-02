@@ -116,6 +116,7 @@ class PersonAdmin(UnfoldModelAdmin):
         "interview_at",
         "interview_notification_state",
         "interview_confirmed_at",
+        "interview_comment",
         "created_at",
     )
     list_filter = ("status", "admission_type", BRIStudyHistoryFilter, CountryCodeFilter, "gender")
@@ -131,7 +132,7 @@ class PersonAdmin(UnfoldModelAdmin):
         "line_display_name",
     )
     fieldsets = (
-        ("นัดสัมภาษณ์", {"fields": ("interview_at", "interview_details", "interview_notification_state", "interview_notified_at", "interview_confirmed_at")}),
+        ("นัดสัมภาษณ์", {"fields": ("interview_at", "interview_details", "interview_notification_state", "interview_notified_at", "interview_confirmed_at", "interview_comment")}),
         (
             "ข้อมูลผู้สมัคร",
             {
@@ -299,7 +300,7 @@ class StudentAdmin(UnfoldModelAdmin):
         "grade",
         "admin_validation_status",
         "is_paid",
-        "payment_slip",
+        "payment_slip_preview",
         "is_active",
     )
     list_filter = ("admin_validation_status", "is_paid", "group", "grade", "is_active", "person__gender")
@@ -310,13 +311,38 @@ class StudentAdmin(UnfoldModelAdmin):
         "person__phone",
         "person__email",
     )
+    readonly_fields = ("payment_slip_preview",)
+
+    @admin.display(description="สลิป")
+    def payment_slip_preview(self, obj):
+        if not obj.payment_slip:
+            return "-"
+        return format_html(
+            '<a href="{}" target="_blank" rel="noopener">'
+            '<img src="{}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #d0d5dd;" />'
+            "</a>",
+            obj.payment_slip.url,
+            obj.payment_slip.url,
+        )
 
 
 @admin.register(TeacherGroup)
 class TeacherGroupAdmin(UnfoldModelAdmin):
-    list_display = ("group_name", "teacher", "grade_level", "is_active")
-    list_filter = ("teacher", "grade_level", "is_active")
-    search_fields = ("group_name", "grade_level", "teacher__username", "teacher__first_name", "teacher__last_name")
+    list_display = ("group_name", "teacher_names_display", "grade_level", "is_active")
+    list_filter = ("teachers", "grade_level", "is_active")
+    search_fields = (
+        "group_name",
+        "grade_level",
+        "teachers__username",
+        "teachers__first_name",
+        "teachers__last_name",
+        "teachers__nickname",
+    )
+    filter_horizontal = ("teachers",)
+
+    @admin.display(description="ผู้สอน")
+    def teacher_names_display(self, obj):
+        return obj.teacher_names
 
 
 @admin.register(AttendanceSession)

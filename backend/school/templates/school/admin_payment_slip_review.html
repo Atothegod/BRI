@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}ตรวจสลิปการโอนเงิน | BRI{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261002-admin-tools-1">
+{% endblock %}
+
+{% block content %}
+{% include "school/includes/school_admin_nav.html" %}
+<main class="dashboard-page admin-tool-page">
+    <div class="dashboard-shell">
+        <header class="page-heading">
+            <div>
+                <span class="eyebrow">Payment slips</span>
+                <h1>ตรวจสลิปการโอนเงิน</h1>
+                <p>เปิดดูรูปสลิป ตรวจสอบชื่อและรหัสนักศึกษา แล้วกดยืนยันการชำระเงิน</p>
+            </div>
+        </header>
+
+        {% for message in messages %}<p class="admin-tool-notice {{ message.tags }}" role="status">{{ message }}</p>{% endfor %}
+
+        <nav class="admin-tool-tabs" aria-label="สถานะสลิป">
+            <a href="?status=pending{% if query %}&q={{ query|urlencode }}{% endif %}" class="{% if status == 'pending' %}is-active{% endif %}"><span>รอตรวจ</span><strong>{{ counts.pending }}</strong></a>
+            <a href="?status=paid{% if query %}&q={{ query|urlencode }}{% endif %}" class="{% if status == 'paid' %}is-active{% endif %}"><span>ยืนยันแล้ว</span><strong>{{ counts.paid }}</strong></a>
+            <a href="?status=needs_fix{% if query %}&q={{ query|urlencode }}{% endif %}" class="{% if status == 'needs_fix' %}is-active{% endif %}"><span>ต้องแก้ไข</span><strong>{{ counts.needs_fix }}</strong></a>
+            <a href="?status=all{% if query %}&q={{ query|urlencode }}{% endif %}" class="{% if status == 'all' %}is-active{% endif %}"><span>ทั้งหมด</span><strong>{{ counts.all }}</strong></a>
+        </nav>
+
+        <form class="admin-tool-search" method="get">
+            <input type="hidden" name="status" value="{{ status }}">
+            <label for="slip-search">ค้นหานักศึกษา</label>
+            <div>
+                <input id="slip-search" name="q" value="{{ query }}" placeholder="ชื่อ รหัสนักศึกษา ชื่อเล่น หรือเบอร์โทร">
+                <button type="submit">ค้นหา</button>
+            </div>
+        </form>
+
+        <section class="payment-review-grid" aria-label="รายการสลิป">
+            {% for student in page_obj %}
+            <article class="payment-review-card">
+                <a class="payment-review-image" href="{{ student.payment_slip.url }}" target="_blank" rel="noopener">
+                    <img src="{{ student.payment_slip.url }}" alt="สลิปของ {{ student.person.full_name }}">
+                </a>
+                <form method="post" class="payment-review-body">
+                    {% csrf_token %}
+                    <input type="hidden" name="student" value="{{ student.pk }}">
+                    <input type="hidden" name="next" value="{{ next_url }}">
+                    <div class="payment-review-heading">
+                        <div>
+                            <strong>{{ student.person.full_name }}</strong>
+                            <span>{{ student.student_id }} · {{ student.group.group_name|default:"ยังไม่มีกลุ่ม" }}</span>
+                        </div>
+                        {% if student.is_paid %}
+                        <span class="admin-status admin-status--success">ยืนยันแล้ว</span>
+                        {% elif student.admin_validation_status == "needs_fix" %}
+                        <span class="admin-status admin-status--warning">ต้องแก้ไข</span>
+                        {% else %}
+                        <span class="admin-status admin-status--pending">รอตรวจ</span>
+                        {% endif %}
+                    </div>
+                    <label class="admin-textarea-field">
+                        <span>หมายเหตุการตรวจ</span>
+                        <textarea name="payment_review_note" rows="3" placeholder="เช่น จำนวนเงินถูกต้อง / รูปไม่ชัด / ต้องส่งใหม่">{{ student.payment_review_note }}</textarea>
+                    </label>
+                    <div class="payment-review-actions">
+                        <button type="submit" name="action" value="approve">ยืนยันสลิป</button>
+                        <button type="submit" name="action" value="needs_fix" class="secondary">ให้แก้ไข</button>
+                    </div>
+                </form>
+            </article>
+            {% empty %}
+            <div class="admin-empty-state">ไม่มีสลิปในหมวดนี้</div>
+            {% endfor %}
+        </section>
+
+        <footer class="admin-tool-pagination">
+            <span>หน้า {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+            <nav aria-label="หน้ารายชื่อ">
+                {% if page_obj.has_previous %}<a href="{{ page_query_prefix }}page={{ page_obj.previous_page_number }}">ก่อนหน้า</a>{% endif %}
+                {% if page_obj.has_next %}<a href="{{ page_query_prefix }}page={{ page_obj.next_page_number }}">ถัดไป</a>{% endif %}
+            </nav>
+        </footer>
+    </div>
+</main>
+{% endblock %}

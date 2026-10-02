@@ -11,6 +11,385 @@
     --school-admin-muted: #526157;
 }
 
+.admin-tool-page .page-heading {
+    margin-bottom: 16px;
+}
+
+.admin-tool-notice {
+    margin: 0 0 14px;
+    padding: 12px 14px;
+    color: var(--school-admin-forest);
+    background: #eef6ee;
+    border-left: 4px solid var(--school-admin-sage);
+    border-radius: 6px;
+    font-weight: 750;
+}
+
+.admin-tool-notice.error {
+    color: #9f1d1d;
+    background: #fff1f1;
+    border-left-color: #b42318;
+}
+
+.admin-tool-notice.warning {
+    color: #8a3418;
+    background: #fff4e8;
+    border-left-color: #d97706;
+}
+
+.admin-tool-search {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 14px;
+    background: var(--school-admin-surface);
+    border: 1px solid var(--school-admin-border);
+    border-radius: 8px;
+}
+
+.admin-tool-search label,
+.attendance-generator label span,
+.admin-inline-upload label span,
+.admin-textarea-field span {
+    color: var(--school-admin-muted);
+    font-size: 0.82rem;
+    font-weight: 800;
+}
+
+.admin-tool-search div {
+    display: flex;
+    gap: 8px;
+}
+
+.admin-tool-search input,
+.attendance-generator select,
+.attendance-generator input,
+.admin-inline-upload input,
+.admin-textarea-field textarea {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    color: var(--school-admin-forest);
+    background: #ffffff;
+    border: 1px solid var(--school-admin-border);
+    border-radius: 6px;
+    font: inherit;
+}
+
+.admin-tool-search button,
+.admin-inline-upload button,
+.payment-review-actions button,
+.attendance-generator button,
+.export-card a {
+    min-height: 44px;
+    padding: 10px 14px;
+    color: #ffffff;
+    background: var(--school-admin-forest);
+    border: 1px solid var(--school-admin-forest);
+    border-radius: 6px;
+    font: inherit;
+    font-weight: 850;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.admin-card-grid,
+.payment-review-grid,
+.export-card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.admin-record-card,
+.payment-review-card,
+.export-card,
+.attendance-generator,
+.attendance-qr-preview {
+    background: var(--school-admin-surface);
+    border: 1px solid var(--school-admin-border);
+    border-radius: 8px;
+    box-shadow: 0 8px 22px rgba(18, 39, 29, 0.06);
+}
+
+.admin-record-card {
+    display: grid;
+    grid-template-columns: 88px minmax(0, 1fr);
+    gap: 14px;
+    padding: 14px;
+}
+
+.admin-record-media {
+    display: grid;
+    width: 88px;
+    height: 88px;
+    place-items: center;
+    overflow: hidden;
+    color: #ffffff;
+    background: var(--school-admin-forest);
+    border-radius: 8px;
+    font-size: 1.7rem;
+    font-weight: 900;
+}
+
+.admin-record-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.admin-record-body,
+.admin-inline-upload,
+.payment-review-body,
+.admin-textarea-field,
+.attendance-generator {
+    display: grid;
+    gap: 10px;
+}
+
+.admin-record-body strong,
+.payment-review-heading strong,
+.export-card h2,
+.attendance-qr-preview h2 {
+    color: var(--school-admin-forest);
+}
+
+.admin-record-body span,
+.payment-review-heading span,
+.export-card p,
+.attendance-qr-preview p,
+.attendance-qr-preview a {
+    color: var(--school-admin-muted);
+}
+
+.admin-tool-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(120px, 1fr));
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.admin-tool-tabs a {
+    display: flex;
+    min-height: 54px;
+    padding: 10px 13px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    color: var(--school-admin-sage);
+    background: #ffffff;
+    border: 1px solid var(--school-admin-border);
+    border-radius: 7px;
+    font-weight: 900;
+    text-decoration: none;
+}
+
+.admin-tool-tabs a.is-active {
+    color: #ffffff;
+    background: var(--school-admin-forest);
+    border-color: var(--school-admin-forest);
+}
+
+.admin-tool-tabs strong {
+    display: grid;
+    min-width: 30px;
+    height: 30px;
+    place-items: center;
+    color: var(--school-admin-forest);
+    background: var(--school-admin-ivory);
+    border-radius: 5px;
+}
+
+.payment-review-card {
+    display: grid;
+    grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
+    overflow: hidden;
+}
+
+.payment-review-image {
+    display: block;
+    min-height: 260px;
+    background: #edf2ed;
+}
+
+.payment-review-image img {
+    width: 100%;
+    height: 100%;
+    min-height: 260px;
+    object-fit: cover;
+}
+
+.payment-review-body {
+    padding: 16px;
+}
+
+.payment-review-heading {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    justify-content: space-between;
+}
+
+.admin-status {
+    flex: 0 0 auto;
+    min-height: 30px;
+    padding: 5px 8px;
+    border-radius: 5px;
+    font-size: 0.76rem;
+    font-weight: 900;
+}
+
+.admin-status--success {
+    color: #20633d;
+    background: #e8f5ec;
+}
+
+.admin-status--warning,
+.admin-status--pending {
+    color: #8a3418;
+    background: #fff4e8;
+}
+
+.admin-textarea-field textarea {
+    min-height: 92px;
+    resize: vertical;
+}
+
+.payment-review-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.payment-review-actions .secondary {
+    color: #8a3418;
+    background: #fff8ed;
+    border-color: #e8c18e;
+}
+
+.export-card {
+    display: grid;
+    gap: 14px;
+    padding: 18px;
+    border-top: 4px solid var(--school-admin-gold);
+}
+
+.export-card > strong {
+    color: var(--school-admin-forest);
+    font-size: 2rem;
+    line-height: 1;
+}
+
+.export-card span,
+.attendance-qr-preview > div > span {
+    color: #8a6b18;
+    font-size: 0.76rem;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.export-preview,
+.attendance-history {
+    margin-top: 16px;
+}
+
+.attendance-qr-layout {
+    display: grid;
+    grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
+    gap: 14px;
+}
+
+.attendance-generator,
+.attendance-qr-preview {
+    padding: 16px;
+}
+
+.attendance-qr-preview {
+    display: grid;
+    gap: 12px;
+    justify-items: start;
+}
+
+.attendance-qr-preview img {
+    width: min(100%, 320px);
+    height: auto;
+    border: 1px solid var(--school-admin-border);
+    border-radius: 8px;
+}
+
+.attendance-qr-preview a {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    font-weight: 700;
+}
+
+.qr-placeholder,
+.admin-empty-state {
+    display: grid;
+    min-height: 180px;
+    padding: 18px;
+    place-items: center;
+    color: var(--school-admin-muted);
+    text-align: center;
+    background: #eef2ee;
+    border: 1px dashed var(--school-admin-border);
+    border-radius: 8px;
+}
+
+.admin-empty-state {
+    grid-column: 1 / -1;
+}
+
+.admin-tool-pagination {
+    display: flex;
+    gap: 14px;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 18px;
+    color: var(--school-admin-muted);
+}
+
+.admin-tool-pagination nav {
+    display: flex;
+    gap: 10px;
+}
+
+.admin-tool-pagination a {
+    color: var(--school-admin-sage);
+    font-weight: 850;
+}
+
+@media (max-width: 980px) {
+    .admin-card-grid,
+    .payment-review-grid,
+    .export-card-grid,
+    .attendance-qr-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .payment-review-card {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 620px) {
+    .admin-tool-search div,
+    .payment-review-heading,
+    .admin-tool-pagination {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .admin-tool-tabs,
+    .payment-review-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-record-card {
+        grid-template-columns: 1fr;
+    }
+}
+
 .school-admin-navbar {
     position: sticky;
     top: 0;

@@ -14,6 +14,22 @@
                 <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#user"></use></svg>
                 <span>จัดกลุ่มนักศึกษา</span>
             </a>
+            <a href="{% url 'school:admin_student_photo_import' %}"{% if request.resolver_match.url_name == "admin_student_photo_import" %} class="is-active" aria-current="page"{% endif %}>
+                <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#upload-cloud"></use></svg>
+                <span>รูปนักศึกษา</span>
+            </a>
+            <a href="{% url 'school:admin_payment_slip_review' %}"{% if request.resolver_match.url_name == "admin_payment_slip_review" %} class="is-active" aria-current="page"{% endif %}>
+                <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#shield-check"></use></svg>
+                <span>ตรวจสลิป</span>
+            </a>
+            <a href="{% url 'school:admin_attendance_qr' %}"{% if request.resolver_match.url_name == "admin_attendance_qr" %} class="is-active" aria-current="page"{% endif %}>
+                <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#check-circle"></use></svg>
+                <span>QR เช็คชื่อ</span>
+            </a>
+            <a href="{% url 'school:admin_exports' %}"{% if request.resolver_match.url_name == "admin_exports" %} class="is-active" aria-current="page"{% endif %}>
+                <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#calendar-days"></use></svg>
+                <span>Export</span>
+            </a>
             <a href="{% url 'school:appointment_schedule' %}"{% if request.resolver_match.url_name == "appointment_schedule" %} class="is-active" aria-current="page"{% endif %}>
                 <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#calendar-days"></use></svg>
                 <span>จัดการนัดหมาย</span>

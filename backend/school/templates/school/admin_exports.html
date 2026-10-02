@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% load static school_dates %}
+
+{% block title %}Export ข้อมูล | BRI{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261002-admin-tools-1">
+{% endblock %}
+
+{% block content %}
+{% include "school/includes/school_admin_nav.html" %}
+<main class="dashboard-page admin-tool-page">
+    <div class="dashboard-shell">
+        <header class="page-heading">
+            <div>
+                <span class="eyebrow">Data exports</span>
+                <h1>Export ข้อมูล</h1>
+                <p>ดาวน์โหลดข้อมูลใบสมัครและ slot เวลาสัมภาษณ์เป็น CSV ที่เปิดใน Excel/Google Sheets ได้</p>
+            </div>
+        </header>
+
+        <section class="export-card-grid" aria-label="รายการ export">
+            <article class="export-card">
+                <div>
+                    <span>Applications</span>
+                    <h2>ข้อมูลใบสมัคร</h2>
+                    <p>รวมชื่อ ช่องทางติดต่อ สถานะ ประเภทผู้เรียน กลุ่ม ประเทศ คริสตจักร goal และคอมเมนต์สัมภาษณ์</p>
+                </div>
+                <strong>{{ application_count }}</strong>
+                <a href="{% url 'school:export_applications_csv' %}">ดาวน์โหลด CSV</a>
+            </article>
+            <article class="export-card">
+                <div>
+                    <span>Interview slots</span>
+                    <h2>ข้อมูล slot เวลาสัมภาษณ์</h2>
+                    <p>รวมกิจกรรม วันที่ เวลา ความจุ จำนวนที่ยืนยัน รายชื่อที่ยืนยัน สถานที่ และรายละเอียด</p>
+                </div>
+                <strong>{{ interview_slot_count|default:0 }}</strong>
+                <a href="{% url 'school:export_interview_slots_csv' %}">ดาวน์โหลด CSV</a>
+            </article>
+        </section>
+
+        <section class="dashboard-panel dashboard-panel--wide export-preview" aria-labelledby="recent-export-title">
+            <div class="dashboard-panel-heading">
+                <div>
+                    <span class="eyebrow">Preview</span>
+                    <h2 id="recent-export-title">นัดสัมภาษณ์ล่าสุด</h2>
+                </div>
+            </div>
+            <div class="table-shell">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>กิจกรรม</th>
+                            <th>วันที่</th>
+                            <th>ผู้เข้าร่วม</th>
+                            <th>สถานที่</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for appointment in recent_interviews %}
+                        <tr>
+                            <td>{{ appointment.title }}</td>
+                            <td>{{ appointment.starts_at|thai_date }}</td>
+                            <td>{{ appointment.participant_count }}</td>
+                            <td>{{ appointment.location|default:"-" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4">ยังไม่มีนัดสัมภาษณ์</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</main>
+{% endblock %}

@@ -32,4 +32,5 @@ def ensure_default_teacher_group(user):
             "is_active": True,
         },
     )
+    group.teachers.add(user)
     return group

@@ -291,6 +291,14 @@ def interview_results(request):
         raise PermissionDenied
     if request.method == "POST":
         person = Person.objects.filter(pk=request.POST.get("person")).first()
+        action = request.POST.get("action", "result")
+        comment = request.POST.get("interview_comment", "").strip()
+        if person and action == "comment":
+            person.interview_comment = comment
+            person.save(update_fields=["interview_comment"])
+            messages.success(request, f"บันทึกคอมเมนต์ของ {person.full_name} แล้ว")
+            redirect_to = request.POST.get("next") or reverse("school:interview_results")
+            return redirect(redirect_to)
         requested_result = request.POST.get("result")
         result_confirmed = request.POST.get("confirmed_result") == requested_result
         result_label = update_interview_result(person, requested_result) if person and result_confirmed else ""
@@ -299,6 +307,9 @@ def interview_results(request):
         elif not person or not result_label:
             messages.error(request, "ไม่พบผู้สมัครหรือสถานะผลสัมภาษณ์ไม่ถูกต้อง")
         else:
+            if comment != person.interview_comment:
+                person.interview_comment = comment
+                person.save(update_fields=["interview_comment"])
             messages.success(request, f"บันทึกผล {person.full_name}: {result_label} แล้ว")
         redirect_to = request.POST.get("next") or reverse("school:interview_results")
         return redirect(redirect_to)

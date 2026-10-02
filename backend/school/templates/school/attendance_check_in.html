@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}เช็คชื่อเข้าเรียน | BRI School of Fivefold{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20260914-journey-1">
+{% endblock %}
+
+{% block content %}
+<main class="success-page auth-page" data-registration-app>
+    <section class="success-shell journey-shell auth-shell" aria-labelledby="attendance-title">
+        <a class="mobile-brand success-brand" href="{% url 'school:student_dashboard' %}" aria-label="BRI School of Fivefold">
+            {% include "school/includes/brand_logo.html" with variant="success" %}
+        </a>
+
+        {% if state == "checked_in" or state == "already_checked_in" %}
+        <div class="success-mark status-mark--success" aria-hidden="true">
+            <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#check"></use></svg>
+        </div>
+        <span class="eyebrow">Attendance recorded</span>
+        <h1 id="attendance-title">{% if state == "checked_in" %}เช็คชื่อเรียบร้อย{% else %}เช็คชื่อไว้แล้ว{% endif %}</h1>
+        <p class="success-lead">{{ student.person.full_name }} · {{ student.student_id }}</p>
+        <div class="receipt-block result-card">
+            <span>ชั้นเรียน</span>
+            <strong>{{ session.group.group_name }}</strong>
+            <small>{{ session.date|date:"d/m/Y" }}</small>
+        </div>
+        <a class="button button--primary success-action" href="{% url 'school:student_dashboard' %}">
+            <span>ไปหน้าแดชบอร์ดนักศึกษา</span>
+            <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
+        </a>
+        {% elif state == "missing_line" %}
+        <div class="success-mark status-mark--pending" aria-hidden="true">
+            <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#clock"></use></svg>
+        </div>
+        <span class="eyebrow">เปิดผ่าน LINE</span>
+        <h1 id="attendance-title">ต้องเชื่อม LINE ก่อนเช็คชื่อ</h1>
+        <p class="success-lead">กรุณาเปิดลิงก์นี้ผ่าน LIFF/LINE เพื่อให้ระบบระบุตัวนักศึกษาได้</p>
+        {% elif state == "wrong_group" %}
+        <div class="success-mark status-mark--pending" aria-hidden="true">
+            <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#info"></use></svg>
+        </div>
+        <span class="eyebrow">ตรวจสอบกลุ่มเรียน</span>
+        <h1 id="attendance-title">คุณไม่ได้อยู่ในกลุ่มนี้</h1>
+        <p class="success-lead">QR นี้เป็นของกลุ่ม {{ session.group.group_name }} กรุณาติดต่อทีมงานถ้าคิดว่าข้อมูลกลุ่มไม่ถูกต้อง</p>
+        {% elif state == "not_student" %}
+        <div class="success-mark status-mark--pending" aria-hidden="true">
+            <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#info"></use></svg>
+        </div>
+        <span class="eyebrow">ยังไม่พบนักศึกษา</span>
+        <h1 id="attendance-title">บัญชีนี้ยังเช็คชื่อไม่ได้</h1>
+        <p class="success-lead">ระบบยังไม่พบนักศึกษาที่ active จากบัญชี LINE นี้</p>
+        {% else %}
+        <div class="success-mark status-mark--pending" aria-hidden="true">
+            <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#info"></use></svg>
+        </div>
+        <span class="eyebrow">Invalid QR</span>
+        <h1 id="attendance-title">QR นี้ไม่ถูกต้องหรือหมดอายุ</h1>
+        <p class="success-lead">กรุณาสแกน QR ล่าสุดจากทีมงานอีกครั้ง</p>
+        {% endif %}
+    </section>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+{% include "school/includes/liff_bridge.html" %}
+{% endblock %}

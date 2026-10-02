@@ -1,25 +1,30 @@
+import csv
 import json
 from calendar import Calendar
 from collections import Counter
 from datetime import datetime, timedelta
+from urllib.parse import urlencode
 
+from django import forms
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
+from django.core import signing
 from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count, Q
 from django.views.decorators.cache import never_cache
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render, resolve_url
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.views.decorators.csrf import ensure_csrf_cookie
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
 from .forms import (
     HomeworkUploadForm,
@@ -515,7 +520,12 @@ def teacher_dashboard(request):
         return redirect(f"{resolve_url('school:login')}?teacher_status=pending")
 
     groups = list(
-        TeacherGroup.objects.filter(teacher=request.user, is_active=True)
+        TeacherGroup.objects.filter(
+            Q(teachers=request.user) | Q(teacher=request.user),
+            is_active=True,
+        )
+        .distinct()
+        .prefetch_related("teachers")
         .annotate(
             active_student_count=Count(
                 "students",
@@ -713,10 +723,10 @@ def teacher_dashboard(request):
 
 
 def teacher_accessible_groups(user):
-    group_queryset = TeacherGroup.objects.filter(is_active=True)
+    group_queryset = TeacherGroup.objects.filter(is_active=True).prefetch_related("teachers")
     if is_school_admin(user):
         return group_queryset.select_related("teacher").order_by("group_name")
-    return group_queryset.filter(teacher=user).order_by("group_name")
+    return group_queryset.filter(Q(teachers=user) | Q(teacher=user)).distinct().order_by("group_name")
 
 
 def parse_teacher_calendar_month(value):
@@ -920,7 +930,14 @@ def participant_in_teacher_scope(user, participant):
     if is_school_admin(user):
         return True
     student = getattr(participant.person, "student", None)
-    return bool(student and student.group and student.group.teacher_id == user.pk)
+    return bool(
+        student
+        and student.group
+        and (
+            student.group.teacher_id == user.pk
+            or student.group.teachers.filter(pk=user.pk).exists()
+        )
+    )
 
 
 @login_required
@@ -1000,6 +1017,7 @@ def admin_overview_dashboard(request):
     )[:8]
     group_summaries = (
         TeacherGroup.objects.select_related("teacher")
+        .prefetch_related("teachers")
         .annotate(
             student_count=Count("students"),
             paid_student_count=Count(
@@ -1092,6 +1110,448 @@ def admin_overview_dashboard(request):
         ],
     }
     return render(request, "school/admin_overview_dashboard.html", context)
+
+
+@login_required(login_url="admin:login")
+@never_cache
+@require_http_methods(["GET", "POST"])
+def admin_student_photo_import(request):
+    if not is_school_admin(request.user):
+        raise PermissionDenied
+
+    if request.method == "POST":
+        student = (
+            Student.objects.select_related("person")
+            .filter(pk=request.POST.get("student"))
+            .first()
+        )
+        uploaded_photo = request.FILES.get("photo")
+        if not student:
+            messages.error(request, "ไม่พบนักศึกษาที่ต้องการอัปโหลดรูป")
+        elif not uploaded_photo:
+            messages.error(request, "กรุณาเลือกรูปนักศึกษา")
+        else:
+            try:
+                forms.ImageField().clean(uploaded_photo)
+            except forms.ValidationError:
+                messages.error(request, "ไฟล์รูปไม่ถูกต้อง กรุณาใช้ JPG, PNG หรือ WEBP")
+            else:
+                student.person.photo = uploaded_photo
+                student.person.save(update_fields=["photo", "updated_at"])
+                messages.success(
+                    request,
+                    f"อัปโหลดรูปของ {student.person.full_name} ({student.student_id}) แล้ว",
+                )
+        return redirect(request.POST.get("next") or "school:admin_student_photo_import")
+
+    query = request.GET.get("q", "").strip()
+    students = (
+        Student.objects.select_related("person", "group")
+        .filter(is_active=True)
+        .order_by("student_id", "person__first_name", "person__last_name")
+    )
+    if query:
+        students = students.filter(
+            Q(student_id__icontains=query)
+            | Q(person__first_name__icontains=query)
+            | Q(person__last_name__icontains=query)
+            | Q(person__nickname__icontains=query)
+            | Q(person__phone__icontains=query)
+        )
+    page = Paginator(students, 60).get_page(request.GET.get("page"))
+    query_params = request.GET.copy()
+    query_params.pop("page", None)
+    return render(
+        request,
+        "school/admin_student_photo_import.html",
+        {
+            "page_obj": page,
+            "query": query,
+            "next_url": request.get_full_path(),
+            "page_query_prefix": f"?{query_params.urlencode()}&" if query_params else "?",
+        },
+    )
+
+
+@login_required(login_url="admin:login")
+@never_cache
+@require_http_methods(["GET", "POST"])
+def admin_payment_slip_review(request):
+    if not is_school_admin(request.user):
+        raise PermissionDenied
+
+    if request.method == "POST":
+        student = (
+            Student.objects.select_related("person")
+            .filter(pk=request.POST.get("student"), payment_slip__isnull=False)
+            .first()
+        )
+        action = request.POST.get("action")
+        note = request.POST.get("payment_review_note", "").strip()
+        if not student:
+            messages.error(request, "ไม่พบนักศึกษาหรือยังไม่มีสลิปให้ตรวจ")
+        elif action == "approve":
+            student.is_paid = True
+            student.admin_validation_status = Student.AdminValidationStatus.APPROVED
+            student.payment_review_note = note
+            student.save(
+                update_fields=[
+                    "is_paid",
+                    "admin_validation_status",
+                    "payment_review_note",
+                    "updated_at",
+                ]
+            )
+            messages.success(request, f"ยืนยันสลิปของ {student.person.full_name} แล้ว")
+        elif action == "needs_fix":
+            student.is_paid = False
+            student.admin_validation_status = Student.AdminValidationStatus.NEEDS_FIX
+            student.payment_review_note = note
+            student.save(
+                update_fields=[
+                    "is_paid",
+                    "admin_validation_status",
+                    "payment_review_note",
+                    "updated_at",
+                ]
+            )
+            messages.warning(request, f"ส่งสถานะให้แก้ไขสลิปของ {student.person.full_name} แล้ว")
+        else:
+            messages.error(request, "คำสั่งตรวจสลิปไม่ถูกต้อง")
+        return redirect(request.POST.get("next") or "school:admin_payment_slip_review")
+
+    query = request.GET.get("q", "").strip()
+    status = request.GET.get("status") or "pending"
+    if status not in {"pending", "paid", "needs_fix", "all"}:
+        status = "pending"
+
+    students = (
+        Student.objects.select_related("person", "group")
+        .exclude(payment_slip="")
+        .exclude(payment_slip__isnull=True)
+        .order_by("-updated_at", "student_id")
+    )
+    if status == "pending":
+        students = students.filter(is_paid=False).exclude(
+            admin_validation_status=Student.AdminValidationStatus.NEEDS_FIX
+        )
+    elif status == "paid":
+        students = students.filter(is_paid=True)
+    elif status == "needs_fix":
+        students = students.filter(admin_validation_status=Student.AdminValidationStatus.NEEDS_FIX)
+    if query:
+        students = students.filter(
+            Q(student_id__icontains=query)
+            | Q(person__first_name__icontains=query)
+            | Q(person__last_name__icontains=query)
+            | Q(person__nickname__icontains=query)
+            | Q(person__phone__icontains=query)
+        )
+
+    counts = {
+        "pending": Student.objects.exclude(payment_slip="")
+        .exclude(payment_slip__isnull=True)
+        .filter(is_paid=False)
+        .exclude(admin_validation_status=Student.AdminValidationStatus.NEEDS_FIX)
+        .count(),
+        "paid": Student.objects.exclude(payment_slip="")
+        .exclude(payment_slip__isnull=True)
+        .filter(is_paid=True)
+        .count(),
+        "needs_fix": Student.objects.exclude(payment_slip="")
+        .exclude(payment_slip__isnull=True)
+        .filter(admin_validation_status=Student.AdminValidationStatus.NEEDS_FIX)
+        .count(),
+        "all": Student.objects.exclude(payment_slip="")
+        .exclude(payment_slip__isnull=True)
+        .count(),
+    }
+    page = Paginator(students, 30).get_page(request.GET.get("page"))
+    query_params = request.GET.copy()
+    query_params.pop("page", None)
+    return render(
+        request,
+        "school/admin_payment_slip_review.html",
+        {
+            "page_obj": page,
+            "query": query,
+            "status": status,
+            "counts": counts,
+            "next_url": request.get_full_path(),
+            "page_query_prefix": f"?{query_params.urlencode()}&" if query_params else "?",
+        },
+    )
+
+
+def csv_download_response(filename):
+    response = HttpResponse(content_type="text/csv; charset=utf-8-sig")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    response.write("\ufeff")
+    return response
+
+
+@login_required(login_url="admin:login")
+@never_cache
+def admin_exports(request):
+    if not is_school_admin(request.user):
+        raise PermissionDenied
+
+    context = {
+        "application_count": Person.objects.count(),
+        "student_count": Student.objects.count(),
+        "interview_appointment_count": Appointment.objects.filter(
+            appointment_type=Appointment.Type.INTERVIEW
+        ).count(),
+        "interview_slot_count": Appointment.objects.filter(
+            appointment_type=Appointment.Type.INTERVIEW
+        ).aggregate(total=Count("slots"))["total"],
+        "recent_interviews": Appointment.objects.filter(
+            appointment_type=Appointment.Type.INTERVIEW
+        )
+        .annotate(participant_count=Count("participants", distinct=True))
+        .order_by("-starts_at")[:6],
+    }
+    return render(request, "school/admin_exports.html", context)
+
+
+@login_required(login_url="admin:login")
+def export_applications_csv(request):
+    if not is_school_admin(request.user):
+        raise PermissionDenied
+
+    response = csv_download_response("bri-applications.csv")
+    writer = csv.writer(response)
+    writer.writerow(
+        [
+            "รหัสนักศึกษา",
+            "ชื่อ",
+            "ชื่อเล่น",
+            "เบอร์โทร",
+            "อีเมล",
+            "สถานะ",
+            "ประเภทผู้เรียน",
+            "ชำระเงิน",
+            "กลุ่ม",
+            "ผู้สอน",
+            "ประเทศ",
+            "ภูมิภาค",
+            "จังหวัด",
+            "คริสตจักร",
+            "Goal",
+            "Vision calling",
+            "คอมเมนต์สัมภาษณ์",
+            "วันที่สมัคร",
+        ]
+    )
+    people = (
+        Person.objects.select_related("student", "student__group", "student__group__teacher")
+        .prefetch_related("student__group__teachers")
+        .order_by("created_at", "pk")
+    )
+    for person in people:
+        student = getattr(person, "student", None)
+        group = student.group if student else None
+        extra = person.extra_data or {}
+        writer.writerow(
+            [
+                student.student_id if student else "",
+                person.full_name,
+                person.nickname,
+                person.phone,
+                person.email,
+                person.get_status_display(),
+                person.admission_type_name,
+                "ชำระแล้ว" if student and student.is_paid else "ยังไม่ชำระ",
+                group.group_name if group else "",
+                group.teacher_names if group else "",
+                extra.get("country_name_th") or extra.get("country_name_en") or "",
+                extra.get("region") or "",
+                extra.get("province") or "",
+                extra.get("church") or "",
+                extra.get("goal") or "",
+                extra.get("vision_calling") or "",
+                person.interview_comment,
+                timezone.localtime(person.created_at).strftime("%Y-%m-%d %H:%M"),
+            ]
+        )
+    return response
+
+
+@login_required(login_url="admin:login")
+def export_interview_slots_csv(request):
+    if not is_school_admin(request.user):
+        raise PermissionDenied
+
+    response = csv_download_response("bri-interview-slots.csv")
+    writer = csv.writer(response)
+    writer.writerow(
+        [
+            "กิจกรรม",
+            "วันที่",
+            "เวลาเริ่ม",
+            "เวลาจบ",
+            "ความจุ",
+            "ยืนยันแล้ว",
+            "รายชื่อที่ยืนยัน",
+            "สถานที่",
+            "รายละเอียด",
+        ]
+    )
+    slots = (
+        Appointment.objects.filter(appointment_type=Appointment.Type.INTERVIEW)
+        .prefetch_related("slots", "participants__person", "participants__selected_slot")
+        .order_by("starts_at", "pk")
+    )
+    for appointment in slots:
+        appointment_slots = list(appointment.slots.all())
+        if not appointment_slots:
+            appointment_slots = [None]
+        for slot in appointment_slots:
+            participants = [
+                participant.person.full_name
+                for participant in appointment.participants.all()
+                if participant.response_status == AppointmentParticipant.ResponseStatus.CONFIRMED
+                and (slot is None or participant.selected_slot_id == slot.pk)
+            ]
+            start_at = slot.starts_at if slot else appointment.starts_at
+            end_at = slot.ends_at if slot else None
+            writer.writerow(
+                [
+                    appointment.title,
+                    timezone.localtime(start_at).strftime("%Y-%m-%d"),
+                    timezone.localtime(start_at).strftime("%H:%M"),
+                    timezone.localtime(end_at).strftime("%H:%M") if end_at else "",
+                    slot.capacity if slot else "",
+                    len(participants),
+                    ", ".join(participants),
+                    appointment.location,
+                    appointment.details,
+                ]
+            )
+    return response
+
+
+ATTENDANCE_SIGNING_SALT = "school.attendance.check-in"
+
+
+@login_required(login_url="admin:login")
+@never_cache
+@require_http_methods(["GET", "POST"])
+def admin_attendance_qr(request):
+    if not is_school_admin(request.user):
+        raise PermissionDenied
+
+    groups = list(
+        TeacherGroup.objects.filter(is_active=True)
+        .prefetch_related("teachers")
+        .annotate(active_student_count=Count("students", filter=Q(students__is_active=True)))
+        .order_by("group_name")
+    )
+    selected_group = None
+    selected_date = timezone.localdate()
+    session = None
+    check_in_url = ""
+    qr_image_url = ""
+
+    if request.method == "POST":
+        group_id = request.POST.get("group", "")
+        date_value = parse_date(request.POST.get("date", ""))
+        selected_group = next((group for group in groups if str(group.pk) == group_id), None)
+        selected_date = date_value or selected_date
+        if selected_group is None:
+            messages.error(request, "กรุณาเลือกกลุ่มเรียน")
+        elif not date_value:
+            messages.error(request, "กรุณาเลือกวันที่เรียน")
+        else:
+            session, _ = AttendanceSession.objects.get_or_create(
+                group=selected_group,
+                date=selected_date,
+            )
+            token = signing.dumps({"session_id": session.pk}, salt=ATTENDANCE_SIGNING_SALT)
+            check_in_url = request.build_absolute_uri(
+                reverse("school:attendance_check_in", kwargs={"token": token})
+            )
+            qr_image_url = "https://api.qrserver.com/v1/create-qr-code/?" + urlencode(
+                {"size": "320x320", "margin": 10, "data": check_in_url}
+            )
+            messages.success(request, f"สร้าง QR เช็คชื่อของ {selected_group.group_name} แล้ว")
+
+    recent_sessions = (
+        AttendanceSession.objects.select_related("group")
+        .prefetch_related("group__teachers")
+        .annotate(
+            present_count=Count(
+                "attendance_records",
+                filter=Q(attendance_records__status=AttendanceRecord.Status.PRESENT),
+            ),
+            late_count=Count(
+                "attendance_records",
+                filter=Q(attendance_records__status=AttendanceRecord.Status.LATE),
+            ),
+            record_count=Count("attendance_records"),
+        )
+        .order_by("-date", "-updated_at")[:10]
+    )
+    return render(
+        request,
+        "school/admin_attendance_qr.html",
+        {
+            "groups": groups,
+            "selected_group": selected_group,
+            "selected_date": selected_date,
+            "session": session,
+            "check_in_url": check_in_url,
+            "qr_image_url": qr_image_url,
+            "recent_sessions": recent_sessions,
+        },
+    )
+
+
+@never_cache
+@ensure_csrf_cookie
+def attendance_check_in(request, token):
+    session = None
+    state = "invalid"
+    person = None
+    student = None
+    record = None
+
+    try:
+        payload = signing.loads(token, salt=ATTENDANCE_SIGNING_SALT, max_age=60 * 60 * 24 * 30)
+        session = AttendanceSession.objects.select_related("group").get(pk=payload.get("session_id"))
+        state = "missing_line"
+    except (signing.BadSignature, AttendanceSession.DoesNotExist):
+        payload = None
+
+    line_profile = get_session_line_profile(request)
+    line_user_id = line_profile.get("line_user_id", "").strip()
+    if session and line_user_id:
+        person, student = get_student_for_line(line_user_id)
+        if not student:
+            state = "not_student"
+        elif student.group_id != session.group_id:
+            state = "wrong_group"
+        else:
+            record, created = AttendanceRecord.objects.update_or_create(
+                attendance_session=session,
+                student=student,
+                defaults={"status": AttendanceRecord.Status.PRESENT},
+            )
+            state = "checked_in" if created else "already_checked_in"
+
+    return render(
+        request,
+        "school/attendance_check_in.html",
+        {
+            "state": state,
+            "session": session,
+            "person": person,
+            "student": student,
+            "record": record,
+            "line_return_url": settings.LINE_RETURN_URL,
+            **get_liff_context(request, reload_on_sync=state == "missing_line"),
+        },
+    )
 
 
 @require_GET

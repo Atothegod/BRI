@@ -22,10 +22,18 @@ def assignable_students():
 def assignable_groups():
     return TeacherGroup.objects.filter(
         is_active=True,
-        teacher__is_active=True,
-        teacher__role="TEACHER",
-        teacher__is_teacher_approved=True,
-    )
+    ).filter(
+        Q(
+            teachers__is_active=True,
+            teachers__role="TEACHER",
+            teachers__is_teacher_approved=True,
+        )
+        | Q(
+            teacher__is_active=True,
+            teacher__role="TEACHER",
+            teacher__is_teacher_approved=True,
+        )
+    ).distinct()
 
 
 class StudentGroupAssignmentForm(forms.Form):
@@ -50,8 +58,8 @@ class StudentGroupAssignmentForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["students"].queryset = assignable_students()
-        self.fields["group"].queryset = assignable_groups().select_related("teacher").order_by(
-            "teacher__first_name", "teacher__last_name", "teacher__username", "group_name"
+        self.fields["group"].queryset = assignable_groups().prefetch_related("teachers").order_by(
+            "group_name"
         )
 
     def clean_students(self):
@@ -84,9 +92,9 @@ def move_student_between_groups(request):
         group = None
         if group_id:
             group = (
-                assignable_groups()
+                TeacherGroup.objects.filter(pk__in=assignable_groups().values("pk"))
                 .select_for_update()
-                .select_related("teacher")
+                .prefetch_related("teachers")
                 .filter(pk=int(group_id))
                 .first()
             )
@@ -104,8 +112,7 @@ def move_student_between_groups(request):
             )
 
     if group:
-        teacher_name = group.teacher.get_full_name() or group.teacher.username
-        destination = f"{group.group_name} โดย {teacher_name}"
+        destination = f"{group.group_name} โดย {group.teacher_names}"
     else:
         destination = "ยังไม่มีกลุ่ม"
 
@@ -133,7 +140,13 @@ def student_group_assignment(request):
         student_ids = list(form.cleaned_data["students"].values_list("pk", flat=True))
         group_id = form.cleaned_data["group"].pk
         with transaction.atomic():
-            group = assignable_groups().select_for_update().select_related("teacher").filter(pk=group_id).first()
+            group = (
+                TeacherGroup.objects.filter(pk__in=assignable_groups().values("pk"))
+                .select_for_update()
+                .prefetch_related("teachers")
+                .filter(pk=group_id)
+                .first()
+            )
             students = list(
                 assignable_students().select_for_update().filter(pk__in=student_ids).order_by("pk")
             )
@@ -149,26 +162,26 @@ def student_group_assignment(request):
                         updated_at=timezone.now(),
                     )
         if not form.errors:
-            teacher_name = group.teacher.get_full_name() or group.teacher.username
             messages.success(
                 request,
-                f"จัดนักศึกษา {len(student_ids)} คนเข้ากลุ่ม {group.group_name} โดย {teacher_name} เรียบร้อยแล้ว",
+                f"จัดนักศึกษา {len(student_ids)} คนเข้ากลุ่ม {group.group_name} โดย {group.teacher_names} เรียบร้อยแล้ว",
             )
             return redirect("school:student_group_assignment")
 
     students = list(
         assignable_students()
         .select_related("person", "group", "group__teacher")
+        .prefetch_related("group__teachers")
         .order_by("student_id", "pk")
     )
 
     groups = list(
-        assignable_groups().select_related("teacher").annotate(
+        assignable_groups().select_related("teacher").prefetch_related("teachers").annotate(
             student_count=Count(
                 "students",
                 filter=Q(students__is_active=True),
             )
-        ).order_by("teacher__first_name", "teacher__last_name", "teacher__username", "group_name")
+        ).order_by("group_name")
     )
     students_by_group = {group.pk: [] for group in groups}
     unassigned_students = []

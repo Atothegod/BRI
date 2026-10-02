@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}QR เช็คชื่อ | BRI{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261002-admin-tools-1">
+{% endblock %}
+
+{% block content %}
+{% include "school/includes/school_admin_nav.html" %}
+<main class="dashboard-page admin-tool-page">
+    <div class="dashboard-shell">
+        <header class="page-heading">
+            <div>
+                <span class="eyebrow">Attendance QR</span>
+                <h1>QR code เช็คชื่อเข้าเรียน</h1>
+                <p>เลือกกลุ่มและวันที่เรียนเพื่อสร้างลิงก์ให้นักศึกษาสแกนเช็คชื่อ ระบบจะสะสมประวัติเข้าเรียนอัตโนมัติ</p>
+            </div>
+        </header>
+
+        {% for message in messages %}<p class="admin-tool-notice {{ message.tags }}" role="status">{{ message }}</p>{% endfor %}
+
+        <section class="attendance-qr-layout">
+            <form method="post" class="attendance-generator">
+                {% csrf_token %}
+                <label>
+                    <span>กลุ่มเรียน</span>
+                    <select name="group" required>
+                        <option value="">เลือกกลุ่มเรียน</option>
+                        {% for group in groups %}
+                        <option value="{{ group.pk }}"{% if selected_group and selected_group.pk == group.pk %} selected{% endif %}>
+                            {{ group.group_name }} · {{ group.teacher_names }} · {{ group.active_student_count }} คน
+                        </option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>
+                    <span>วันที่เรียน</span>
+                    <input type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}" required>
+                </label>
+                <button type="submit">สร้าง QR</button>
+            </form>
+
+            <section class="attendance-qr-preview" aria-labelledby="qr-preview-title">
+                <div>
+                    <span>QR สำหรับเช็คชื่อ</span>
+                    <h2 id="qr-preview-title">{% if session %}{{ session.group.group_name }}{% else %}เลือกกลุ่มเพื่อสร้าง QR{% endif %}</h2>
+                    {% if session %}<p>{{ session.date|date:"d/m/Y" }}</p>{% endif %}
+                </div>
+                {% if qr_image_url %}
+                <img src="{{ qr_image_url }}" alt="QR code เช็คชื่อ {{ session.group.group_name }}">
+                <a href="{{ check_in_url }}" target="_blank" rel="noopener">{{ check_in_url }}</a>
+                {% else %}
+                <div class="qr-placeholder">QR จะแสดงที่นี่หลังจากสร้าง</div>
+                {% endif %}
+            </section>
+        </section>
+
+        <section class="dashboard-panel dashboard-panel--wide attendance-history" aria-labelledby="attendance-history-title">
+            <div class="dashboard-panel-heading">
+                <div>
+                    <span class="eyebrow">Recent attendance</span>
+                    <h2 id="attendance-history-title">ประวัติเช็คชื่อล่าสุด</h2>
+                </div>
+            </div>
+            <div class="table-shell">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>วันที่</th>
+                            <th>กลุ่ม</th>
+                            <th>ผู้สอน</th>
+                            <th>มาเรียน</th>
+                            <th>ทั้งหมดที่บันทึก</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in recent_sessions %}
+                        <tr>
+                            <td>{{ item.date|date:"d/m/Y" }}</td>
+                            <td>{{ item.group.group_name }}</td>
+                            <td>{{ item.group.teacher_names }}</td>
+                            <td>{{ item.present_count|add:item.late_count }}</td>
+                            <td>{{ item.record_count }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5">ยังไม่มีประวัติเช็คชื่อ</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</main>
+{% endblock %}

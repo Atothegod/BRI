@@ -62,6 +62,7 @@ class Person(TimeStampedModel):
         max_length=10, blank=True,
         choices=[("pending", "รอส่ง"), ("sent", "LINE รับข้อความแล้ว"), ("failed", "ส่งไม่สำเร็จ")],
     )
+    interview_comment = models.TextField(blank=True)
 
     class Meta:
         constraints = [
@@ -249,11 +250,33 @@ class TeacherGroup(TimeStampedModel):
     teacher = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="legacy_teacher_groups",
+    )
+    teachers = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        blank=True,
         related_name="teacher_groups",
     )
     group_name = models.CharField(max_length=255)
     grade_level = models.CharField(max_length=100, blank=True)
     is_active = models.BooleanField(default=True)
+
+    @property
+    def teacher_list(self):
+        teachers = list(self.teachers.all())
+        if teachers:
+            return teachers
+        return [self.teacher] if self.teacher_id else []
+
+    @property
+    def teacher_names(self):
+        names = []
+        for teacher in self.teacher_list:
+            display_name = getattr(teacher, "display_name", "") or teacher.get_full_name() or teacher.username
+            names.append(display_name)
+        return ", ".join(names) or "ยังไม่กำหนดผู้สอน"
 
     def __str__(self):
         if self.grade_level:
@@ -288,6 +311,7 @@ class Student(TimeStampedModel):
     )
     is_paid = models.BooleanField(default=False)
     payment_slip = models.ImageField(upload_to="payment_slips/", null=True, blank=True)
+    payment_review_note = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
 
     @classmethod
@@ -330,6 +354,12 @@ def handle_passed_person(sender, instance, **kwargs):
         return
 
     Student.objects.get_or_create(person=instance)
+
+
+@receiver(post_save, sender=TeacherGroup)
+def sync_legacy_teacher_membership(sender, instance, **kwargs):
+    if instance.teacher_id and not instance.teachers.filter(pk=instance.teacher_id).exists():
+        instance.teachers.add(instance.teacher_id)
 
 
 @receiver(pre_save, sender=Student)

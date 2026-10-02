@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}อัปโหลดรูปนักศึกษา | BRI{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261002-admin-tools-1">
+{% endblock %}
+
+{% block content %}
+{% include "school/includes/school_admin_nav.html" %}
+<main class="dashboard-page admin-tool-page">
+    <div class="dashboard-shell">
+        <header class="page-heading">
+            <div>
+                <span class="eyebrow">Student photos</span>
+                <h1>อัปโหลดรูปนักศึกษา</h1>
+                <p>ค้นหาด้วยชื่อหรือรหัสนักศึกษา แล้วอัปโหลดรูปเข้า profile ที่เห็นใน Django Admin</p>
+            </div>
+        </header>
+
+        {% for message in messages %}<p class="admin-tool-notice {{ message.tags }}" role="status">{{ message }}</p>{% endfor %}
+
+        <form class="admin-tool-search" method="get">
+            <label for="photo-search">ค้นหานักศึกษา</label>
+            <div>
+                <input id="photo-search" name="q" value="{{ query }}" placeholder="ชื่อ รหัสนักศึกษา ชื่อเล่น หรือเบอร์โทร">
+                <button type="submit">ค้นหา</button>
+            </div>
+        </form>
+
+        <section class="admin-card-grid" aria-label="รายชื่อนักศึกษา">
+            {% for student in page_obj %}
+            <article class="admin-record-card">
+                <div class="admin-record-media">
+                    {% if student.person.photo %}
+                    <img src="{{ student.person.photo.url }}" alt="รูปของ {{ student.person.full_name }}">
+                    {% else %}
+                    <span>{{ student.person.full_name|slice:":1" }}</span>
+                    {% endif %}
+                </div>
+                <div class="admin-record-body">
+                    <div>
+                        <strong>{{ student.person.full_name }}</strong>
+                        <span>{{ student.student_id }} · {{ student.group.group_name|default:"ยังไม่มีกลุ่ม" }}</span>
+                    </div>
+                    <form method="post" enctype="multipart/form-data" class="admin-inline-upload">
+                        {% csrf_token %}
+                        <input type="hidden" name="student" value="{{ student.pk }}">
+                        <input type="hidden" name="next" value="{{ next_url }}">
+                        <label>
+                            <span>เลือกรูป</span>
+                            <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required>
+                        </label>
+                        <button type="submit">อัปโหลด</button>
+                    </form>
+                </div>
+            </article>
+            {% empty %}
+            <div class="admin-empty-state">ไม่พบนักศึกษาที่ตรงกับเงื่อนไข</div>
+            {% endfor %}
+        </section>
+
+        <footer class="admin-tool-pagination">
+            <span>หน้า {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+            <nav aria-label="หน้ารายชื่อ">
+                {% if page_obj.has_previous %}<a href="{{ page_query_prefix }}page={{ page_obj.previous_page_number }}">ก่อนหน้า</a>{% endif %}
+                {% if page_obj.has_next %}<a href="{{ page_query_prefix }}page={{ page_obj.next_page_number }}">ถัดไป</a>{% endif %}
+            </nav>
+        </footer>
+    </div>
+</main>
+{% endblock %}

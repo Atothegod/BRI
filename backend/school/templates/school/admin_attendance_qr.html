@@ -4,7 +4,7 @@
 {% block title %}QR เช็คชื่อ | BRI{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261002-admin-nav-2">
+<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261002-readable-1">
 {% endblock %}
 
 {% block content %}
@@ -64,31 +64,32 @@
                     <h2 id="attendance-history-title">ประวัติเช็คชื่อล่าสุด</h2>
                 </div>
             </div>
-            <div class="table-shell">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>วันที่</th>
-                            <th>กลุ่ม</th>
-                            <th>ผู้สอน</th>
-                            <th>มาเรียน</th>
-                            <th>ทั้งหมดที่บันทึก</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in recent_sessions %}
-                        <tr>
-                            <td>{{ item.date|date:"d/m/Y" }}</td>
-                            <td>{{ item.group.group_name }}</td>
-                            <td>{{ item.group.teacher_names }}</td>
-                            <td>{{ item.present_count|add:item.late_count }}</td>
-                            <td>{{ item.record_count }}</td>
-                        </tr>
-                        {% empty %}
-                        <tr><td colspan="5">ยังไม่มีประวัติเช็คชื่อ</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <div class="attendance-session-list">
+                {% for item in recent_sessions %}
+                <article class="attendance-session-card">
+                    <div class="attendance-session-main">
+                        <time datetime="{{ item.date|date:'Y-m-d' }}">{{ item.date|date:"d/m/Y" }}</time>
+                        <strong>{{ item.group.group_name }}</strong>
+                        <span>{{ item.group.teacher_names }}</span>
+                    </div>
+                    <div class="attendance-session-stats">
+                        <div>
+                            <span>มาเรียน</span>
+                            <strong>{{ item.present_count|add:item.late_count }}</strong>
+                        </div>
+                        <div>
+                            <span>บันทึกทั้งหมด</span>
+                            <strong>{{ item.record_count }}</strong>
+                        </div>
+                        <div>
+                            <span>นักศึกษา active</span>
+                            <strong>{{ item.target_student_count }}</strong>
+                        </div>
+                    </div>
+                </article>
+                {% empty %}
+                <div class="admin-empty-state">ยังไม่มีประวัติเช็คชื่อ</div>
+                {% endfor %}
             </div>
         </section>
     </div>

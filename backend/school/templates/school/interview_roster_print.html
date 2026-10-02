@@ -1,0 +1,122 @@
+{% load static school_dates %}
+<!doctype html>
+<html lang="th">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>รายชื่อสัมภาษณ์ BRI</title>
+    <style>
+        @page { size: A4 landscape; margin: 10mm; }
+        * { box-sizing: border-box; }
+        body { margin: 0; color: #111; background: #eef2ee; font-family: "Noto Sans Thai", "Noto Sans", Arial, sans-serif; }
+        .print-toolbar { position: sticky; top: 0; z-index: 10; display: flex; gap: 10px; justify-content: center; padding: 12px; background: #12271d; }
+        .print-toolbar button, .print-toolbar a { min-height: 40px; padding: 8px 14px; color: #12271d; background: #f5e8bf; border: 1px solid #d8bd73; border-radius: 6px; font: inherit; font-weight: 800; text-decoration: none; cursor: pointer; }
+        .page { width: 297mm; min-height: 210mm; margin: 18px auto; padding: 11mm; background: #fff; box-shadow: 0 12px 36px rgba(18, 39, 29, .18); page-break-after: always; }
+        .page:last-child { page-break-after: auto; }
+        .header { display: grid; grid-template-columns: 65mm 1fr auto; gap: 12px; align-items: center; padding-bottom: 8px; border-bottom: 3px solid #12271d; }
+        .header img { width: 60mm; }
+        .header h1 { margin: 0; font-size: 22pt; line-height: 1.15; }
+        .header p { margin: 4px 0 0; color: #425b46; font-size: 10pt; }
+        .summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 12px 0; }
+        .summary div { padding: 9px 10px; background: #eef2ee; border: 1px solid #c7d2c8; border-left: 4px solid #c2a256; border-radius: 5px; }
+        .summary span { display: block; color: #526157; font-size: 8pt; font-weight: 800; }
+        .summary strong { display: block; margin-top: 2px; font-size: 12pt; overflow-wrap: anywhere; }
+        .slot { margin-top: 12px; border: 2px solid #12271d; border-radius: 6px; overflow: hidden; }
+        .slot-header { display: grid; grid-template-columns: 1fr repeat(3, auto); gap: 12px; padding: 8px 10px; color: #12271d; background: #c8d2c4; align-items: center; font-weight: 900; }
+        .slot-header span { font-size: 9pt; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        th { padding: 7px 8px; color: #fff; background: #425b46; border: 1px solid #33463a; font-size: 8.5pt; text-align: left; }
+        td { min-height: 28px; padding: 7px 8px; border: 1px solid #d8dfd8; font-size: 9pt; vertical-align: top; overflow-wrap: anywhere; }
+        tbody tr:nth-child(even) td { background: #f7f9f7; }
+        .center { text-align: center; }
+        .sign-cell { height: 28px; }
+        .empty { padding: 18px; color: #667168; text-align: center; background: #f7f9f7; border: 1px dashed #c7d2c8; }
+        @media print {
+            body { background: #fff; }
+            .print-toolbar { display: none; }
+            .page { width: auto; min-height: auto; margin: 0; box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="print-toolbar">
+        <button type="button" onclick="window.print()">Print / Save PDF</button>
+        <a href="{% url 'school:admin_exports' %}">กลับหน้า Export</a>
+    </div>
+
+    {% for appointment in appointments %}
+    <article class="page">
+        <header class="header">
+            <img src="{% static 'school/images/ci-bri.png' %}" alt="BRI School of Fivefold">
+            <div>
+                <h1>รายชื่อผู้สัมภาษณ์</h1>
+                <p>{{ appointment.title }} · {{ appointment.starts_at|thai_date }}</p>
+            </div>
+            <div>
+                <p>พิมพ์เมื่อ {% now "d/m/Y H:i" %}</p>
+            </div>
+        </header>
+
+        <section class="summary" aria-label="สรุปกิจกรรม">
+            <div><span>กิจกรรม</span><strong>{{ appointment.title }}</strong></div>
+            <div><span>สถานที่</span><strong>{{ appointment.location|default:"-" }}</strong></div>
+            <div><span>ผู้เข้าร่วมทั้งหมด</span><strong>{{ appointment.participant_count }}</strong></div>
+            <div><span>ยืนยันแล้ว</span><strong>{{ appointment.confirmed_count }}</strong></div>
+        </section>
+
+        {% if appointment.details %}
+        <section class="summary" aria-label="รายละเอียด">
+            <div style="grid-column:1 / -1;"><span>รายละเอียด</span><strong>{{ appointment.details }}</strong></div>
+        </section>
+        {% endif %}
+
+        {% for row in appointment.roster_rows %}
+        <section class="slot">
+            <div class="slot-header">
+                <strong>{{ row.starts_at|date:"d/m/Y H:i" }}{% if row.ends_at %}-{{ row.ends_at|date:"H:i" }}{% endif %}</strong>
+                <span>ความจุ {{ row.capacity|default:"-" }}</span>
+                <span>ยืนยัน {{ row.confirmed_count }}</span>
+                <span>รายชื่อ {{ row.confirmed_count }} คน</span>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:12mm;">#</th>
+                        <th style="width:42mm;">ชื่อ</th>
+                        <th style="width:28mm;">ชื่อเล่น</th>
+                        <th style="width:34mm;">เบอร์โทร</th>
+                        <th style="width:58mm;">LINE</th>
+                        <th>หมายเหตุ</th>
+                        <th style="width:38mm;">ลายเซ็น</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for participant in row.participants %}
+                    <tr>
+                        <td class="center">{{ forloop.counter }}</td>
+                        <td>{{ participant.person.full_name }}</td>
+                        <td>{{ participant.person.nickname|default:"-" }}</td>
+                        <td>{{ participant.person.phone|default:"-" }}</td>
+                        <td>{{ participant.person.line_display_name|default:"-" }}</td>
+                        <td></td>
+                        <td class="sign-cell"></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="center">ยังไม่มีรายชื่อที่ยืนยันใน slot นี้</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+        {% endfor %}
+    </article>
+    {% empty %}
+    <article class="page">
+        <header class="header">
+            <img src="{% static 'school/images/ci-bri.png' %}" alt="BRI School of Fivefold">
+            <div><h1>ไม่พบกิจกรรมสัมภาษณ์</h1></div>
+        </header>
+        <div class="empty">เลือกกิจกรรมจากหน้า Export อีกครั้ง</div>
+    </article>
+    {% endfor %}
+</body>
+</html>

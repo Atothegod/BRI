@@ -1290,12 +1290,49 @@ def csv_download_response(filename):
     return response
 
 
+def application_export_queryset():
+    return (
+        Person.objects.select_related("student", "student__group", "student__group__teacher")
+        .prefetch_related("student__group__teachers")
+        .order_by("created_at", "pk")
+    )
+
+
+def interview_appointment_queryset():
+    return (
+        Appointment.objects.filter(appointment_type=Appointment.Type.INTERVIEW)
+        .prefetch_related("slots", "participants__person", "participants__selected_slot")
+        .annotate(
+            participant_count=Count("participants", distinct=True),
+            confirmed_count=Count(
+                "participants",
+                filter=Q(participants__response_status=AppointmentParticipant.ResponseStatus.CONFIRMED),
+                distinct=True,
+            ),
+        )
+        .order_by("-starts_at", "-pk")
+    )
+
+
 @login_required(login_url="admin:login")
 @never_cache
 def admin_exports(request):
     if not is_school_admin(request.user):
         raise PermissionDenied
 
+    applicant_query = request.GET.get("q", "").strip()
+    applicants = application_export_queryset()
+    if applicant_query:
+        applicants = applicants.filter(
+            Q(first_name__icontains=applicant_query)
+            | Q(last_name__icontains=applicant_query)
+            | Q(nickname__icontains=applicant_query)
+            | Q(phone__icontains=applicant_query)
+            | Q(email__icontains=applicant_query)
+            | Q(student__student_id__icontains=applicant_query)
+        )
+    applicant_options = list(applicants[:80])
+    appointment_options = list(interview_appointment_queryset()[:80])
     context = {
         "application_count": Person.objects.count(),
         "student_count": Student.objects.count(),
@@ -1305,13 +1342,94 @@ def admin_exports(request):
         "interview_slot_count": Appointment.objects.filter(
             appointment_type=Appointment.Type.INTERVIEW
         ).aggregate(total=Count("slots"))["total"],
-        "recent_interviews": Appointment.objects.filter(
-            appointment_type=Appointment.Type.INTERVIEW
-        )
-        .annotate(participant_count=Count("participants", distinct=True))
-        .order_by("-starts_at")[:6],
+        "recent_interviews": appointment_options[:6],
+        "applicant_query": applicant_query,
+        "applicant_options": applicant_options,
+        "appointment_options": appointment_options,
     }
     return render(request, "school/admin_exports.html", context)
+
+
+@login_required(login_url="admin:login")
+def export_application_single_form(request):
+    if not is_school_admin(request.user):
+        raise PermissionDenied
+
+    person = get_object_or_404(application_export_queryset(), pk=request.GET.get("person"))
+    return render(
+        request,
+        "school/application_form_print.html",
+        {
+            "people": [person],
+            "document_mode": "single",
+            "document_title": f"ใบสมัครเรียน BRI - {person.full_name}",
+        },
+    )
+
+
+@login_required(login_url="admin:login")
+def export_application_forms(request):
+    if not is_school_admin(request.user):
+        raise PermissionDenied
+
+    people = list(application_export_queryset())
+    return render(
+        request,
+        "school/application_form_print.html",
+        {
+            "people": people,
+            "document_mode": "batch",
+            "document_title": "ใบสมัครเรียน BRI - รวมทุกคน",
+        },
+    )
+
+
+def appointment_roster_rows(appointment):
+    rows = []
+    slots = list(appointment.slots.all()) or [None]
+    participants = list(appointment.participants.all())
+    for slot in slots:
+        slot_participants = [
+            participant
+            for participant in participants
+            if participant.response_status == AppointmentParticipant.ResponseStatus.CONFIRMED
+            and (slot is None or participant.selected_slot_id == slot.pk)
+        ]
+        starts_at = slot.starts_at if slot else appointment.starts_at
+        ends_at = slot.ends_at if slot else None
+        rows.append(
+            {
+                "slot": slot,
+                "starts_at": starts_at,
+                "ends_at": ends_at,
+                "capacity": slot.capacity if slot else "",
+                "participants": slot_participants,
+                "confirmed_count": len(slot_participants),
+            }
+        )
+    return rows
+
+
+@login_required(login_url="admin:login")
+def export_interview_roster(request):
+    if not is_school_admin(request.user):
+        raise PermissionDenied
+
+    appointment_id = request.GET.get("appointment", "")
+    appointments = interview_appointment_queryset()
+    if appointment_id:
+        appointments = appointments.filter(pk=appointment_id)
+    appointments = list(appointments[:20])
+    for appointment in appointments:
+        appointment.roster_rows = appointment_roster_rows(appointment)
+    return render(
+        request,
+        "school/interview_roster_print.html",
+        {
+            "appointments": appointments,
+            "selected_appointment_id": appointment_id,
+        },
+    )
 
 
 @login_required(login_url="admin:login")
@@ -1343,11 +1461,7 @@ def export_applications_csv(request):
             "วันที่สมัคร",
         ]
     )
-    people = (
-        Person.objects.select_related("student", "student__group", "student__group__teacher")
-        .prefetch_related("student__group__teachers")
-        .order_by("created_at", "pk")
-    )
+    people = application_export_queryset()
     for person in people:
         student = getattr(person, "student", None)
         group = student.group if student else None
@@ -1397,11 +1511,7 @@ def export_interview_slots_csv(request):
             "รายละเอียด",
         ]
     )
-    slots = (
-        Appointment.objects.filter(appointment_type=Appointment.Type.INTERVIEW)
-        .prefetch_related("slots", "participants__person", "participants__selected_slot")
-        .order_by("starts_at", "pk")
-    )
+    slots = interview_appointment_queryset().order_by("starts_at", "pk")
     for appointment in slots:
         appointment_slots = list(appointment.slots.all())
         if not appointment_slots:
@@ -1483,12 +1593,19 @@ def admin_attendance_qr(request):
             present_count=Count(
                 "attendance_records",
                 filter=Q(attendance_records__status=AttendanceRecord.Status.PRESENT),
+                distinct=True,
             ),
             late_count=Count(
                 "attendance_records",
                 filter=Q(attendance_records__status=AttendanceRecord.Status.LATE),
+                distinct=True,
             ),
-            record_count=Count("attendance_records"),
+            record_count=Count("attendance_records", distinct=True),
+            target_student_count=Count(
+                "group__students",
+                filter=Q(group__students__is_active=True),
+                distinct=True,
+            ),
         )
         .order_by("-date", "-updated_at")[:10]
     )

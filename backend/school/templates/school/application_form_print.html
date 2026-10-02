@@ -1,0 +1,150 @@
+{% load static %}
+<!doctype html>
+<html lang="th">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ document_title }}</title>
+    <style>
+        @page { size: A4; margin: 12mm; }
+        * { box-sizing: border-box; }
+        body { margin: 0; color: #111; background: #eef2ee; font-family: "Noto Sans Thai", "Noto Sans", Arial, sans-serif; }
+        .print-toolbar { position: sticky; top: 0; z-index: 10; display: flex; gap: 10px; justify-content: center; padding: 12px; background: #12271d; }
+        .print-toolbar button, .print-toolbar a { min-height: 40px; padding: 8px 14px; color: #12271d; background: #f5e8bf; border: 1px solid #d8bd73; border-radius: 6px; font: inherit; font-weight: 800; text-decoration: none; cursor: pointer; }
+        .page { position: relative; width: 210mm; min-height: 297mm; margin: 18px auto; padding: 13mm 13mm 14mm; overflow: hidden; background: #fff; box-shadow: 0 12px 36px rgba(18, 39, 29, .18); page-break-after: always; }
+        .page:last-child { page-break-after: auto; }
+        .brand { display: grid; justify-items: center; gap: 8px; margin-bottom: 12px; text-align: center; }
+        .brand img { width: 75mm; max-width: 100%; height: auto; }
+        .brand h1 { margin: 0; font-size: 22pt; line-height: 1.15; }
+        .document-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
+        .line-field { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: end; min-height: 38px; padding: 8px 10px; border: 2px solid #111; font-size: 15pt; }
+        .line-field span:last-child { border-bottom: 1px solid #111; min-height: 24px; }
+        .section { margin-top: 10px; border: 2px solid #111; }
+        .section-title { padding: 7px 11px; background: #c8d2c4; border-bottom: 2px solid #111; font-size: 15pt; font-weight: 900; }
+        .field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .field { display: grid; grid-template-columns: 34mm minmax(0, 1fr); min-height: 32px; border-bottom: 1px dashed #9aa899; }
+        .field:nth-child(odd) { border-right: 1px solid #c7d2c8; }
+        .field.full { grid-column: 1 / -1; border-right: 0; }
+        .field label { padding: 8px 9px; color: #33463a; font-size: 9pt; font-weight: 900; }
+        .value { padding: 8px 9px; min-width: 0; font-size: 10pt; overflow-wrap: anywhere; }
+        .value.muted { color: #68766b; }
+        .photo-box { display: grid; grid-template-columns: 35mm 1fr; gap: 12px; padding: 12px; border-bottom: 1px solid #111; }
+        .photo-box img, .photo-placeholder { width: 35mm; height: 42mm; object-fit: cover; border: 1px solid #879486; border-radius: 4px; }
+        .photo-placeholder { display: grid; place-items: center; color: #667168; background: #f4f6f4; font-size: 9pt; text-align: center; }
+        .identity strong { display: block; margin-bottom: 4px; font-size: 16pt; }
+        .identity span { display: block; color: #425b46; font-size: 10pt; }
+        .checkbox-section { display: grid; grid-template-columns: 1fr 1fr; gap: 0; padding: 12px 20px; border: 2px solid #111; border-top: 0; }
+        .check-row { display: grid; grid-template-columns: 1fr 24mm 1fr 24mm; gap: 10px; align-items: center; min-height: 30px; font-size: 14pt; }
+        .box { display: inline-grid; width: 15px; height: 15px; place-items: center; border: 1.8px solid #111; font-size: 10pt; line-height: 1; }
+        .long-text { min-height: 42px; white-space: pre-wrap; }
+        .watermark { position: absolute; left: 26mm; top: 122mm; transform: rotate(-11deg); color: rgba(66, 91, 70, .78); font-size: 30pt; font-weight: 900; white-space: nowrap; pointer-events: none; }
+        .watermark.secondary { left: 91mm; top: 225mm; font-size: 22pt; }
+        .decision-box { margin-top: 12px; padding: 14px 18px; border: 2px solid #111; }
+        .decision-grid { display: grid; grid-template-columns: 1fr 1.35fr; gap: 18px; }
+        .decision-options { display: grid; gap: 18px; font-size: 16pt; }
+        .signature { display: grid; gap: 18px; font-size: 15pt; }
+        .signature-line { display: inline-block; min-width: 70mm; border-bottom: 2px dashed #111; transform: translateY(-3px); }
+        @media print {
+            body { background: #fff; }
+            .print-toolbar { display: none; }
+            .page { width: auto; min-height: auto; margin: 0; box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="print-toolbar">
+        <button type="button" onclick="window.print()">Print / Save PDF</button>
+        <a href="{% url 'school:admin_exports' %}">กลับหน้า Export</a>
+    </div>
+
+    {% for person in people %}
+    {% with student=person.student extra=person.extra_data %}
+    <article class="page">
+        <header class="brand">
+            <img src="{% static 'school/images/ci-bri.png' %}" alt="BRI School of Fivefold">
+            <h1>ใบสมัครเรียน BRI รุ่นที่ 5</h1>
+        </header>
+
+        <div class="document-meta">
+            <div class="line-field"><span>รอบสัมภาษณ์</span><span>{% if person.latest_interview_participant %}{{ person.latest_interview_participant.appointment.starts_at|date:"d/m/Y H:i" }}{% endif %}</span></div>
+            <div class="line-field"><span>รหัสนักศึกษา</span><span>{% if student %}{{ student.student_id }}{% endif %}</span></div>
+        </div>
+
+        <section class="section">
+            <div class="section-title">ข้อมูลผู้สมัคร</div>
+            <div class="photo-box">
+                {% if person.photo %}
+                <img src="{{ person.photo.url }}" alt="รูป {{ person.full_name }}">
+                {% else %}
+                <div class="photo-placeholder">ไม่มีรูป</div>
+                {% endif %}
+                <div class="identity">
+                    <strong>{{ person.full_name }}</strong>
+                    <span>ชื่อเล่น {{ person.nickname|default:"-" }} · {{ person.get_status_display }}{% if person.admission_type_name %} · {{ person.admission_type_name }}{% endif %}</span>
+                    <span>{{ person.phone|default:"-" }} · {{ person.email|default:"-" }}</span>
+                    <span>LINE: {{ person.line_display_name|default:"-" }}</span>
+                </div>
+            </div>
+            <div class="field-grid">
+                <div class="field"><label>First name</label><div class="value">{{ person.first_name }}</div></div>
+                <div class="field"><label>Last name</label><div class="value">{{ person.last_name }}</div></div>
+                <div class="field"><label>Gender</label><div class="value">{{ person.gender|default:"-" }}</div></div>
+                <div class="field"><label>Date of birth</label><div class="value">{{ person.date_of_birth|date:"Y-m-d"|default:"-" }}</div></div>
+                <div class="field"><label>Occupation</label><div class="value">{{ person.occupation|default:"-" }}</div></div>
+                <div class="field"><label>Church</label><div class="value">{{ extra.church|default:"-" }}</div></div>
+                <div class="field"><label>Mentor</label><div class="value">{{ extra.mentor_name|default:"-" }}</div></div>
+                <div class="field"><label>Facebook</label><div class="value">{{ extra.facebook_link|default:"-" }}</div></div>
+                <div class="field full"><label>Address</label><div class="value">{% if extra.address %}{{ extra.address }}{% elif extra.address_en.address_line %}{{ extra.address_en.address_line }}{% else %}-{% endif %} {{ extra.sub_district|default:"" }} {{ extra.district|default:"" }} {{ extra.province|default:"" }} {% if extra.country_name_th %}{{ extra.country_name_th }}{% elif extra.country_name_en %}{{ extra.country_name_en }}{% endif %}</div></div>
+            </div>
+        </section>
+
+        <div class="checkbox-section">
+            <div class="check-row">
+                <span>เคยเรียน BRI หรือไม่</span>
+                <span><span class="box">{% if extra.has_studied_bri == True or extra.has_studied_bri == "true" %}✓{% endif %}</span> เคย</span>
+                <span><span class="box">{% if extra.has_studied_bri == False or extra.has_studied_bri == "false" %}✓{% endif %}</span> ไม่เคย</span>
+            </div>
+            <div class="check-row">
+                <span>เป็นศิษยาภิบาลหรือไม่</span>
+                <span><span class="box">{% if extra.is_pastor == True or extra.is_pastor == "true" %}✓{% endif %}</span> เป็น</span>
+                <span><span class="box">{% if extra.is_pastor == False or extra.is_pastor == "false" %}✓{% endif %}</span> ไม่เป็น</span>
+            </div>
+        </div>
+
+        <section class="section">
+            <div class="section-title">ข้อมูลอื่นๆ</div>
+            <div class="field-grid">
+                <div class="field full"><label>Goal</label><div class="value long-text">{{ extra.goal|default:"-" }}</div></div>
+                <div class="field full"><label>Vision calling</label><div class="value long-text">{{ extra.vision_calling|default:"-" }}</div></div>
+                <div class="field full"><label>Interview comment</label><div class="value long-text">{{ person.interview_comment|default:"" }}</div></div>
+            </div>
+        </section>
+
+        <div class="watermark">ข้อมูลผู้สมัครเรียน BRI รุ่นที่ 5</div>
+        <div class="watermark secondary">ข้อมูลผู้สมัคร BRI รุ่นที่ 5</div>
+
+        <section class="decision-box">
+            <div class="decision-grid">
+                <div class="decision-options">
+                    <div><span class="box"></span> ผ่านสัมภาษณ์</div>
+                    <div><span class="box"></span> ไม่ผ่านสัมภาษณ์</div>
+                </div>
+                <div class="signature">
+                    <div>ผู้สัมภาษณ์ <span class="signature-line"></span></div>
+                    <div>( <span class="signature-line"></span> )</div>
+                    <div>วันที่สัมภาษณ์ <span class="signature-line"></span></div>
+                </div>
+            </div>
+        </section>
+    </article>
+    {% endwith %}
+    {% empty %}
+    <article class="page">
+        <header class="brand">
+            <img src="{% static 'school/images/ci-bri.png' %}" alt="BRI School of Fivefold">
+            <h1>ไม่พบข้อมูลใบสมัคร</h1>
+        </header>
+    </article>
+    {% endfor %}
+</body>
+</html>

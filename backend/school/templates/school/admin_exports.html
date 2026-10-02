@@ -4,7 +4,7 @@
 {% block title %}Export ข้อมูล | BRI{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261002-admin-nav-2">
+<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261002-readable-1">
 {% endblock %}
 
 {% block content %}
@@ -15,28 +15,81 @@
             <div>
                 <span class="eyebrow">Data exports</span>
                 <h1>Export ข้อมูล</h1>
-                <p>ดาวน์โหลดข้อมูลใบสมัครและ slot เวลาสัมภาษณ์เป็น CSV ที่เปิดใน Excel/Google Sheets ได้</p>
+                <p>สร้างไฟล์ใบสมัครและรายชื่อสัมภาษณ์แบบพร้อมพิมพ์ หรือดาวน์โหลด CSV สำหรับทำงานต่อใน Sheets</p>
             </div>
         </header>
 
-        <section class="export-card-grid" aria-label="รายการ export">
-            <article class="export-card">
-                <div>
-                    <span>Applications</span>
-                    <h2>ข้อมูลใบสมัคร</h2>
-                    <p>รวมชื่อ ช่องทางติดต่อ สถานะ ประเภทผู้เรียน กลุ่ม ประเทศ คริสตจักร goal และคอมเมนต์สัมภาษณ์</p>
+        <section class="export-workflow-grid" aria-label="รายการ export">
+            <article class="export-workflow-card export-workflow-card--primary">
+                <div class="export-workflow-heading">
+                    <span>1</span>
+                    <div>
+                        <strong>ไฟล์เดี่ยวรายคน</strong>
+                        <p>เลือกผู้สมัคร 1 คน แล้วเปิดเป็นใบสมัคร A4 พร้อมช่องผลสัมภาษณ์และลายเซ็น</p>
+                    </div>
                 </div>
-                <strong>{{ application_count }}</strong>
-                <a href="{% url 'school:export_applications_csv' %}">ดาวน์โหลด CSV</a>
+                <form method="get" action="{% url 'school:export_application_single_form' %}" target="_blank" class="export-workflow-form">
+                    <label for="single-person">ผู้สมัคร</label>
+                    <select id="single-person" name="person" required>
+                        <option value="">เลือกผู้สมัคร</option>
+                        {% for person in applicant_options %}
+                        <option value="{{ person.pk }}">
+                            {{ person.full_name }}{% if person.student %} · {{ person.student.student_id }}{% endif %}{% if person.nickname %} · {{ person.nickname }}{% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit">เปิดใบสมัครรายคน</button>
+                </form>
+                <form method="get" class="export-compact-search">
+                    <label for="applicant-q">ค้นชื่อเพิ่มเติม</label>
+                    <div>
+                        <input id="applicant-q" name="q" value="{{ applicant_query }}" placeholder="ชื่อ รหัสนักศึกษา เบอร์โทร หรืออีเมล">
+                        <button type="submit">ค้นหา</button>
+                    </div>
+                </form>
             </article>
-            <article class="export-card">
-                <div>
-                    <span>Interview slots</span>
-                    <h2>ข้อมูล slot เวลาสัมภาษณ์</h2>
-                    <p>รวมกิจกรรม วันที่ เวลา ความจุ จำนวนที่ยืนยัน รายชื่อที่ยืนยัน สถานที่ และรายละเอียด</p>
+
+            <article class="export-workflow-card">
+                <div class="export-workflow-heading">
+                    <span>2</span>
+                    <div>
+                        <strong>ไฟล์รวมใบสมัคร</strong>
+                        <p>จัด format ใบสมัครทุกคนเป็นหน้า A4 แยกคนละหน้า เหมาะกับ print หรือ save เป็น PDF รวม</p>
+                    </div>
                 </div>
-                <strong>{{ interview_slot_count|default:0 }}</strong>
-                <a href="{% url 'school:export_interview_slots_csv' %}">ดาวน์โหลด CSV</a>
+                <div class="export-workflow-stat">
+                    <span>ผู้สมัครทั้งหมด</span>
+                    <strong>{{ application_count }}</strong>
+                </div>
+                <div class="export-workflow-actions">
+                    <a class="export-main-action" href="{% url 'school:export_application_forms' %}" target="_blank" rel="noopener">เปิดไฟล์รวม</a>
+                    <a class="export-secondary-action" href="{% url 'school:export_applications_csv' %}">CSV สำหรับ Sheets</a>
+                </div>
+            </article>
+
+            <article class="export-workflow-card">
+                <div class="export-workflow-heading">
+                    <span>3</span>
+                    <div>
+                        <strong>รายชื่อ ณ วันสัมภาษณ์</strong>
+                        <p>เลือกกิจกรรมสัมภาษณ์เพื่อพิมพ์รายชื่อแยกตาม slot พร้อมความจุ จำนวนยืนยัน สถานที่ และรายละเอียด</p>
+                    </div>
+                </div>
+                <form method="get" action="{% url 'school:export_interview_roster' %}" target="_blank" class="export-workflow-form">
+                    <label for="interview-event">กิจกรรมสัมภาษณ์</label>
+                    <select id="interview-event" name="appointment">
+                        <option value="">ทุกกิจกรรมล่าสุด</option>
+                        {% for appointment in appointment_options %}
+                        <option value="{{ appointment.pk }}">
+                            {{ appointment.title }} · {{ appointment.starts_at|thai_date }} · {{ appointment.confirmed_count }} ยืนยัน
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit">เปิดรายชื่อสัมภาษณ์</button>
+                </form>
+                <div class="export-workflow-actions">
+                    <a class="export-secondary-action" href="{% url 'school:export_interview_slots_csv' %}">CSV slot สัมภาษณ์</a>
+                </div>
             </article>
         </section>
 
@@ -47,29 +100,26 @@
                     <h2 id="recent-export-title">นัดสัมภาษณ์ล่าสุด</h2>
                 </div>
             </div>
-            <div class="table-shell">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>กิจกรรม</th>
-                            <th>วันที่</th>
-                            <th>ผู้เข้าร่วม</th>
-                            <th>สถานที่</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for appointment in recent_interviews %}
-                        <tr>
-                            <td>{{ appointment.title }}</td>
-                            <td>{{ appointment.starts_at|thai_date }}</td>
-                            <td>{{ appointment.participant_count }}</td>
-                            <td>{{ appointment.location|default:"-" }}</td>
-                        </tr>
-                        {% empty %}
-                        <tr><td colspan="4">ยังไม่มีนัดสัมภาษณ์</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <div class="export-event-list">
+                {% for appointment in recent_interviews %}
+                <article>
+                    <div>
+                        <strong>{{ appointment.title }}</strong>
+                        <span>{{ appointment.starts_at|thai_date }} · {{ appointment.location|default:"ไม่ระบุสถานที่" }}</span>
+                    </div>
+                    <div>
+                        <span>ผู้เข้าร่วม</span>
+                        <strong>{{ appointment.participant_count }}</strong>
+                    </div>
+                    <div>
+                        <span>ยืนยันแล้ว</span>
+                        <strong>{{ appointment.confirmed_count }}</strong>
+                    </div>
+                    <a href="{% url 'school:export_interview_roster' %}?appointment={{ appointment.pk }}" target="_blank" rel="noopener">เปิดรายชื่อ</a>
+                </article>
+                {% empty %}
+                <div class="admin-empty-state">ยังไม่มีนัดสัมภาษณ์</div>
+                {% endfor %}
             </div>
         </section>
     </div>

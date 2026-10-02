@@ -288,6 +288,179 @@
     text-transform: uppercase;
 }
 
+.export-workflow-grid {
+    display: grid;
+    grid-template-columns: minmax(320px, 1.1fr) repeat(2, minmax(260px, 0.95fr));
+    gap: 14px;
+}
+
+.export-workflow-card {
+    display: grid;
+    gap: 14px;
+    align-content: start;
+    min-height: 280px;
+    padding: 18px;
+    background: #ffffff;
+    border: 1px solid var(--school-admin-border);
+    border-top: 4px solid var(--school-admin-sage);
+    border-radius: 8px;
+    box-shadow: 0 8px 22px rgba(18, 39, 29, 0.06);
+}
+
+.export-workflow-card--primary {
+    border-top-color: var(--school-admin-gold);
+}
+
+.export-workflow-heading {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+}
+
+.export-workflow-heading > span {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    color: #ffffff;
+    background: var(--school-admin-forest);
+    border-radius: 8px;
+    font-size: 1.15rem;
+    font-weight: 900;
+}
+
+.export-workflow-heading strong {
+    display: block;
+    color: var(--school-admin-forest);
+    font-size: 1.05rem;
+}
+
+.export-workflow-heading p,
+.export-workflow-stat span,
+.export-compact-search label,
+.export-workflow-form label {
+    color: var(--school-admin-muted);
+}
+
+.export-workflow-heading p {
+    margin: 4px 0 0;
+    font-size: 0.86rem;
+    line-height: 1.5;
+}
+
+.export-workflow-form,
+.export-compact-search {
+    display: grid;
+    gap: 8px;
+}
+
+.export-workflow-form select,
+.export-compact-search input {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    color: var(--school-admin-forest);
+    background: #ffffff;
+    border: 1px solid var(--school-admin-border);
+    border-radius: 6px;
+    font: inherit;
+}
+
+.export-workflow-form button,
+.export-compact-search button,
+.export-main-action,
+.export-secondary-action,
+.export-event-list a {
+    display: inline-flex;
+    min-height: 44px;
+    padding: 10px 14px;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    background: var(--school-admin-forest);
+    border: 1px solid var(--school-admin-forest);
+    border-radius: 6px;
+    font: inherit;
+    font-weight: 850;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.export-compact-search div {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+}
+
+.export-workflow-stat {
+    padding: 14px;
+    background: #f7f9f7;
+    border: 1px solid #d5dfd6;
+    border-left: 4px solid var(--school-admin-gold);
+    border-radius: 8px;
+}
+
+.export-workflow-stat strong {
+    display: block;
+    margin-top: 4px;
+    color: var(--school-admin-forest);
+    font-size: 2rem;
+    line-height: 1;
+}
+
+.export-workflow-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.export-secondary-action {
+    color: var(--school-admin-forest);
+    background: #f3f0e8;
+    border-color: #d8ccb5;
+}
+
+.export-event-list {
+    display: grid;
+    gap: 10px;
+}
+
+.export-event-list article {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 90px 90px auto;
+    gap: 10px;
+    align-items: center;
+    padding: 12px;
+    background: #f7f9f7;
+    border: 1px solid #d5dfd6;
+    border-radius: 8px;
+}
+
+.export-event-list article > div {
+    min-width: 0;
+}
+
+.export-event-list strong,
+.export-event-list span {
+    display: block;
+}
+
+.export-event-list strong {
+    color: var(--school-admin-forest);
+}
+
+.export-event-list span {
+    color: var(--school-admin-muted);
+    font-size: 0.8rem;
+}
+
+.export-event-list a {
+    min-height: 38px;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+}
+
 .export-preview,
 .attendance-history {
     margin-top: 16px;
@@ -336,6 +509,76 @@
     border-radius: 8px;
 }
 
+.attendance-session-list {
+    display: grid;
+    gap: 10px;
+}
+
+.attendance-session-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 0.9fr);
+    gap: 14px;
+    align-items: center;
+    padding: 14px;
+    background: #ffffff;
+    border: 1px solid #d5dfd6;
+    border-left: 5px solid var(--school-admin-gold);
+    border-radius: 8px;
+    box-shadow: 0 8px 18px rgba(18, 39, 29, 0.05);
+}
+
+.attendance-session-main {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.attendance-session-main time {
+    color: #8a6b18;
+    font-size: 0.78rem;
+    font-weight: 900;
+}
+
+.attendance-session-main strong {
+    color: var(--school-admin-forest);
+    font-size: 1.05rem;
+    overflow-wrap: anywhere;
+}
+
+.attendance-session-main span {
+    color: var(--school-admin-muted);
+    overflow-wrap: anywhere;
+}
+
+.attendance-session-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.attendance-session-stats div {
+    min-height: 74px;
+    padding: 10px;
+    background: #f7f9f7;
+    border: 1px solid #d5dfd6;
+    border-radius: 7px;
+}
+
+.attendance-session-stats span {
+    display: block;
+    color: var(--school-admin-muted);
+    font-size: 0.74rem;
+    font-weight: 800;
+}
+
+.attendance-session-stats strong {
+    display: block;
+    margin-top: 5px;
+    color: var(--school-admin-forest);
+    font-size: 1.45rem;
+    line-height: 1;
+}
+
 .admin-empty-state {
     grid-column: 1 / -1;
 }
@@ -363,12 +606,21 @@
     .admin-card-grid,
     .payment-review-grid,
     .export-card-grid,
+    .export-workflow-grid,
     .attendance-qr-layout {
         grid-template-columns: 1fr;
     }
 
     .payment-review-card {
         grid-template-columns: 1fr;
+    }
+
+    .attendance-session-card {
+        grid-template-columns: 1fr;
+    }
+
+    .export-event-list article {
+        grid-template-columns: 1fr 1fr;
     }
 }
 
@@ -381,11 +633,17 @@
     }
 
     .admin-tool-tabs,
-    .payment-review-actions {
+    .payment-review-actions,
+    .attendance-session-stats {
         grid-template-columns: 1fr;
     }
 
     .admin-record-card {
+        grid-template-columns: 1fr;
+    }
+
+    .export-compact-search div,
+    .export-event-list article {
         grid-template-columns: 1fr;
     }
 }
@@ -531,6 +789,8 @@
     min-height: calc(100vh - 78px);
     padding: 26px 24px 48px;
     color: var(--school-admin-forest);
+    font-size: 17px;
+    line-height: 1.55;
     background: var(--school-admin-bg) !important;
 }
 
@@ -558,21 +818,22 @@
     display: inline-flex;
     margin-bottom: 7px;
     color: #e7cf8f;
-    font-size: 0.76rem;
+    font-size: 0.92rem;
     font-weight: 800;
     text-transform: uppercase;
 }
 
 .dashboard-shell .page-heading h1 {
     color: #ffffff;
-    font-size: clamp(1.75rem, 3vw, 2.35rem);
+    font-size: clamp(2rem, 3vw, 2.65rem);
     line-height: 1.15;
 }
 
 .dashboard-shell .page-heading p {
     margin-top: 9px;
     color: #e6ede7;
-    font-size: 0.92rem;
+    font-size: 1.06rem;
+    font-weight: 650;
 }
 
 .summary-strip {
@@ -605,15 +866,15 @@
 }
 
 .summary-strip span {
-    color: var(--school-admin-muted);
-    font-size: 0.78rem;
-    font-weight: 650;
+    color: #38483e;
+    font-size: 0.95rem;
+    font-weight: 800;
 }
 
 .summary-strip strong {
     margin-top: 8px;
     color: var(--school-admin-forest);
-    font-size: 1.9rem;
+    font-size: 2.35rem;
     line-height: 1;
 }
 
@@ -641,12 +902,13 @@
 
 .dashboard-tab-list label {
     position: relative;
-    min-height: 56px;
-    padding: 16px 18px 14px;
-    color: #46564b;
+    min-height: 62px;
+    padding: 18px 20px 16px;
+    color: #26372d;
     border: 0;
     border-radius: 0;
-    font-size: 0.84rem;
+    font-size: 1rem;
+    font-weight: 900;
 }
 
 .dashboard-tab-list label:hover,
@@ -667,7 +929,7 @@
 }
 
 .dashboard-tab-panels {
-    padding: 18px;
+    padding: 22px;
 }
 
 #admin-tab-geo:checked ~ .dashboard-tab-panels .dashboard-tab-panel--geo {
@@ -675,7 +937,7 @@
 }
 
 .dashboard-panel {
-    padding: 20px;
+    padding: 24px;
     background: #ffffff;
     border: 1px solid var(--school-admin-border);
     border-radius: 8px;
@@ -690,12 +952,12 @@
 
 .dashboard-panel-heading .eyebrow {
     color: var(--school-admin-sage);
-    font-size: 0.72rem;
+    font-size: 0.9rem;
 }
 
 .dashboard-panel-heading h2 {
     color: var(--school-admin-forest);
-    font-size: 1.12rem;
+    font-size: 1.35rem;
 }
 
 .metric-list > div,
@@ -707,7 +969,40 @@
 }
 
 .metric-list > div {
+    min-height: 110px;
+    padding: 16px;
     border-left: 3px solid var(--school-admin-gold);
+}
+
+.metric-list span {
+    color: #38483e;
+    font-size: 0.96rem;
+    font-weight: 850;
+}
+
+.metric-list strong {
+    margin-top: 7px;
+    color: var(--school-admin-forest);
+    font-size: 2rem;
+    line-height: 1;
+}
+
+.queue-row,
+.group-row {
+    min-height: 72px;
+    padding: 15px 16px;
+}
+
+.queue-row strong,
+.group-row strong {
+    color: var(--school-admin-forest);
+    font-size: 1.08rem;
+}
+
+.queue-row span,
+.group-row span {
+    color: #4a5d50;
+    font-size: 0.98rem;
 }
 
 .metric-list--two {
@@ -716,14 +1011,15 @@
 
 .teacher-group-count {
     display: inline-flex !important;
-    min-height: 28px;
-    padding: 4px 9px;
+    min-height: 34px;
+    padding: 6px 11px;
     color: var(--school-admin-forest) !important;
     background: #f5e8bf;
     border: 1px solid #d8bd73;
     border-radius: 999px;
     align-items: center;
-    font-weight: 750;
+    font-size: 0.95rem;
+    font-weight: 850;
     white-space: nowrap;
 }
 
@@ -754,14 +1050,15 @@
 }
 
 .geo-summary span {
-    color: var(--school-admin-muted);
-    font-size: 0.76rem;
+    color: #435348;
+    font-size: 0.94rem;
+    font-weight: 800;
 }
 
 .geo-summary strong {
     margin-top: 4px;
     color: var(--school-admin-forest);
-    font-size: 1.35rem;
+    font-size: 1.75rem;
 }
 
 .geo-grid {
@@ -777,7 +1074,7 @@
 .geo-grid h3 {
     margin: 0 0 9px;
     color: var(--school-admin-forest);
-    font-size: 0.9rem;
+    font-size: 1.08rem;
 }
 
 .geo-list {
@@ -788,15 +1085,16 @@
 
 .geo-row {
     display: flex;
-    min-height: 42px;
-    padding: 9px 12px;
+    min-height: 48px;
+    padding: 11px 13px;
     color: #3f4f44;
     background: #ffffff;
     border-bottom: 1px solid #e1e7e2;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    font-size: 0.8rem;
+    font-size: 0.98rem;
+    font-weight: 750;
 }
 
 .geo-row:nth-child(even) {
@@ -809,14 +1107,14 @@
 
 .geo-row strong {
     color: var(--school-admin-forest);
-    font-size: 0.9rem;
+    font-size: 1.08rem;
 }
 
 .geo-empty {
     margin: 0;
-    padding: 14px;
+    padding: 16px;
     color: var(--school-admin-muted);
-    font-size: 0.8rem;
+    font-size: 0.98rem;
 }
 
 .table-shell {
@@ -827,6 +1125,16 @@
 .data-table th {
     color: #ffffff;
     background: var(--school-admin-sage);
+    font-size: 0.95rem;
+    font-weight: 900;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.data-table td {
+    color: var(--school-admin-forest);
+    font-size: 1rem;
+    font-weight: 650;
 }
 
 .data-table tbody tr:nth-child(even) {

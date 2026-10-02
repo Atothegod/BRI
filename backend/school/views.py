@@ -1328,6 +1328,89 @@ def filter_application_queryset(queryset, query):
     )
 
 
+def compact_address_parts(*parts):
+    cleaned_parts = []
+    seen = set()
+    for part in parts:
+        value = str(part or "").strip()
+        if not value:
+            continue
+        normalized = value.casefold()
+        if normalized in seen:
+            continue
+        cleaned_parts.append(value)
+        seen.add(normalized)
+    return " ".join(cleaned_parts)
+
+
+def application_country_name(extra_data):
+    address_en = extra_data.get("address_en") or {}
+    return (
+        extra_data.get("country_name_th")
+        or extra_data.get("country_name_en")
+        or address_en.get("country_name_en")
+        or address_en.get("country_code")
+        or extra_data.get("country_code")
+        or ""
+    )
+
+
+def application_country_label(extra_data):
+    country = str(application_country_name(extra_data) or "").strip()
+    if not country:
+        return "-"
+    if country.startswith("ประเทศ"):
+        return country
+    return f"ประเทศ {country}"
+
+
+def application_postal_code(extra_data):
+    address_en = extra_data.get("address_en") or {}
+    return (
+        extra_data.get("postal_code")
+        or address_en.get("postal_code")
+        or (extra_data.get("address_th") or {}).get("postal_code")
+        or ""
+    )
+
+
+def application_address_text(extra_data):
+    address_en = extra_data.get("address_en") or {}
+    address_th = extra_data.get("address_th") or {}
+    country_code = str(
+        extra_data.get("country_code")
+        or address_en.get("country_code")
+        or ""
+    ).upper()
+
+    if country_code == "TH" or address_th:
+        address = compact_address_parts(
+            extra_data.get("address") or address_th.get("address"),
+            extra_data.get("sub_district") or address_th.get("sub_district"),
+            extra_data.get("district") or address_th.get("district"),
+            extra_data.get("province") or address_th.get("province"),
+        )
+    else:
+        address = compact_address_parts(
+            address_en.get("address_line") or extra_data.get("address"),
+            address_en.get("city") or extra_data.get("city"),
+            address_en.get("state_province")
+            or extra_data.get("state_province")
+            or extra_data.get("province"),
+        )
+
+    return address or "-"
+
+
+def enrich_application_people_for_export(people):
+    for person in people:
+        extra_data = person.extra_data or {}
+        person.export_address = application_address_text(extra_data)
+        person.export_postal_code = application_postal_code(extra_data) or "-"
+        person.export_country = application_country_label(extra_data)
+    return people
+
+
 def interview_appointment_queryset():
     return (
         Appointment.objects.filter(appointment_type=Appointment.Type.INTERVIEW)
@@ -1386,7 +1469,7 @@ def export_application_single_form(request):
         people = filter_application_queryset(people, request.GET.get("q", "").strip())
     else:
         people = people.none()
-    people = list(people)
+    people = enrich_application_people_for_export(list(people))
     return render(
         request,
         "school/application_form_print.html",
@@ -1410,7 +1493,7 @@ def export_application_forms(request):
         people = people.filter(pk__in=selected_ids)
     else:
         people = filter_application_queryset(people, query)
-    people = list(people)
+    people = enrich_application_people_for_export(list(people))
     return render(
         request,
         "school/application_table_print.html",
@@ -1489,6 +1572,8 @@ def export_applications_csv(request):
             "ชำระเงิน",
             "กลุ่ม",
             "ผู้สอน",
+            "ที่อยู่",
+            "รหัสไปรษณีย์",
             "ประเทศ",
             "ภูมิภาค",
             "จังหวัด",
@@ -1516,7 +1601,9 @@ def export_applications_csv(request):
                 "ชำระแล้ว" if student and student.is_paid else "ยังไม่ชำระ",
                 group.group_name if group else "",
                 group.teacher_names if group else "",
-                extra.get("country_name_th") or extra.get("country_name_en") or "",
+                application_address_text(extra),
+                application_postal_code(extra),
+                application_country_label(extra),
                 extra.get("region") or "",
                 extra.get("province") or "",
                 extra.get("church") or "",

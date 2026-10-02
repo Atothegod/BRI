@@ -13,8 +13,8 @@
         .print-toolbar button, .print-toolbar a { min-height: 40px; padding: 8px 14px; color: #12271d; background: #f5e8bf; border: 1px solid #d8bd73; border-radius: 6px; font: inherit; font-weight: 800; text-decoration: none; cursor: pointer; }
         .page { position: relative; width: 210mm; min-height: 297mm; margin: 18px auto; padding: 13mm 13mm 14mm; overflow: hidden; background: #fff; box-shadow: 0 12px 36px rgba(18, 39, 29, .18); page-break-after: always; }
         .page:last-child { page-break-after: auto; }
-        .brand { display: grid; justify-items: center; gap: 8px; margin-bottom: 12px; text-align: center; }
-        .brand-mark { display: block; width: 62mm; height: 31mm; background: #244431; -webkit-mask: url("{% static 'school/images/logo_white.png' %}") center / contain no-repeat; mask: url("{% static 'school/images/logo_white.png' %}") center / contain no-repeat; }
+        .brand { display: grid; justify-items: center; gap: 4px; margin-bottom: 10px; text-align: center; }
+        .brand-mark { display: block; width: 90mm; height: 44mm; background: #244431; -webkit-mask: url("{% static 'school/images/logo_white.png' %}") center / contain no-repeat; mask: url("{% static 'school/images/logo_white.png' %}") center / contain no-repeat; }
         .brand h1 { margin: 0; font-size: 22pt; line-height: 1.15; }
         .document-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
         .line-field { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: end; min-height: 38px; padding: 8px 10px; border: 2px solid #111; font-size: 15pt; }
@@ -123,7 +123,9 @@
             <div class="field-grid">
                 <div class="field full"><label>Goal</label><div class="value long-text">{{ extra.goal|default:"-" }}</div></div>
                 <div class="field full"><label>Vision calling</label><div class="value long-text">{{ extra.vision_calling|default:"-" }}</div></div>
-                <div class="field full"><label>Address</label><div class="value long-text">{% if extra.address %}{{ extra.address }}{% elif extra.address_en.address_line %}{{ extra.address_en.address_line }}{% else %}-{% endif %} {{ extra.sub_district|default:"" }} {{ extra.district|default:"" }} {{ extra.province|default:"" }} {% if extra.country_name_th %}{{ extra.country_name_th }}{% elif extra.country_name_en %}{{ extra.country_name_en }}{% endif %}</div></div>
+                <div class="field full"><label>Address</label><div class="value long-text">{{ person.export_address }}</div></div>
+                <div class="field"><label>Postal code</label><div class="value">{{ person.export_postal_code }}</div></div>
+                <div class="field"><label>Country</label><div class="value">{{ person.export_country }}</div></div>
             </div>
         </section>
 

@@ -348,6 +348,108 @@ class PersonViewTests(TestCase):
         self.assertRedirects(response, reverse("school:registration"))
 
 
+class ApplicationExportTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.admin = User.objects.create_superuser(
+            username="export-admin",
+            email="export-admin@example.com",
+            password="pass",
+        )
+        self.client.force_login(self.admin)
+
+    def test_application_table_export_formats_thai_and_foreign_addresses(self):
+        Person.objects.create(
+            first_name="Thai",
+            last_name="Applicant",
+            phone="0811111111",
+            email="thai@example.com",
+            extra_data={
+                "country_code": "TH",
+                "country_name_th": "ไทย",
+                "address": "99/1",
+                "sub_district": "สีลม",
+                "district": "เขตบางรัก",
+                "province": "กรุงเทพมหานคร",
+                "address_th": {
+                    "address": "99/1",
+                    "sub_district": "สีลม",
+                    "district": "เขตบางรัก",
+                    "province": "กรุงเทพมหานคร",
+                },
+            },
+        )
+        Person.objects.create(
+            first_name="Foreign",
+            last_name="Applicant",
+            phone="0822222222",
+            email="foreign@example.com",
+            extra_data={
+                "country_code": "LA",
+                "country_name_th": "ลาว",
+                "country_name_en": "Laos",
+                "address_en": {
+                    "address_line": "2 Chammany Road",
+                    "city": "Vientiane",
+                    "state_province": "Vientiane Prefecture",
+                    "postal_code": "01000",
+                    "country_code": "LA",
+                    "country_name_en": "Laos",
+                },
+            },
+        )
+
+        response = self.client.get(reverse("school:export_application_forms"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "รหัสไปรษณีย์")
+        self.assertContains(response, "99/1 สีลม เขตบางรัก กรุงเทพมหานคร")
+        self.assertContains(response, "ประเทศ ไทย")
+        self.assertContains(response, "2 Chammany Road Vientiane Vientiane Prefecture")
+        self.assertContains(response, "01000")
+        self.assertContains(response, "ประเทศ ลาว")
+
+        csv_response = self.client.get(reverse("school:export_applications_csv"))
+        csv_content = csv_response.content.decode("utf-8-sig")
+        self.assertIn("ที่อยู่", csv_content)
+        self.assertIn("รหัสไปรษณีย์", csv_content)
+        self.assertIn("2 Chammany Road Vientiane Vientiane Prefecture", csv_content)
+        self.assertIn("01000", csv_content)
+        self.assertIn("ประเทศ ลาว", csv_content)
+
+    def test_single_application_export_uses_larger_logo_and_address_fields(self):
+        person = Person.objects.create(
+            first_name="Foreign",
+            last_name="Applicant",
+            phone="0822222222",
+            email="foreign@example.com",
+            extra_data={
+                "country_code": "LA",
+                "country_name_th": "ลาว",
+                "address_en": {
+                    "address_line": "2 Chammany Road",
+                    "city": "Vientiane",
+                    "state_province": "Vientiane Prefecture",
+                    "postal_code": "01000",
+                    "country_code": "LA",
+                    "country_name_en": "Laos",
+                },
+            },
+        )
+
+        response = self.client.get(
+            reverse("school:export_application_single_form"),
+            {"person": person.pk},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "width: 90mm")
+        self.assertContains(response, "Postal code")
+        self.assertContains(response, "2 Chammany Road Vientiane Vientiane Prefecture")
+        self.assertContains(response, "01000")
+        self.assertContains(response, "ประเทศ ลาว")
+
+
 class AgentNotificationEndpointTests(TestCase):
     def test_notifications_endpoint_returns_empty_payload(self):
         response = self.client.get(

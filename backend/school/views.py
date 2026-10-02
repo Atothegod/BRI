@@ -1298,6 +1298,20 @@ def application_export_queryset():
     )
 
 
+def filter_application_queryset(queryset, query):
+    if not query:
+        return queryset
+    return queryset.filter(
+        Q(first_name__icontains=query)
+        | Q(last_name__icontains=query)
+        | Q(nickname__icontains=query)
+        | Q(phone__icontains=query)
+        | Q(email__icontains=query)
+        | Q(student__student_id__icontains=query)
+        | Q(line_display_name__icontains=query)
+    )
+
+
 def interview_appointment_queryset():
     return (
         Appointment.objects.filter(appointment_type=Appointment.Type.INTERVIEW)
@@ -1321,16 +1335,8 @@ def admin_exports(request):
         raise PermissionDenied
 
     applicant_query = request.GET.get("q", "").strip()
-    applicants = application_export_queryset()
-    if applicant_query:
-        applicants = applicants.filter(
-            Q(first_name__icontains=applicant_query)
-            | Q(last_name__icontains=applicant_query)
-            | Q(nickname__icontains=applicant_query)
-            | Q(phone__icontains=applicant_query)
-            | Q(email__icontains=applicant_query)
-            | Q(student__student_id__icontains=applicant_query)
-        )
+    applicants = filter_application_queryset(application_export_queryset(), applicant_query)
+    applicant_result_count = applicants.count()
     applicant_options = list(applicants[:80])
     appointment_options = list(interview_appointment_queryset()[:80])
     context = {
@@ -1344,6 +1350,7 @@ def admin_exports(request):
         ).aggregate(total=Count("slots"))["total"],
         "recent_interviews": appointment_options[:6],
         "applicant_query": applicant_query,
+        "applicant_result_count": applicant_result_count,
         "applicant_options": applicant_options,
         "appointment_options": appointment_options,
     }
@@ -1355,14 +1362,22 @@ def export_application_single_form(request):
     if not is_school_admin(request.user):
         raise PermissionDenied
 
-    person = get_object_or_404(application_export_queryset(), pk=request.GET.get("person"))
+    selected_ids = request.GET.getlist("people") or request.GET.getlist("person")
+    people = application_export_queryset()
+    if selected_ids:
+        people = people.filter(pk__in=selected_ids)
+    elif request.GET.get("all") == "1":
+        people = filter_application_queryset(people, request.GET.get("q", "").strip())
+    else:
+        people = people.none()
+    people = list(people)
     return render(
         request,
         "school/application_form_print.html",
         {
-            "people": [person],
-            "document_mode": "single",
-            "document_title": f"ใบสมัครเรียน BRI - {person.full_name}",
+            "people": people,
+            "document_mode": "selected",
+            "document_title": "ใบสมัครเรียน BRI",
         },
     )
 
@@ -1372,14 +1387,21 @@ def export_application_forms(request):
     if not is_school_admin(request.user):
         raise PermissionDenied
 
-    people = list(application_export_queryset())
+    selected_ids = request.GET.getlist("people")
+    query = request.GET.get("q", "").strip()
+    people = application_export_queryset()
+    if selected_ids:
+        people = people.filter(pk__in=selected_ids)
+    else:
+        people = filter_application_queryset(people, query)
+    people = list(people)
     return render(
         request,
-        "school/application_form_print.html",
+        "school/application_table_print.html",
         {
             "people": people,
-            "document_mode": "batch",
-            "document_title": "ใบสมัครเรียน BRI - รวมทุกคน",
+            "document_title": "ตารางรายชื่อผู้สมัคร BRI",
+            "query": query,
         },
     )
 

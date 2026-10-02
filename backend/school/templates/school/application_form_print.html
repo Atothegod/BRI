@@ -14,7 +14,7 @@
         .page { position: relative; width: 210mm; min-height: 297mm; margin: 18px auto; padding: 13mm 13mm 14mm; overflow: hidden; background: #fff; box-shadow: 0 12px 36px rgba(18, 39, 29, .18); page-break-after: always; }
         .page:last-child { page-break-after: auto; }
         .brand { display: grid; justify-items: center; gap: 8px; margin-bottom: 12px; text-align: center; }
-        .brand img { width: 75mm; max-width: 100%; height: auto; }
+        .brand-mark { display: block; width: 62mm; height: 31mm; background: #244431; -webkit-mask: url("{% static 'school/images/logo_white.png' %}") center / contain no-repeat; mask: url("{% static 'school/images/logo_white.png' %}") center / contain no-repeat; }
         .brand h1 { margin: 0; font-size: 22pt; line-height: 1.15; }
         .document-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
         .line-field { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: end; min-height: 38px; padding: 8px 10px; border: 2px solid #111; font-size: 15pt; }
@@ -33,15 +33,19 @@
         .photo-placeholder { display: grid; place-items: center; color: #667168; background: #f4f6f4; font-size: 9pt; text-align: center; }
         .identity strong { display: block; margin-bottom: 4px; font-size: 16pt; }
         .identity span { display: block; color: #425b46; font-size: 10pt; }
-        .checkbox-section { display: grid; grid-template-columns: 1fr 1fr; gap: 0; padding: 12px 20px; border: 2px solid #111; border-top: 0; }
-        .check-row { display: grid; grid-template-columns: 1fr 24mm 1fr 24mm; gap: 10px; align-items: center; min-height: 30px; font-size: 14pt; }
+        .choice-section { display: grid; gap: 8px; padding: 12px 18px; border: 2px solid #111; border-top: 0; }
+        .choice-row { display: grid; grid-template-columns: 62mm 1fr; gap: 12px; align-items: center; min-height: 30px; font-size: 13.5pt; }
+        .choice-row > strong { font-weight: 850; }
+        .choice-options { display: flex; gap: 28px; align-items: center; flex-wrap: wrap; }
+        .choice-options span { display: inline-flex; gap: 8px; align-items: center; white-space: nowrap; }
         .box { display: inline-grid; width: 15px; height: 15px; place-items: center; border: 1.8px solid #111; font-size: 10pt; line-height: 1; }
         .long-text { min-height: 42px; white-space: pre-wrap; }
-        .watermark { position: absolute; left: 26mm; top: 122mm; transform: rotate(-11deg); color: rgba(66, 91, 70, .78); font-size: 30pt; font-weight: 900; white-space: nowrap; pointer-events: none; }
-        .watermark.secondary { left: 91mm; top: 225mm; font-size: 22pt; }
         .decision-box { margin-top: 12px; padding: 14px 18px; border: 2px solid #111; }
         .decision-grid { display: grid; grid-template-columns: 1fr 1.35fr; gap: 18px; }
-        .decision-options { display: grid; gap: 18px; font-size: 16pt; }
+        .decision-options { display: grid; gap: 12px; font-size: 16pt; }
+        .decision-pass { display: grid; gap: 8px; }
+        .decision-pass-options { display: flex; gap: 18px; padding-left: 23px; font-size: 12pt; }
+        .decision-pass-options span { display: inline-flex; gap: 7px; align-items: center; white-space: nowrap; }
         .signature { display: grid; gap: 18px; font-size: 15pt; }
         .signature-line { display: inline-block; min-width: 70mm; border-bottom: 2px dashed #111; transform: translateY(-3px); }
         @media print {
@@ -61,7 +65,7 @@
     {% with student=person.student extra=person.extra_data %}
     <article class="page">
         <header class="brand">
-            <img src="{% static 'school/images/ci-bri.png' %}" alt="BRI School of Fivefold">
+            <span class="brand-mark" aria-label="BRI School of Fivefold"></span>
             <h1>ใบสมัครเรียน BRI รุ่นที่ 5</h1>
         </header>
 
@@ -94,20 +98,23 @@
                 <div class="field"><label>Church</label><div class="value">{{ extra.church|default:"-" }}</div></div>
                 <div class="field"><label>Mentor</label><div class="value">{{ extra.mentor_name|default:"-" }}</div></div>
                 <div class="field"><label>Facebook</label><div class="value">{{ extra.facebook_link|default:"-" }}</div></div>
-                <div class="field full"><label>Address</label><div class="value">{% if extra.address %}{{ extra.address }}{% elif extra.address_en.address_line %}{{ extra.address_en.address_line }}{% else %}-{% endif %} {{ extra.sub_district|default:"" }} {{ extra.district|default:"" }} {{ extra.province|default:"" }} {% if extra.country_name_th %}{{ extra.country_name_th }}{% elif extra.country_name_en %}{{ extra.country_name_en }}{% endif %}</div></div>
             </div>
         </section>
 
-        <div class="checkbox-section">
-            <div class="check-row">
-                <span>เคยเรียน BRI หรือไม่</span>
-                <span><span class="box">{% if extra.has_studied_bri == True or extra.has_studied_bri == "true" %}✓{% endif %}</span> เคย</span>
-                <span><span class="box">{% if extra.has_studied_bri == False or extra.has_studied_bri == "false" %}✓{% endif %}</span> ไม่เคย</span>
+        <div class="choice-section">
+            <div class="choice-row">
+                <strong>เคยเรียน BRI หรือไม่</strong>
+                <div class="choice-options">
+                    <span><span class="box">{% if extra.has_studied_bri == True or extra.has_studied_bri == "true" %}✓{% endif %}</span> เคย</span>
+                    <span><span class="box">{% if extra.has_studied_bri == False or extra.has_studied_bri == "false" %}✓{% endif %}</span> ไม่เคย</span>
+                </div>
             </div>
-            <div class="check-row">
-                <span>เป็นศิษยาภิบาลหรือไม่</span>
-                <span><span class="box">{% if extra.is_pastor == True or extra.is_pastor == "true" %}✓{% endif %}</span> เป็น</span>
-                <span><span class="box">{% if extra.is_pastor == False or extra.is_pastor == "false" %}✓{% endif %}</span> ไม่เป็น</span>
+            <div class="choice-row">
+                <strong>เป็นศิษยาภิบาลหรือไม่</strong>
+                <div class="choice-options">
+                    <span><span class="box">{% if extra.is_pastor == True or extra.is_pastor == "true" %}✓{% endif %}</span> เป็น</span>
+                    <span><span class="box">{% if extra.is_pastor == False or extra.is_pastor == "false" %}✓{% endif %}</span> ไม่เป็น</span>
+                </div>
             </div>
         </div>
 
@@ -116,17 +123,20 @@
             <div class="field-grid">
                 <div class="field full"><label>Goal</label><div class="value long-text">{{ extra.goal|default:"-" }}</div></div>
                 <div class="field full"><label>Vision calling</label><div class="value long-text">{{ extra.vision_calling|default:"-" }}</div></div>
-                <div class="field full"><label>Interview comment</label><div class="value long-text">{{ person.interview_comment|default:"" }}</div></div>
+                <div class="field full"><label>Address</label><div class="value long-text">{% if extra.address %}{{ extra.address }}{% elif extra.address_en.address_line %}{{ extra.address_en.address_line }}{% else %}-{% endif %} {{ extra.sub_district|default:"" }} {{ extra.district|default:"" }} {{ extra.province|default:"" }} {% if extra.country_name_th %}{{ extra.country_name_th }}{% elif extra.country_name_en %}{{ extra.country_name_en }}{% endif %}</div></div>
             </div>
         </section>
-
-        <div class="watermark">ข้อมูลผู้สมัครเรียน BRI รุ่นที่ 5</div>
-        <div class="watermark secondary">ข้อมูลผู้สมัคร BRI รุ่นที่ 5</div>
 
         <section class="decision-box">
             <div class="decision-grid">
                 <div class="decision-options">
-                    <div><span class="box"></span> ผ่านสัมภาษณ์</div>
+                    <div class="decision-pass">
+                        <div><span class="box"></span> ผ่านสัมภาษณ์</div>
+                        <div class="decision-pass-options">
+                            <span><span class="box"></span> Online</span>
+                            <span><span class="box"></span> Onsite</span>
+                        </div>
+                    </div>
                     <div><span class="box"></span> ไม่ผ่านสัมภาษณ์</div>
                 </div>
                 <div class="signature">
@@ -141,7 +151,7 @@
     {% empty %}
     <article class="page">
         <header class="brand">
-            <img src="{% static 'school/images/ci-bri.png' %}" alt="BRI School of Fivefold">
+            <span class="brand-mark" aria-label="BRI School of Fivefold"></span>
             <h1>ไม่พบข้อมูลใบสมัคร</h1>
         </header>
     </article>

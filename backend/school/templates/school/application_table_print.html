@@ -1,0 +1,98 @@
+{% load static %}
+<!doctype html>
+<html lang="th">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ document_title }}</title>
+    <style>
+        @page { size: A4 landscape; margin: 10mm; }
+        * { box-sizing: border-box; }
+        body { margin: 0; color: #111; background: #eef2ee; font-family: "Noto Sans Thai", "Noto Sans", Arial, sans-serif; }
+        .print-toolbar { position: sticky; top: 0; z-index: 10; display: flex; gap: 10px; justify-content: center; padding: 12px; background: #12271d; }
+        .print-toolbar button, .print-toolbar a { min-height: 40px; padding: 8px 14px; color: #12271d; background: #f5e8bf; border: 1px solid #d8bd73; border-radius: 6px; font: inherit; font-weight: 800; text-decoration: none; cursor: pointer; }
+        .page { width: 297mm; min-height: 210mm; margin: 18px auto; padding: 11mm; background: #fff; box-shadow: 0 12px 36px rgba(18, 39, 29, .18); }
+        .header { display: grid; grid-template-columns: 45mm 1fr auto; gap: 14px; align-items: center; padding-bottom: 9px; border-bottom: 3px solid #12271d; }
+        .brand-mark { display: block; width: 42mm; height: 22mm; background: #244431; -webkit-mask: url("{% static 'school/images/logo_white.png' %}") center / contain no-repeat; mask: url("{% static 'school/images/logo_white.png' %}") center / contain no-repeat; }
+        .header h1 { margin: 0; font-size: 21pt; line-height: 1.15; }
+        .header p { margin: 4px 0 0; color: #425b46; font-size: 10pt; }
+        .summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 12px 0; }
+        .summary div { padding: 9px 10px; background: #eef2ee; border: 1px solid #c7d2c8; border-left: 4px solid #c2a256; border-radius: 5px; }
+        .summary span { display: block; color: #526157; font-size: 8pt; font-weight: 800; }
+        .summary strong { display: block; margin-top: 2px; font-size: 12pt; overflow-wrap: anywhere; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        th { padding: 7px 8px; color: #fff; background: #425b46; border: 1px solid #33463a; font-size: 8.5pt; text-align: left; }
+        td { padding: 7px 8px; border: 1px solid #d8dfd8; font-size: 8.5pt; vertical-align: top; overflow-wrap: anywhere; }
+        tbody tr:nth-child(even) td { background: #f7f9f7; }
+        .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-weight: 800; background: #eef2ee; }
+        .badge.passed { color: #244431; background: #dfeae0; }
+        .badge.failed { color: #8a3418; background: #fff1e8; }
+        .empty { padding: 22px; color: #667168; text-align: center; background: #f7f9f7; border: 1px dashed #c7d2c8; }
+        @media print {
+            body { background: #fff; }
+            .print-toolbar { display: none; }
+            .page { width: auto; min-height: auto; margin: 0; box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="print-toolbar">
+        <button type="button" onclick="window.print()">Print / Save PDF</button>
+        <a href="{% url 'school:admin_exports' %}">กลับหน้า Export</a>
+    </div>
+
+    <main class="page">
+        <header class="header">
+            <span class="brand-mark" aria-label="BRI School of Fivefold"></span>
+            <div>
+                <h1>ตารางรายชื่อผู้สมัคร</h1>
+                <p>{% if query %}คำค้น: {{ query }}{% else %}รวมผู้สมัครทั้งหมด{% endif %}</p>
+            </div>
+            <p>พิมพ์เมื่อ {% now "d/m/Y H:i" %}</p>
+        </header>
+
+        <section class="summary" aria-label="สรุป">
+            <div><span>จำนวนรายการ</span><strong>{{ people|length }}</strong></div>
+            <div><span>เอกสาร</span><strong>Persons table</strong></div>
+            <div><span>รูปแบบ</span><strong>Admin list</strong></div>
+        </section>
+
+        {% if people %}
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:11mm;">#</th>
+                    <th style="width:34mm;">ผู้สมัคร</th>
+                    <th style="width:22mm;">ชื่อเล่น</th>
+                    <th style="width:30mm;">โทรศัพท์</th>
+                    <th style="width:42mm;">อีเมล</th>
+                    <th style="width:30mm;">LINE</th>
+                    <th style="width:25mm;">สถานะ</th>
+                    <th style="width:25mm;">นักศึกษา</th>
+                    <th>คริสตจักร / จังหวัด</th>
+                    <th style="width:34mm;">วันที่สมัคร</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for person in people %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ person.full_name }}</td>
+                    <td>{{ person.nickname|default:"-" }}</td>
+                    <td>{{ person.phone|default:"-" }}</td>
+                    <td>{{ person.email|default:"-" }}</td>
+                    <td>{{ person.line_display_name|default:"-" }}</td>
+                    <td><span class="badge {{ person.status }}">{{ person.get_status_display }}</span></td>
+                    <td>{% if person.student %}{{ person.student.student_id }}{% else %}-{% endif %}</td>
+                    <td>{{ person.extra_data.church|default:"-" }}{% if person.extra_data.province %} · {{ person.extra_data.province }}{% endif %}</td>
+                    <td>{{ person.created_at|date:"d/m/Y H:i" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty">ไม่พบรายชื่อผู้สมัคร</div>
+        {% endif %}
+    </main>
+</body>
+</html>

@@ -62,14 +62,19 @@ urlpatterns = [
     ),
     path("login/redirect/", views.post_login_redirect, name="post_login_redirect"),
     path("school-admin/dashboard/", views.admin_overview_dashboard, name="admin_overview_dashboard"),
+
+    # delete if not needed
     path("school-admin/student-photos/", views.admin_student_photo_import, name="admin_student_photo_import"),
     path("school-admin/payment-slips/", views.admin_payment_slip_review, name="admin_payment_slip_review"),
+
     path("school-admin/exports/", views.admin_exports, name="admin_exports"),
     path("school-admin/exports/applications/person/", views.export_application_single_form, name="export_application_single_form"),
     path("school-admin/exports/applications/forms/", views.export_application_forms, name="export_application_forms"),
     path("school-admin/exports/applications.csv", views.export_applications_csv, name="export_applications_csv"),
     path("school-admin/exports/interview-roster/", views.export_interview_roster, name="export_interview_roster"),
     path("school-admin/exports/interview-slots.csv", views.export_interview_slots_csv, name="export_interview_slots_csv"),
+
+
     path("school-admin/attendance/qr/", views.admin_attendance_qr, name="admin_attendance_qr"),
     path("attendance/check-in/<str:token>/", views.attendance_check_in, name="attendance_check_in"),
     path("teachers/register/", views.teacher_register, name="teacher_register"),

@@ -4,7 +4,7 @@
 {% block title %}Export ข้อมูล | BRI{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261002-readable-1">
+<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261002-export-fix-2">
 {% endblock %}
 
 {% block content %}
@@ -24,27 +24,35 @@
                 <div class="export-workflow-heading">
                     <span>1</span>
                     <div>
-                        <strong>ไฟล์เดี่ยวรายคน</strong>
-                        <p>เลือกผู้สมัคร 1 คน แล้วเปิดเป็นใบสมัคร A4 พร้อมช่องผลสัมภาษณ์และลายเซ็น</p>
+                        <strong>ใบสมัครรายคน / บางคน</strong>
+                        <p>เลือกผู้สมัครจากผลลัพธ์ที่ค้นหา แล้วเปิดเป็นฟอร์ม A4 แยกคนละหน้า หรือ export ทุกคนในผลลัพธ์นี้</p>
                     </div>
                 </div>
-                <form method="get" action="{% url 'school:export_application_single_form' %}" target="_blank" class="export-workflow-form">
-                    <label for="single-person">ผู้สมัคร</label>
-                    <select id="single-person" name="person" required>
-                        <option value="">เลือกผู้สมัคร</option>
-                        {% for person in applicant_options %}
-                        <option value="{{ person.pk }}">
-                            {{ person.full_name }}{% if person.student %} · {{ person.student.student_id }}{% endif %}{% if person.nickname %} · {{ person.nickname }}{% endif %}
-                        </option>
-                        {% endfor %}
-                    </select>
-                    <button type="submit">เปิดใบสมัครรายคน</button>
-                </form>
                 <form method="get" class="export-compact-search">
                     <label for="applicant-q">ค้นชื่อเพิ่มเติม</label>
                     <div>
                         <input id="applicant-q" name="q" value="{{ applicant_query }}" placeholder="ชื่อ รหัสนักศึกษา เบอร์โทร หรืออีเมล">
                         <button type="submit">ค้นหา</button>
+                    </div>
+                </form>
+                <form method="get" action="{% url 'school:export_application_single_form' %}" target="_blank" class="export-person-picker">
+                    <input type="hidden" name="q" value="{{ applicant_query }}">
+                    <div class="export-person-picker__list" aria-label="เลือกผู้สมัคร">
+                        {% for person in applicant_options %}
+                        <label>
+                            <input type="checkbox" name="people" value="{{ person.pk }}">
+                            <span>
+                                <strong>{{ person.full_name }}</strong>
+                                <small>{% if person.student %}{{ person.student.student_id }} · {% endif %}{{ person.nickname|default:"-" }} · {{ person.phone|default:"ไม่มีเบอร์" }}</small>
+                            </span>
+                        </label>
+                        {% empty %}
+                        <div class="export-picker-empty">ไม่พบผู้สมัครที่ตรงกับคำค้น</div>
+                        {% endfor %}
+                    </div>
+                    <div class="export-workflow-actions">
+                        <button type="submit">เปิดใบสมัครที่เลือก</button>
+                        <button type="submit" name="all" value="1" class="secondary">เปิดทุกคนในผลลัพธ์</button>
                     </div>
                 </form>
             </article>
@@ -53,16 +61,16 @@
                 <div class="export-workflow-heading">
                     <span>2</span>
                     <div>
-                        <strong>ไฟล์รวมใบสมัคร</strong>
-                        <p>จัด format ใบสมัครทุกคนเป็นหน้า A4 แยกคนละหน้า เหมาะกับ print หรือ save เป็น PDF รวม</p>
+                        <strong>ไฟล์รวมแบบตาราง</strong>
+                        <p>ตารางรายชื่อผู้สมัครแบบเดียวกับการดู list ใน admin เหมาะกับ print, save PDF หรือเช็ครายชื่อเร็ว ๆ</p>
                     </div>
                 </div>
                 <div class="export-workflow-stat">
-                    <span>ผู้สมัครทั้งหมด</span>
-                    <strong>{{ application_count }}</strong>
+                    <span>{% if applicant_query %}ผลลัพธ์ที่ค้นหา{% else %}ผู้สมัครทั้งหมด{% endif %}</span>
+                    <strong>{{ applicant_result_count }}</strong>
                 </div>
                 <div class="export-workflow-actions">
-                    <a class="export-main-action" href="{% url 'school:export_application_forms' %}" target="_blank" rel="noopener">เปิดไฟล์รวม</a>
+                    <a class="export-main-action" href="{% url 'school:export_application_forms' %}{% if applicant_query %}?q={{ applicant_query|urlencode }}{% endif %}" target="_blank" rel="noopener">เปิดตารางรวม</a>
                     <a class="export-secondary-action" href="{% url 'school:export_applications_csv' %}">CSV สำหรับ Sheets</a>
                 </div>
             </article>

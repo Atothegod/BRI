@@ -355,6 +355,70 @@
     gap: 8px;
 }
 
+.export-person-picker {
+    display: grid;
+    gap: 10px;
+}
+
+.export-person-picker__list {
+    display: grid;
+    max-height: 330px;
+    overflow: auto;
+    border: 1px solid var(--school-admin-border);
+    border-radius: 8px;
+}
+
+.export-person-picker__list label {
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr);
+    gap: 10px;
+    align-items: start;
+    min-height: 58px;
+    padding: 10px 12px;
+    background: #ffffff;
+    border-bottom: 1px solid #e1e7e2;
+    cursor: pointer;
+}
+
+.export-person-picker__list label:nth-child(even) {
+    background: #f7f9f7;
+}
+
+.export-person-picker__list label:last-child {
+    border-bottom: 0;
+}
+
+.export-person-picker__list input {
+    width: 18px;
+    height: 18px;
+    margin-top: 4px;
+    accent-color: var(--school-admin-forest);
+}
+
+.export-person-picker__list strong,
+.export-person-picker__list small {
+    display: block;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.export-person-picker__list strong {
+    color: var(--school-admin-forest);
+    font-size: 0.95rem;
+}
+
+.export-person-picker__list small {
+    color: var(--school-admin-muted);
+    font-size: 0.82rem;
+}
+
+.export-picker-empty {
+    padding: 16px;
+    color: var(--school-admin-muted);
+    text-align: center;
+    background: #f7f9f7;
+}
+
 .export-workflow-form select,
 .export-compact-search input {
     width: 100%;
@@ -369,6 +433,7 @@
 
 .export-workflow-form button,
 .export-compact-search button,
+.export-workflow-actions button,
 .export-main-action,
 .export-secondary-action,
 .export-event-list a {
@@ -416,6 +481,12 @@
 }
 
 .export-secondary-action {
+    color: var(--school-admin-forest);
+    background: #f3f0e8;
+    border-color: #d8ccb5;
+}
+
+.export-workflow-actions button.secondary {
     color: var(--school-admin-forest);
     background: #f3f0e8;
     border-color: #d8ccb5;

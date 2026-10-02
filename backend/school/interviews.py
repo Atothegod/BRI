@@ -35,7 +35,7 @@ from .models import (
     line_notification_sent,
     mark_line_notification_sent,
 )
-from .views import is_school_admin
+from .views import can_view_operation_tools, is_school_admin
 
 THAI_TIMEZONE = ZoneInfo("Asia/Bangkok")
 ADMIN_APPOINTMENT_TYPES = (
@@ -283,11 +283,11 @@ def send_interview_result_notification(person):
     return sent
 
 
-@login_required(login_url="admin:login")
+@login_required(login_url="school:login")
 @never_cache
 @require_http_methods(["GET", "POST"])
 def interview_results(request):
-    if not is_school_admin(request.user):
+    if not can_view_operation_tools(request.user):
         raise PermissionDenied
     if request.method == "POST":
         person = Person.objects.filter(pk=request.POST.get("person")).first()

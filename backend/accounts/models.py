@@ -6,13 +6,14 @@ from django.utils import timezone
 class User(AbstractUser):
     class Role(models.TextChoices):
         TEACHER = "TEACHER", "Teacher"
+        OPERATION = "OPERATION", "Operation"
         STUDENT = "STUDENT", "Student"
 
     role = models.CharField(
         max_length=20,
         choices=Role.choices,
         default=Role.STUDENT,
-        help_text="App role for teacher/student flows. Django admin access is controlled by superuser status.",
+        help_text="App role for teacher/student/operation flows. Django admin access is controlled by superuser status.",
     )
     nickname = models.CharField(max_length=100, blank=True)
     google_email = models.EmailField(blank=True)

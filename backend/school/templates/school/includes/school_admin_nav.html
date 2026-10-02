@@ -14,14 +14,6 @@
                 <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#user"></use></svg>
                 <span>จัดกลุ่มนักศึกษา</span>
             </a>
-            <a href="{% url 'school:admin_student_photo_import' %}"{% if request.resolver_match.url_name == "admin_student_photo_import" %} class="is-active" aria-current="page"{% endif %}>
-                <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#upload-cloud"></use></svg>
-                <span>รูปนักศึกษา</span>
-            </a>
-            <a href="{% url 'school:admin_payment_slip_review' %}"{% if request.resolver_match.url_name == "admin_payment_slip_review" %} class="is-active" aria-current="page"{% endif %}>
-                <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#shield-check"></use></svg>
-                <span>ตรวจสลิป</span>
-            </a>
             <a href="{% url 'school:admin_attendance_qr' %}"{% if request.resolver_match.url_name == "admin_attendance_qr" %} class="is-active" aria-current="page"{% endif %}>
                 <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#check-circle"></use></svg>
                 <span>QR เช็คชื่อ</span>
@@ -34,6 +26,17 @@
                 <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#calendar-days"></use></svg>
                 <span>จัดการนัดหมาย</span>
             </a>
+            <details class="school-admin-navbar__dropdown"{% if request.resolver_match.url_name == "interview_results" or request.resolver_match.url_name == "admin_payment_slip_review" or request.resolver_match.url_name == "admin_student_photo_import" %} open{% endif %}>
+                <summary>
+                    <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#shield-check"></use></svg>
+                    <span>Operations</span>
+                </summary>
+                <div class="school-admin-navbar__dropdown-menu">
+                    <a href="{% url 'school:interview_results' %}"{% if request.resolver_match.url_name == "interview_results" %} class="is-active"{% endif %}>ผลสัมภาษณ์</a>
+                    <a href="{% url 'school:admin_payment_slip_review' %}"{% if request.resolver_match.url_name == "admin_payment_slip_review" %} class="is-active"{% endif %}>ตรวจสลิป</a>
+                    <a href="{% url 'school:admin_student_photo_import' %}"{% if request.resolver_match.url_name == "admin_student_photo_import" %} class="is-active"{% endif %}>รูปนักศึกษา</a>
+                </div>
+            </details>
             {% if request.user.is_staff or request.user.is_superuser %}
             <a href="{% url 'admin:index' %}">
                 <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#shield-check"></use></svg>

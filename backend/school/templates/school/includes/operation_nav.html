@@ -1,0 +1,34 @@
+{% load static %}
+<header class="operation-navbar">
+    <div class="operation-navbar__inner">
+        <a class="operation-navbar__brand" href="{% url 'school:admin_payment_slip_review' %}" aria-label="BRI Operation">
+            {% include "school/includes/brand_logo.html" with variant="nav" %}
+        </a>
+
+        <nav class="operation-navbar__links" aria-label="เมนู Operation">
+            <a href="{% url 'school:interview_results' %}"{% if request.resolver_match.url_name == "interview_results" %} class="is-active" aria-current="page"{% endif %}>
+                <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#check-circle"></use></svg>
+                <span>ผลสัมภาษณ์</span>
+            </a>
+            <a href="{% url 'school:admin_payment_slip_review' %}"{% if request.resolver_match.url_name == "admin_payment_slip_review" %} class="is-active" aria-current="page"{% endif %}>
+                <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#shield-check"></use></svg>
+                <span>ตรวจสลิป</span>
+            </a>
+            <a href="{% url 'school:admin_student_photo_import' %}"{% if request.resolver_match.url_name == "admin_student_photo_import" %} class="is-active" aria-current="page"{% endif %}>
+                <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#upload-cloud"></use></svg>
+                <span>รูปนักศึกษา</span>
+            </a>
+            {% if request.user.is_superuser %}
+            <a href="{% url 'school:admin_overview_dashboard' %}">
+                <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#landmark"></use></svg>
+                <span>School admin</span>
+            </a>
+            {% endif %}
+        </nav>
+
+        <form class="operation-navbar__logout" method="post" action="{% url 'school:logout' %}">
+            {% csrf_token %}
+            <button type="submit">ออกจากระบบ</button>
+        </form>
+    </div>
+</header>

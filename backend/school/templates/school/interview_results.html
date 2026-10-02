@@ -2,9 +2,11 @@
 {% load static tz school_dates %}
 {% block title %}บันทึกผลสัมภาษณ์ | BRI{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/interview_results.css' %}?v=20261002-readable-1">
+<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261002-ops-dropdown-1">
+<link rel="stylesheet" href="{% static 'school/css/interview_results.css' %}?v=20261002-ops-dropdown-1">
 {% endblock %}
 {% block content %}
+{% include "school/includes/operation_nav.html" %}
 <main class="interview-results">
     <header class="results-heading">
         <div>

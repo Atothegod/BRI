@@ -98,10 +98,22 @@ def is_teacher(user):
     )
 
 
+def is_operation(user):
+    return (
+        user.is_authenticated
+        and user.is_active
+        and getattr(user, "role", "") == user.Role.OPERATION
+    )
+
+
 def can_view_teacher_dashboard(user):
     return is_school_admin(user) or (
         is_teacher(user) and user.can_access_teacher_dashboard()
     )
+
+
+def can_view_operation_tools(user):
+    return is_school_admin(user) or is_operation(user)
 
 
 def get_auth_context():
@@ -121,6 +133,8 @@ class TeacherLoginView(LoginView):
 
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated:
+            if can_view_operation_tools(request.user) and not is_school_admin(request.user):
+                return redirect("school:admin_payment_slip_review")
             if can_view_teacher_dashboard(request.user):
                 return redirect("school:teacher_dashboard")
             if not is_teacher(request.user):
@@ -492,6 +506,8 @@ def teacher_register(request):
 
 @login_required
 def post_login_redirect(request):
+    if can_view_operation_tools(request.user) and not is_school_admin(request.user):
+        return redirect("school:admin_payment_slip_review")
     if can_view_teacher_dashboard(request.user):
         return redirect("school:teacher_dashboard")
     if is_teacher(request.user):
@@ -1112,11 +1128,11 @@ def admin_overview_dashboard(request):
     return render(request, "school/admin_overview_dashboard.html", context)
 
 
-@login_required(login_url="admin:login")
+@login_required(login_url="school:login")
 @never_cache
 @require_http_methods(["GET", "POST"])
 def admin_student_photo_import(request):
-    if not is_school_admin(request.user):
+    if not can_view_operation_tools(request.user):
         raise PermissionDenied
 
     if request.method == "POST":
@@ -1173,11 +1189,11 @@ def admin_student_photo_import(request):
     )
 
 
-@login_required(login_url="admin:login")
+@login_required(login_url="school:login")
 @never_cache
 @require_http_methods(["GET", "POST"])
 def admin_payment_slip_review(request):
-    if not is_school_admin(request.user):
+    if not can_view_operation_tools(request.user):
         raise PermissionDenied
 
     if request.method == "POST":

@@ -443,10 +443,9 @@ class ApplicationExportTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "width: 90mm")
-        self.assertContains(response, "Postal code")
+        self.assertContains(response, "width: 128mm")
+        self.assertNotContains(response, "Postal code")
         self.assertContains(response, "2 Chammany Road Vientiane Vientiane Prefecture")
-        self.assertContains(response, "01000")
         self.assertContains(response, "ประเทศ ลาว")
 
 

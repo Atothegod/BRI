@@ -777,11 +777,11 @@
     margin: 0;
     align-items: center;
     justify-content: flex-start;
+    flex-wrap: wrap;
     gap: 6px;
     grid-area: links;
-    overflow-x: auto;
+    overflow: visible;
     padding: 1px 0 2px;
-    scrollbar-width: thin;
 }
 
 .school-admin-navbar__links a {
@@ -1496,9 +1496,8 @@
         width: 100%;
         margin: 0;
         padding: 2px 0;
-        overflow-x: auto;
+        overflow: visible;
         justify-content: flex-start;
-        scrollbar-width: thin;
     }
 
     .school-admin-navbar__links .icon {

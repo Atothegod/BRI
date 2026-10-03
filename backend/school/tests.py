@@ -539,7 +539,7 @@ class LineProactiveNotificationTests(TestCase):
 class TeacherFlowTests(TestCase):
     @override_settings(GOOGLE_OAUTH_ENABLED=True)
     def test_teacher_login_shows_google_oauth_button(self):
-        response = self.client.get(reverse("school:login"))
+        response = self.client.get(reverse("school:teacher_login"))
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Continue with Google")
@@ -564,11 +564,11 @@ class TeacherFlowTests(TestCase):
         login_response = self.client.get("/accounts/login/")
         signup_response = self.client.get("/accounts/signup/")
 
-        self.assertRedirects(login_response, reverse("school:login"))
+        self.assertRedirects(login_response, reverse("school:teacher_login"))
         self.assertRedirects(signup_response, reverse("school:teacher_register"))
 
     def test_google_social_signup_populates_pending_teacher(self):
-        request = RequestFactory().get(reverse("school:login"))
+        request = RequestFactory().get(reverse("school:teacher_login"))
         User = get_user_model()
         sociallogin = SocialLogin(
             user=User(),
@@ -596,7 +596,7 @@ class TeacherFlowTests(TestCase):
         self.assertIsNotNone(user.google_connected_at)
 
     def test_google_social_login_matches_existing_teacher_google_email(self):
-        request = RequestFactory().get(reverse("school:login"))
+        request = RequestFactory().get(reverse("school:teacher_login"))
         User = get_user_model()
         teacher = User.objects.create_user(
             username="teacher-google",
@@ -636,7 +636,7 @@ class TeacherFlowTests(TestCase):
 
         self.assertRedirects(
             response,
-            f"{reverse('school:login')}?teacher_status=registered_pending",
+            f"{reverse('school:teacher_login')}?teacher_status=registered_pending",
         )
         user = get_user_model().objects.get(username="teacher@example.com")
         self.assertEqual(user.role, user.Role.TEACHER)
@@ -662,7 +662,7 @@ class TeacherFlowTests(TestCase):
         self.client.force_login(teacher)
 
         response = self.client.get(
-            f"{reverse('school:login')}?teacher_status=registered_pending"
+            f"{reverse('school:teacher_login')}?teacher_status=registered_pending"
         )
 
         self.assertEqual(response.status_code, 200)
@@ -680,7 +680,7 @@ class TeacherFlowTests(TestCase):
         )
 
         response = self.client.post(
-            reverse("school:login"),
+            reverse("school:teacher_login"),
             {
                 "username": "teacher@example.com",
                 "password": "StrongPass12345",
@@ -705,7 +705,7 @@ class TeacherFlowTests(TestCase):
         )
 
         response = self.client.post(
-            reverse("school:login"),
+            reverse("school:teacher_login"),
             {
                 "username": "teacher@example.com",
                 "password": "StrongPass12345",
@@ -718,7 +718,7 @@ class TeacherFlowTests(TestCase):
             response.redirect_chain,
             [
                 (reverse("school:post_login_redirect"), 302),
-                (f"{reverse('school:login')}?teacher_status=pending", 302),
+                (f"{reverse('school:teacher_login')}?teacher_status=pending", 302),
             ],
         )
         self.assertEqual(int(self.client.session["_auth_user_id"]), teacher.pk)
@@ -750,7 +750,7 @@ class TeacherFlowTests(TestCase):
         )
 
         response = self.client.post(
-            reverse("school:login"),
+            reverse("school:teacher_login"),
             {
                 "username": "teacher@example.com",
                 "password": "StrongPass12345",
@@ -768,18 +768,54 @@ class TeacherFlowTests(TestCase):
         )
         self.assertContains(response, "นักเรียนในกลุ่มของคุณ")
 
-    def test_school_admin_login_flow_reaches_teacher_dashboard(self):
+    def test_teacher_login_rejects_admin_and_operation_accounts(self):
         User = get_user_model()
         User.objects.create_superuser(
             username="admin",
             email="admin@example.com",
             password="StrongPass12345",
         )
+        User.objects.create_user(
+            username="operation",
+            email="operation@example.com",
+            password="StrongPass12345",
+            role=User.Role.OPERATION,
+        )
 
-        response = self.client.post(
-            reverse("school:login"),
+        admin_response = self.client.post(
+            reverse("school:teacher_login"),
             {
                 "username": "admin",
+                "password": "StrongPass12345",
+            },
+        )
+        operation_response = self.client.post(
+            reverse("school:teacher_login"),
+            {
+                "username": "operation@example.com",
+                "password": "StrongPass12345",
+            },
+        )
+
+        self.assertEqual(admin_response.status_code, 200)
+        self.assertContains(admin_response, "หน้านี้สำหรับบัญชีผู้สอนเท่านั้น")
+        self.assertEqual(operation_response.status_code, 200)
+        self.assertContains(operation_response, "หน้านี้สำหรับบัญชีผู้สอนเท่านั้น")
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+    def test_operation_login_flow_reaches_operation_home(self):
+        User = get_user_model()
+        operation = User.objects.create_user(
+            username="operation",
+            email="operation@example.com",
+            password="StrongPass12345",
+            role=User.Role.OPERATION,
+        )
+
+        response = self.client.post(
+            reverse("school:operation_login"),
+            {
+                "username": "operation@example.com",
                 "password": "StrongPass12345",
             },
             follow=True,
@@ -788,12 +824,66 @@ class TeacherFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.redirect_chain,
-            [
-                (reverse("school:post_login_redirect"), 302),
-                (reverse("school:teacher_dashboard"), 302),
-            ],
+            [(reverse("school:admin_payment_slip_review"), 302)],
         )
-        self.assertContains(response, "นักเรียนในกลุ่มของคุณ")
+        self.assertEqual(int(self.client.session["_auth_user_id"]), operation.pk)
+        self.assertContains(response, "ตรวจสลิปการโอนเงิน")
+        self.assertNotContains(response, "Continue with Google")
+
+    def test_operation_login_rejects_teacher_account(self):
+        User = get_user_model()
+        User.objects.create_user(
+            username="teacher1",
+            email="teacher@example.com",
+            password="StrongPass12345",
+            role=User.Role.TEACHER,
+            is_teacher_approved=True,
+        )
+
+        response = self.client.post(
+            reverse("school:operation_login"),
+            {
+                "username": "teacher@example.com",
+                "password": "StrongPass12345",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "หน้านี้สำหรับบัญชี operation เท่านั้น")
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+    def test_operation_pages_use_operation_login(self):
+        urls = [
+            reverse("school:interview_results"),
+            reverse("school:admin_payment_slip_review"),
+            reverse("school:admin_student_photo_import"),
+        ]
+
+        for url in urls:
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertRedirects(
+                    response,
+                    f"{reverse('school:operation_login')}?next={url}",
+                    fetch_redirect_response=False,
+                )
+
+    def test_admin_login_shortcut_redirects_to_django_admin_login(self):
+        response = self.client.get(reverse("school:admin_login"))
+
+        self.assertRedirects(
+            response,
+            f"{reverse('admin:login')}?next={reverse('school:admin_overview_dashboard')}",
+            fetch_redirect_response=False,
+        )
+
+    def test_legacy_login_redirects_to_teacher_login(self):
+        response = self.client.get(reverse("school:login"), {"teacher_status": "pending"})
+
+        self.assertRedirects(
+            response,
+            f"{reverse('school:teacher_login')}?teacher_status=pending",
+        )
 
     def test_teacher_dashboard_requires_admin_approval(self):
         User = get_user_model()
@@ -809,7 +899,7 @@ class TeacherFlowTests(TestCase):
 
         self.assertRedirects(
             response,
-            f"{reverse('school:login')}?teacher_status=pending",
+            f"{reverse('school:teacher_login')}?teacher_status=pending",
         )
 
     def test_teacher_dashboard_shows_only_students_in_teacher_groups(self):

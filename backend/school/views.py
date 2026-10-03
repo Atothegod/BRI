@@ -123,35 +123,112 @@ def get_auth_context():
     }
 
 
-class TeacherLoginView(LoginView):
+def authenticated_home_url(user):
+    if is_school_admin(user):
+        return "school:admin_overview_dashboard"
+    if is_operation(user):
+        return "school:admin_payment_slip_review"
+    if can_view_teacher_dashboard(user):
+        return "school:teacher_dashboard"
+    if is_teacher(user):
+        return f"{resolve_url('school:teacher_login')}?teacher_status=pending"
+    return "school:registration"
+
+
+class RoleLoginView(LoginView):
     form_class = TeacherLoginForm
     template_name = "school/login.html"
     redirect_authenticated_user = False
+    role_error_message = "บัญชีนี้ไม่สามารถเข้าสู่ระบบหน้านี้ได้"
+    auth_eyebrow = "BRI"
+    auth_title = "เข้าสู่ระบบ"
+    auth_description = ""
+    form_error_title = "เข้าสู่ระบบไม่สำเร็จ"
+    form_error_text = "ตรวจสอบอีเมลและรหัสผ่านอีกครั้ง"
+    show_google_oauth = False
+    show_teacher_register = False
+
+    def role_allowed(self, user):
+        return user.is_authenticated and user.is_active
+
+    def get_authenticated_redirect_url(self, user):
+        return authenticated_home_url(user)
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            redirect_url = self.get_authenticated_redirect_url(request.user)
+            if redirect_url:
+                return redirect(redirect_url)
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        if not self.role_allowed(form.get_user()):
+            form.add_error(None, self.role_error_message)
+            return self.form_invalid(form)
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.show_google_oauth:
+            context.update(get_auth_context())
+        else:
+            context["google_oauth_enabled"] = False
+        context.update(
+            {
+                "auth_eyebrow": self.auth_eyebrow,
+                "auth_title": self.auth_title,
+                "auth_description": self.auth_description,
+                "form_error_title": self.form_error_title,
+                "form_error_text": self.form_error_text,
+                "show_google_oauth": self.show_google_oauth,
+                "show_teacher_register": self.show_teacher_register,
+            }
+        )
+        status = self.request.GET.get("teacher_status")
+        context["teacher_pending_notice"] = (
+            self.show_teacher_register and status in {"pending", "registered_pending"}
+        )
+        context["teacher_registered_pending_notice"] = status == "registered_pending"
+        return context
+
+
+class TeacherLoginView(RoleLoginView):
+    auth_eyebrow = "ระบบผู้สอน"
+    auth_title = "เข้าสู่ระบบผู้สอน"
+    auth_description = "เข้าสู่ระบบเพื่อดูข้อมูลนักเรียนในกลุ่มของคุณ"
+    role_error_message = "หน้านี้สำหรับบัญชีผู้สอนเท่านั้น"
+    show_google_oauth = True
+    show_teacher_register = True
 
     def get_success_url(self):
         return resolve_url("school:post_login_redirect")
 
-    def dispatch(self, request, *args, **kwargs):
-        if request.user.is_authenticated:
-            if can_view_operation_tools(request.user) and not is_school_admin(request.user):
-                return redirect("school:admin_payment_slip_review")
-            if can_view_teacher_dashboard(request.user):
-                return redirect("school:teacher_dashboard")
-            if not is_teacher(request.user):
-                return redirect("school:registration")
-        return super().dispatch(request, *args, **kwargs)
+    def role_allowed(self, user):
+        return is_teacher(user)
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context.update(get_auth_context())
-        user = self.request.user
-        status = self.request.GET.get("teacher_status")
-        context["teacher_pending_notice"] = (
-            status in {"pending", "registered_pending"}
-            or (is_teacher(user) and not user.can_access_teacher_dashboard())
-        )
-        context["teacher_registered_pending_notice"] = status == "registered_pending"
-        return context
+    def get_authenticated_redirect_url(self, user):
+        if is_teacher(user) and not user.can_access_teacher_dashboard():
+            return None
+        return authenticated_home_url(user)
+
+
+class OperationLoginView(RoleLoginView):
+    auth_eyebrow = "ระบบ Operation"
+    auth_title = "เข้าสู่ระบบ Operation"
+    auth_description = "เข้าสู่ระบบเพื่อตรวจสลิป อัปโหลดรูปนักศึกษา และบันทึกผลสัมภาษณ์"
+    form_error_text = "ตรวจสอบอีเมล รหัสผ่าน และสิทธิ์ operation อีกครั้ง"
+    role_error_message = "หน้านี้สำหรับบัญชี operation เท่านั้น"
+
+    def get_success_url(self):
+        return resolve_url("school:admin_payment_slip_review")
+
+    def role_allowed(self, user):
+        return is_operation(user)
+
+
+def admin_login_redirect(request):
+    next_url = request.GET.get("next") or resolve_url("school:admin_overview_dashboard")
+    return redirect(f"{resolve_url('admin:login')}?{urlencode({'next': next_url})}")
 
 
 def get_session_line_profile(request):
@@ -495,7 +572,7 @@ def teacher_register(request):
     if request.method == "POST" and form.is_valid():
         user = form.save()
         login(request, user, backend="django.contrib.auth.backends.ModelBackend")
-        return redirect(f"{resolve_url('school:login')}?teacher_status=registered_pending")
+        return redirect(f"{resolve_url('school:teacher_login')}?teacher_status=registered_pending")
 
     return render(
         request,
@@ -506,12 +583,14 @@ def teacher_register(request):
 
 @login_required
 def post_login_redirect(request):
-    if can_view_operation_tools(request.user) and not is_school_admin(request.user):
+    if is_school_admin(request.user):
+        return redirect("school:admin_overview_dashboard")
+    if is_operation(request.user):
         return redirect("school:admin_payment_slip_review")
     if can_view_teacher_dashboard(request.user):
         return redirect("school:teacher_dashboard")
     if is_teacher(request.user):
-        return redirect(f"{resolve_url('school:login')}?teacher_status=pending")
+        return redirect(f"{resolve_url('school:teacher_login')}?teacher_status=pending")
     return redirect("school:registration")
 
 
@@ -525,7 +604,7 @@ def teacher_pending_approval(request):
     if request.user.can_access_teacher_dashboard():
         return redirect("school:teacher_dashboard")
 
-    return redirect(f"{resolve_url('school:login')}?teacher_status=pending")
+    return redirect(f"{resolve_url('school:teacher_login')}?teacher_status=pending")
 
 
 @login_required
@@ -533,7 +612,7 @@ def teacher_dashboard(request):
     if not can_view_teacher_dashboard(request.user):
         if not is_teacher(request.user):
             raise PermissionDenied
-        return redirect(f"{resolve_url('school:login')}?teacher_status=pending")
+        return redirect(f"{resolve_url('school:teacher_login')}?teacher_status=pending")
 
     groups = list(
         TeacherGroup.objects.filter(
@@ -759,7 +838,7 @@ def teacher_calendar(request):
     if not can_view_teacher_dashboard(request.user):
         if not is_teacher(request.user):
             raise PermissionDenied
-        return redirect(f"{resolve_url('school:login')}?teacher_status=pending")
+        return redirect(f"{resolve_url('school:teacher_login')}?teacher_status=pending")
 
     groups = list(
         teacher_accessible_groups(request.user).annotate(
@@ -1128,7 +1207,7 @@ def admin_overview_dashboard(request):
     return render(request, "school/admin_overview_dashboard.html", context)
 
 
-@login_required(login_url="school:login")
+@login_required(login_url="school:operation_login")
 @never_cache
 @require_http_methods(["GET", "POST"])
 def admin_student_photo_import(request):
@@ -1189,7 +1268,7 @@ def admin_student_photo_import(request):
     )
 
 
-@login_required(login_url="school:login")
+@login_required(login_url="school:operation_login")
 @never_cache
 @require_http_methods(["GET", "POST"])
 def admin_payment_slip_review(request):

@@ -12,7 +12,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path(
         "accounts/login/",
-        RedirectView.as_view(pattern_name="school:login", permanent=False),
+        RedirectView.as_view(pattern_name="school:teacher_login", permanent=False),
         name="account_login_redirect",
     ),
     path(

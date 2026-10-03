@@ -47,6 +47,7 @@
 
         <form class="school-admin-navbar__logout" method="post" action="{% url 'school:logout' %}">
             {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'school:admin_login' %}">
             <button type="submit">ออกจากระบบ</button>
         </form>
     </div>

@@ -283,7 +283,7 @@ def send_interview_result_notification(person):
     return sent
 
 
-@login_required(login_url="school:login")
+@login_required(login_url="school:operation_login")
 @never_cache
 @require_http_methods(["GET", "POST"])
 def interview_results(request):

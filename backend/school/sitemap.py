@@ -8,7 +8,7 @@ SITEMAP_ROUTES = (
     ("school:registration", "daily", "1.0"),
     ("school:registration_success", "monthly", "0.2"),
     ("school:announcement_result", "daily", "0.6"),
-    ("school:login", "monthly", "0.3"),
+    ("school:teacher_login", "monthly", "0.3"),
     ("school:teacher_register", "monthly", "0.4"),
     ("school:teacher_pending_approval", "monthly", "0.2"),
     ("school:student_payment_upload", "weekly", "0.5"),

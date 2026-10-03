@@ -251,7 +251,7 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "accounts.User"
-LOGIN_URL = "school:login"
+LOGIN_URL = "school:teacher_login"
 LOGIN_REDIRECT_URL = "school:post_login_redirect"
 SITE_ID = 1
 

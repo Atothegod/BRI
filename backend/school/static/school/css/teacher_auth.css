@@ -252,7 +252,8 @@ a {
     border-color: var(--auth-danger);
 }
 
-.errorlist {
+.errorlist,
+.auth-error-list {
     margin: 6px 0 0;
     padding: 0;
     color: var(--auth-danger);

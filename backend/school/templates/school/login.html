@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}เข้าสู่ระบบผู้สอน | BRI School of Fivefold{% endblock %}
+{% block title %}{{ auth_title|default:"เข้าสู่ระบบ" }} | BRI School of Fivefold{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'school/css/teacher_auth.css' %}?v=20260912-card-theme-1">
@@ -15,9 +15,9 @@
         </a>
 
         <header class="teacher-auth-heading">
-            <span>ระบบผู้สอน</span>
-            <h1 id="login-title">เข้าสู่ระบบผู้สอน</h1>
-            <p>เข้าสู่ระบบเพื่อดูข้อมูลนักเรียนในกลุ่มของคุณ</p>
+            <span>{{ auth_eyebrow|default:"BRI" }}</span>
+            <h1 id="login-title">{{ auth_title|default:"เข้าสู่ระบบ" }}</h1>
+            <p>{{ auth_description|default:"เข้าสู่ระบบเพื่อใช้งานระบบ BRI" }}</p>
         </header>
 
         {% if teacher_pending_notice %}
@@ -39,12 +39,18 @@
         <div class="form-alert" role="alert">
             <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#info"></use></svg>
             <div>
-                <strong>เข้าสู่ระบบไม่สำเร็จ</strong>
-                <p>ตรวจสอบอีเมลและรหัสผ่านอีกครั้ง</p>
+                <strong>{{ form_error_title|default:"เข้าสู่ระบบไม่สำเร็จ" }}</strong>
+                <p>{{ form_error_text|default:"ตรวจสอบอีเมลและรหัสผ่านอีกครั้ง" }}</p>
+                {% if form.non_field_errors %}
+                <ul class="auth-error-list">
+                    {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+                </ul>
+                {% endif %}
             </div>
         </div>
         {% endif %}
 
+        {% if show_google_oauth %}
         <div class="teacher-oauth">
             {% if google_oauth_enabled %}
             <form method="post" action="{% url 'google_login' %}">
@@ -63,6 +69,7 @@
         </div>
 
         <div class="teacher-auth-divider"><span>หรือเข้าสู่ระบบด้วยรหัสผ่าน</span></div>
+        {% endif %}
 
         <form class="teacher-auth-form" method="post" novalidate>
             {% csrf_token %}
@@ -80,10 +87,12 @@
             </button>
         </form>
 
+        {% if show_teacher_register %}
         <p class="teacher-auth-switch">
             ยังไม่มีบัญชี?
             <a href="{% url 'school:teacher_register' %}">สมัครผู้สอนใหม่</a>
         </p>
+        {% endif %}
     </section>
 </main>
 {% endblock %}

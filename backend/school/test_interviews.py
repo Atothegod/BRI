@@ -479,6 +479,28 @@ class AppointmentScheduleTests(TestCase):
         self.assertContains(response, "นัดหมายและ LINE")
         self.assertContains(response, self.url)
 
+    def test_operation_urls_use_operations_prefix(self):
+        self.assertEqual(reverse("school:interview_results"), "/operations/interview-results/")
+        self.assertEqual(reverse("school:admin_payment_slip_review"), "/operations/payment-slips/")
+        self.assertEqual(reverse("school:admin_student_photo_import"), "/operations/student-photos/")
+
+    def test_operation_user_can_view_results_but_not_announcements(self):
+        User = get_user_model()
+        operation = User.objects.create_user(
+            username="operation",
+            password="test-password",
+            role=User.Role.OPERATION,
+        )
+        self.client.force_login(operation)
+
+        results = self.client.get(reverse("school:interview_results"))
+        announcements = self.client.get(reverse("school:interview_announcements"))
+
+        self.assertEqual(results.status_code, 200)
+        self.assertNotContains(results, "ไปหน้ายิงประกาศผล")
+        self.assertNotContains(results, reverse("school:interview_announcements"))
+        self.assertEqual(announcements.status_code, 403)
+
     @override_settings(LINE_MESSAGING_CHANNEL_ACCESS_TOKEN="line-token")
     @patch("school.line.request.urlopen")
     def test_interview_results_page_can_search_and_pass_online_with_line_notice(self, mock_urlopen):

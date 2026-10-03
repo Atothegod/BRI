@@ -16,7 +16,7 @@ urlpatterns = [
         name="student_group_assignment",
     ),
     path("school-admin/appointments/", interviews.interview_schedule, name="appointment_schedule"),
-    path("school-admin/interview-results/", interviews.interview_results, name="interview_results"),
+    path("operations/interview-results/", interviews.interview_results, name="interview_results"),
     path("school-admin/interview-announcements/", interviews.interview_announcements, name="interview_announcements"),
     path("school-admin/appointments/<int:pk>/notify/", interviews.interview_notify, name="appointment_notify"),
     path("school-admin/appointments/status/", interviews.interview_confirmation_status, name="appointment_confirmation_status"),
@@ -63,9 +63,8 @@ urlpatterns = [
     path("login/redirect/", views.post_login_redirect, name="post_login_redirect"),
     path("school-admin/dashboard/", views.admin_overview_dashboard, name="admin_overview_dashboard"),
 
-    # delete if not needed
-    path("school-admin/student-photos/", views.admin_student_photo_import, name="admin_student_photo_import"),
-    path("school-admin/payment-slips/", views.admin_payment_slip_review, name="admin_payment_slip_review"),
+    path("operations/student-photos/", views.admin_student_photo_import, name="admin_student_photo_import"),
+    path("operations/payment-slips/", views.admin_payment_slip_review, name="admin_payment_slip_review"),
 
     path("school-admin/exports/", views.admin_exports, name="admin_exports"),
     path("school-admin/exports/applications/person/", views.export_application_single_form, name="export_application_single_form"),

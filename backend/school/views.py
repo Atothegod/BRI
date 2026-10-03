@@ -1580,7 +1580,7 @@ def export_applications_csv(request):
             "คริสตจักร",
             "Goal",
             "Vision calling",
-            "คอมเมนต์สัมภาษณ์",
+            "comment",
             "วันที่สมัคร",
         ]
     )

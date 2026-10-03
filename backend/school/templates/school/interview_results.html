@@ -12,7 +12,6 @@
         <div>
             <span>BRI INTERVIEW RESULTS</span>
             <h1>บันทึกผลสัมภาษณ์</h1>
-            <a class="result-page-link" href="{% url 'school:interview_announcements' %}">ไปหน้ายิงประกาศผล</a>
         </div>
         <form method="get" class="results-search">
             <input type="hidden" name="status" value="{{ status }}">
@@ -65,7 +64,7 @@
                     <input type="hidden" name="next" value="{{ next_url }}">
                     <input type="hidden" name="confirmed_result" value="">
                     <label class="result-comment">
-                        <span>คอมเมนต์สัมภาษณ์</span>
+                        <span>comment</span>
                         <textarea name="interview_comment" rows="3" placeholder="บันทึกข้อสังเกต จุดเด่น หรือสิ่งที่ต้องติดตาม">{{ person.interview_comment }}</textarea>
                     </label>
                     <button type="submit" class="comment-save" name="action" value="comment">บันทึกคอมเมนต์</button>

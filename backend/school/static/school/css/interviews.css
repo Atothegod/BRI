@@ -42,8 +42,17 @@ h1 { font-size: 38px; margin: 24px 0; font-weight: 800; }
 .selected-event-main > span { color: #8a6b18; font-size: 13px; font-weight: 800; }
 .selected-event-main h2 { margin: 2px 0 4px; font-size: 26px; }
 .selected-event-main p { margin: 0; color: #5f6b63; }
-.event-slots { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 12px; }
-.event-slots span { padding: 5px 9px; color: #425b46; background: #eef3ee; border-radius: 4px; font-size: 14px; font-weight: 700; }
+.event-slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; margin-top: 12px; }
+.event-slots > span { padding: 5px 9px; color: #425b46; background: #eef3ee; border-radius: 4px; font-size: 14px; font-weight: 700; }
+.event-slot { display: grid; gap: 5px; min-width: 0; padding: 9px 10px; background: #f7faf7; border: 1px solid #dce6dc; border-radius: 6px; }
+.event-slot.full { color: #8a3418; background: #fff4e8; border-color: #fed7aa; }
+.event-slot span { display: flex; justify-content: space-between; gap: 10px; align-items: center; min-width: 0; color: inherit; font-size: 14px; font-weight: 800; }
+.event-slot strong { min-width: 0; overflow-wrap: anywhere; }
+.event-slot b { flex: 0 0 auto; }
+.event-slot progress { width: 100%; height: 8px; accent-color: var(--bri-sage); }
+.event-slot.full progress { accent-color: #d97706; }
+.event-slot small { color: #5f6b63; font-size: 13px; font-weight: 700; }
+.event-slot.full small { color: #8a3418; }
 .event-metrics { display: grid; grid-template-columns: repeat(3, minmax(100px, 1fr)); align-self: center; }
 .event-metrics div { min-width: 110px; padding: 8px 16px; border-left: 1px solid var(--bri-border); }
 .event-metrics span, .event-metrics strong { display: block; }

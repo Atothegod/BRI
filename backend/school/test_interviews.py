@@ -239,6 +239,21 @@ class AppointmentScheduleTests(TestCase):
             {"token": tokens[0], "slot": first_slot.pk},
         )
 
+        admin_view = self.client.get(self.url, {
+            "type": "interview",
+            "event": Appointment.objects.get().pk,
+            "audience": "waiting",
+        })
+        self.assertContains(admin_view, "09:30-10:30")
+        self.assertContains(admin_view, "10:30-11:30")
+        self.assertContains(admin_view, "เต็มแล้ว")
+        self.assertContains(admin_view, "เหลือ 1 ที่นั่ง")
+        slot_status = self.client.post(reverse("school:appointment_confirmation_status"), {
+            "event_id": Appointment.objects.get().pk,
+        }).json()["event"]["slots"]
+        self.assertEqual(slot_status[0]["remaining"], 0)
+        self.assertEqual(slot_status[1]["remaining"], 1)
+
         full_slot = self.client.post(
             reverse("school:appointment_confirmation"),
             {"token": tokens[1], "slot": first_slot.pk},
@@ -330,8 +345,8 @@ class AppointmentScheduleTests(TestCase):
             "appointment_type": "interview",
             "event_id": appointment.pk,
             "people": [self.people[1].pk],
-            "location": "",
-            "meeting_url": "https://meet.example/provincial",
+            "location": "ออนไลน์",
+            "meeting_url": "",
             "details": "สัมภาษณ์ออนไลน์",
         })
         self.assertEqual(added.status_code, 302)
@@ -347,15 +362,42 @@ class AppointmentScheduleTests(TestCase):
             ensure_ascii=False,
         )
         self.assertIn("BRI Bangkok", metro_message)
-        self.assertNotIn("meet.example/provincial", metro_message)
         self.assertNotIn("BRI Bangkok", provincial_message)
-        self.assertIn("meet.example/provincial", provincial_message)
+        self.assertIn("ออนไลน์", provincial_message)
         self.assertIn("สัมภาษณ์ออนไลน์", provincial_message)
 
         confirmation = self.client.get(self.confirmation_url(provincial_participant))
+        self.assertContains(confirmation, "ออนไลน์")
         self.assertContains(confirmation, "สัมภาษณ์ออนไลน์")
-        self.assertContains(confirmation, "https://meet.example/provincial")
         self.assertNotContains(confirmation, "BRI Bangkok")
+
+        waiting = self.client.get(self.url, {
+            "type": "interview", "event": appointment.pk, "audience": "waiting",
+        })
+        place_options = {
+            option["label"]: option["key"]
+            for option in waiting.context["place_options"]
+        }
+        self.assertIn("BRI Bangkok", place_options)
+        self.assertIn("ออนไลน์", place_options)
+
+        onsite_page = self.client.get(self.url, {
+            "type": "interview",
+            "event": appointment.pk,
+            "audience": "waiting",
+            "place": place_options["BRI Bangkok"],
+        })
+        self.assertContains(onsite_page, self.people[0].full_name)
+        self.assertNotContains(onsite_page, self.people[1].full_name)
+
+        online_page = self.client.get(self.url, {
+            "type": "interview",
+            "event": appointment.pk,
+            "audience": "waiting",
+            "place": place_options["ออนไลน์"],
+        })
+        self.assertContains(online_page, self.people[1].full_name)
+        self.assertNotContains(online_page, self.people[0].full_name)
 
         resend = self.client.post(self.url, {
             "action": "resend",
@@ -363,6 +405,7 @@ class AppointmentScheduleTests(TestCase):
             "event_id": appointment.pk,
             "audience": "waiting",
             "province": "metro",
+            "place": place_options["BRI Bangkok"],
             "participants": [metro_participant.pk],
             "location": "BRI Bangkok อาคารใหม่",
             "meeting_url": "",

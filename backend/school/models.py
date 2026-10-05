@@ -268,6 +268,10 @@ class AppointmentParticipant(TimeStampedModel):
         return self.invitation_value("location")
 
     @property
+    def invitation_location_label(self):
+        return self.invitation_location or "ไม่ระบุสถานที่"
+
+    @property
     def invitation_meeting_url(self):
         return self.invitation_value("meeting_url")
 

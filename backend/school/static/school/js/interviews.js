@@ -190,6 +190,20 @@
                 if (audienceWaiting) audienceWaiting.textContent = data.event.waiting_count ?? data.event.invited_count;
                 if (audienceFailed) audienceFailed.textContent = data.event.failed_count;
                 if (audienceNextRound) audienceNextRound.textContent = data.event.next_round_count ?? 0;
+                (data.event.slots || []).forEach(slot => {
+                    const slotCard = document.querySelector(`[data-slot-status="${slot.id}"]`);
+                    if (!slotCard) return;
+                    slotCard.classList.toggle('full', !!slot.is_full);
+                    const count = slotCard.querySelector('[data-slot-count]');
+                    const progress = slotCard.querySelector('[data-slot-progress]');
+                    const remaining = slotCard.querySelector('[data-slot-remaining]');
+                    if (count) count.textContent = `${slot.confirmed_count}/${slot.capacity}`;
+                    if (progress) {
+                        progress.value = slot.confirmed_count;
+                        progress.max = slot.capacity;
+                    }
+                    if (remaining) remaining.textContent = slot.is_full ? 'เต็มแล้ว' : `เหลือ ${slot.remaining} ที่นั่ง`;
+                });
             }
         } catch (_) {
             // The next visibility change or polling interval retries quietly.

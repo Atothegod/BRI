@@ -1,4 +1,5 @@
 from datetime import datetime
+from urllib.parse import urlencode
 from zoneinfo import ZoneInfo
 
 from django import forms
@@ -101,6 +102,39 @@ def filter_people_by_province(people, province):
     return people.exclude(filtered_province="").exclude(
         filtered_province__in=METRO_PROVINCES
     )
+
+
+def participant_place_key(participant):
+    return participant.invitation_location.strip() or "__blank__"
+
+
+def participant_ids_for_place(participations, place):
+    if not place:
+        return []
+    return [
+        participant.pk
+        for participant in participations.select_related("appointment")
+        if participant_place_key(participant) == place
+    ]
+
+
+def place_filter_options(participations):
+    grouped = {}
+    for participant in participations.select_related("appointment").order_by("pk"):
+        key = participant_place_key(participant)
+        item = grouped.setdefault(
+            key,
+            {
+                "key": key,
+                "label": participant.invitation_location_label,
+                "count": 0,
+                "confirmed": 0,
+            },
+        )
+        item["count"] += 1
+        if participant.response_status == AppointmentParticipant.ResponseStatus.CONFIRMED:
+            item["confirmed"] += 1
+    return list(grouped.values())
 
 
 class AppointmentScheduleForm(forms.Form):
@@ -648,12 +682,18 @@ def interview_schedule(request):
                     for participant in participants
                 ]
                 messages.success(request, f"เตรียมส่ง LINE ซ้ำให้ {len(participants)} คนแล้ว")
-                redirect_query = (
-                    f"type={appointment_type}&event={appointment.pk}&audience={request.POST.get('audience', 'waiting')}"
-                )
+                redirect_params = {
+                    "type": appointment_type,
+                    "event": appointment.pk,
+                    "audience": request.POST.get("audience", "waiting"),
+                }
                 province = request.POST.get("province", "")
                 if province in {"metro", "provincial"}:
-                    redirect_query += f"&province={province}"
+                    redirect_params["province"] = province
+                place = request.POST.get("place", "")
+                if place:
+                    redirect_params["place"] = place
+                redirect_query = urlencode(redirect_params)
                 return redirect(f"{reverse('school:appointment_schedule')}?{redirect_query}")
     if request.method == "POST" and not is_resend and not invalid_requested_event and form.is_valid():
         ids = list(form.cleaned_data["people"].values_list("pk", flat=True))
@@ -710,7 +750,7 @@ def interview_schedule(request):
     query = request.GET.get("q", "").strip()
     filters = {
         key: request.GET.get(key, "")
-        for key in ("appointment", "line", "notification", "confirmation", "province")
+        for key in ("appointment", "line", "notification", "confirmation", "province", "place")
     }
     audience = request.GET.get("audience", "")
     if audience == "sent":
@@ -804,6 +844,13 @@ def interview_schedule(request):
         people = people.filter(appointment_participations__in=participations.filter(response_status="confirmed"))
     elif selected_appointment is not None and filters["confirmation"] == "waiting":
         people = people.filter(appointment_participations__in=participations.filter(response_status="waiting"))
+    if selected_appointment is not None and filters["place"]:
+        people = people.filter(
+            appointment_participations__pk__in=participant_ids_for_place(
+                participations,
+                filters["place"],
+            )
+        )
     people = people.distinct()
     query_params = request.GET.copy()
     query_params.pop("page", None)
@@ -882,6 +929,12 @@ def interview_schedule(request):
         )
         and audience not in {"unsent", "confirmed_other", "next_round"}
     )
+    place_options = place_filter_options(participations) if selected_appointment is not None else []
+    selected_slot_options = (
+        interview_slot_options(selected_appointment)
+        if selected_appointment is not None and appointment_type == Appointment.Type.INTERVIEW
+        else []
+    )
     return render(request, "school/interview_schedule.html", {
         "form": form, "resend_form": resend_form, "page_obj": page, "query": query, "filters": filters,
         "has_filters": bool(query or any(filters.values())),
@@ -902,6 +955,8 @@ def interview_schedule(request):
         "can_resend": can_resend,
         "audience": audience,
         "audience_counts": audience_counts,
+        "place_options": place_options,
+        "selected_slot_options": selected_slot_options,
         "slot_rows": form.slot_rows(),
     })
 
@@ -1020,6 +1075,7 @@ def interview_confirmation_status(request):
                 "waiting_count": max(appointment.waiting_count - next_round_count, 0),
                 "next_round_count": next_round_count,
                 "invited_count": appointment.invited_count,
+                "slots": interview_slot_options(appointment),
             }
     return JsonResponse({"participants": {str(item["pk"]): {
         "status": item["response_status"],

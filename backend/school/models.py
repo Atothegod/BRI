@@ -94,6 +94,17 @@ class Person(TimeStampedModel):
         return self.line_display_name or self.full_name
 
     @property
+    def province_name(self):
+        address_th = self.extra_data.get("address_th") or {}
+        address_en = self.extra_data.get("address_en") or {}
+        return (
+            self.extra_data.get("province")
+            or address_th.get("province")
+            or address_en.get("state_province")
+            or ""
+        )
+
+    @property
     def student_code(self):
         if not hasattr(self, "student") or not self.student.is_paid:
             return ""
@@ -232,6 +243,8 @@ class AppointmentParticipant(TimeStampedModel):
     notified_at = models.DateTimeField(null=True, blank=True)
     confirmed_at = models.DateTimeField(null=True, blank=True)
     notification_error = models.CharField(max_length=500, blank=True)
+    invitation_message = models.JSONField(default=dict, blank=True)
+    notification_count = models.PositiveIntegerField(default=0)
 
     class Meta:
         ordering = ("pk",)
@@ -244,6 +257,23 @@ class AppointmentParticipant(TimeStampedModel):
 
     def __str__(self):
         return f"{self.appointment.title} - {self.person.full_name}"
+
+    def invitation_value(self, field_name):
+        if field_name in self.invitation_message:
+            return self.invitation_message.get(field_name) or ""
+        return getattr(self.appointment, field_name)
+
+    @property
+    def invitation_location(self):
+        return self.invitation_value("location")
+
+    @property
+    def invitation_meeting_url(self):
+        return self.invitation_value("meeting_url")
+
+    @property
+    def invitation_details(self):
+        return self.invitation_value("details")
 
 
 class TeacherGroup(TimeStampedModel):

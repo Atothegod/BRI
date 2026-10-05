@@ -501,10 +501,10 @@ def build_appointment_invitation_flex_message(participant):
         })
     else:
         contents.append(build_flex_row("เวลา", f"{time} น."))
-    if appointment.location:
-        contents.append(build_flex_row("สถานที่", appointment.location))
-    if appointment.details:
-        contents.append({"type": "text", "text": appointment.details, "size": "sm", "wrap": True, "color": "#425B46"})
+    if participant.invitation_location:
+        contents.append(build_flex_row("สถานที่", participant.invitation_location))
+    if participant.invitation_details:
+        contents.append({"type": "text", "text": participant.invitation_details, "size": "sm", "wrap": True, "color": "#425B46"})
     buttons = [{
         "type": "button",
         "style": "primary",
@@ -512,12 +512,12 @@ def build_appointment_invitation_flex_message(participant):
         "color": "#425B46",
         "action": {"type": "uri", "label": "เลือกเวลา" if slots else "ยืนยันเข้าร่วม", "uri": confirmation_link},
     }]
-    if appointment.meeting_url:
+    if participant.invitation_meeting_url:
         buttons.append({
             "type": "button",
             "style": "secondary",
             "height": "sm",
-            "action": {"type": "uri", "label": "เปิดลิงก์เข้าร่วม", "uri": appointment.meeting_url},
+            "action": {"type": "uri", "label": "เปิดลิงก์เข้าร่วม", "uri": participant.invitation_meeting_url},
         })
     return {
         "type": "flex",

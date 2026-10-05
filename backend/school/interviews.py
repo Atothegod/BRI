@@ -9,7 +9,9 @@ from django.core import signing
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import CharField, Count, Q, Value
+from django.db.models.fields.json import KeyTextTransform, KeyTransform
+from django.db.models.functions import Coalesce
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -43,6 +45,17 @@ ADMIN_APPOINTMENT_TYPES = (
     Appointment.Type.ORIENTATION,
 )
 APPOINTMENT_AUDIENCES = ("unsent", "waiting", "confirmed", "failed", "confirmed_other", "next_round")
+METRO_PROVINCES = (
+    "กรุงเทพมหานคร",
+    "กรุงเทพ",
+    "กรุงเทพฯ",
+    "กทม",
+    "นครปฐม",
+    "นนทบุรี",
+    "ปทุมธานี",
+    "สมุทรปราการ",
+    "สมุทรสาคร",
+)
 
 
 def appointment_candidates(appointment_type):
@@ -59,6 +72,35 @@ def confirmed_interview_people():
         appointment__appointment_type=Appointment.Type.INTERVIEW,
         response_status=AppointmentParticipant.ResponseStatus.CONFIRMED,
     ).values("person_id")
+
+
+def invitation_message(data):
+    return {
+        "location": data.get("location", "").strip(),
+        "meeting_url": data.get("meeting_url", "").strip(),
+        "details": data.get("details", "").strip(),
+    }
+
+
+def filter_people_by_province(people, province):
+    if province not in {"metro", "provincial"}:
+        return people
+    people = people.annotate(
+        filtered_province=Coalesce(
+            KeyTextTransform("province", "extra_data"),
+            KeyTextTransform(
+                "province",
+                KeyTransform("address_th", "extra_data"),
+            ),
+            Value(""),
+            output_field=CharField(),
+        )
+    )
+    if province == "metro":
+        return people.filter(filtered_province__in=METRO_PROVINCES)
+    return people.exclude(filtered_province="").exclude(
+        filtered_province__in=METRO_PROVINCES
+    )
 
 
 class AppointmentScheduleForm(forms.Form):
@@ -98,6 +140,8 @@ class AppointmentScheduleForm(forms.Form):
             self.fields["event_id"].initial = selected_appointment.pk
             for field_name in ("title", "date", "time", "location", "meeting_url", "details"):
                 self.fields[field_name].required = False
+            for field_name in ("location", "meeting_url", "details"):
+                self.fields[field_name].initial = getattr(selected_appointment, field_name)
         if appointment_type == Appointment.Type.INTERVIEW:
             self.fields["time"].required = False
             self.fields["time"].widget = forms.HiddenInput()
@@ -185,6 +229,40 @@ class AppointmentScheduleForm(forms.Form):
         data["total_capacity"] = sum(slot["capacity"] for slot in slot_defs)
         data["slot_defs"] = slot_defs
         data["starts_at"] = min(slot["starts_at"] for slot in slot_defs)
+
+
+class AppointmentResendForm(forms.Form):
+    participants = forms.ModelMultipleChoiceField(
+        queryset=AppointmentParticipant.objects.none(),
+        label="ผู้รับ",
+        error_messages={
+            "required": "กรุณาเลือกผู้รับอย่างน้อย 1 คน",
+            "invalid_choice": "มีผู้รับที่ไม่ได้อยู่ใน Event นี้ กรุณาเลือกใหม่",
+        },
+    )
+    location = forms.CharField(label="สถานที่ในข้อความ", required=False, max_length=500)
+    meeting_url = forms.URLField(label="ลิงก์เข้าร่วมในข้อความ", required=False, max_length=1000)
+    details = forms.CharField(
+        label="รายละเอียดในข้อความ",
+        required=False,
+        max_length=2000,
+        widget=forms.Textarea(attrs={"rows": 3}),
+    )
+
+    def __init__(self, *args, appointment=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.appointment = appointment
+        if appointment is None:
+            return
+        self.fields["participants"].queryset = appointment.participants.all()
+        for field_name in ("location", "meeting_url", "details"):
+            self.fields[field_name].initial = getattr(appointment, field_name)
+
+    def clean_participants(self):
+        participants = self.cleaned_data["participants"]
+        if len(participants) > 500:
+            raise forms.ValidationError("เลือกได้ครั้งละไม่เกิน 500 คน")
+        return participants
 
 
 def selected_appointment_type(request):
@@ -449,7 +527,7 @@ def interview_schedule(request):
     appointments = list(Appointment.objects.filter(appointment_type=appointment_type).prefetch_related("slots").annotate(
         participant_count=Count("participants", distinct=True),
         confirmed_count=Count("participants", filter=Q(participants__response_status="confirmed"), distinct=True),
-        sent_count=Count("participants", filter=Q(participants__notification_status="sent"), distinct=True),
+        sent_count=Count("participants", filter=Q(participants__notification_count__gt=0), distinct=True),
         failed_count=Count("participants", filter=Q(participants__notification_status="failed"), distinct=True),
     )[:12])
     for appointment in appointments:
@@ -474,7 +552,7 @@ def interview_schedule(request):
             ).prefetch_related("slots").annotate(
                 participant_count=Count("participants", distinct=True),
                 confirmed_count=Count("participants", filter=Q(participants__response_status="confirmed"), distinct=True),
-                sent_count=Count("participants", filter=Q(participants__notification_status="sent"), distinct=True),
+                sent_count=Count("participants", filter=Q(participants__notification_count__gt=0), distinct=True),
                 failed_count=Count("participants", filter=Q(participants__notification_status="failed"), distinct=True),
             ).first()
             if selected_appointment:
@@ -499,16 +577,85 @@ def interview_schedule(request):
                 source_appointment.slot_capacity = appointment_capacity(source_appointment)
                 source_appointment.is_full = appointment_is_full(source_appointment, source_appointment.confirmed_count)
 
+    is_resend = request.method == "POST" and request.POST.get("action") == "resend"
     form = AppointmentScheduleForm(
-        request.POST or None,
+        request.POST if request.method == "POST" and not is_resend else None,
         appointment_type=appointment_type,
         selected_appointment=selected_appointment,
     )
+    resend_form = AppointmentResendForm(
+        request.POST if is_resend else None,
+        appointment=selected_appointment,
+    )
     invalid_requested_event = bool(requested_event and requested_event != "new" and selected_appointment is None)
-    if request.method == "POST" and invalid_requested_event:
+    if request.method == "POST" and invalid_requested_event and not is_resend:
         form.is_valid()
         form.add_error("event_id", "ไม่พบ Event ที่เลือก กรุณาเลือก Event ใหม่")
-    if request.method == "POST" and not invalid_requested_event and form.is_valid():
+    if is_resend:
+        if selected_appointment is None:
+            resend_form.is_valid()
+            resend_form.add_error(None, "ไม่พบ Event ที่เลือก กรุณาเลือก Event ใหม่")
+        elif resend_form.is_valid():
+            participant_ids = list(
+                resend_form.cleaned_data["participants"].values_list("pk", flat=True)
+            )
+            with transaction.atomic():
+                appointment = Appointment.objects.select_for_update().get(pk=selected_appointment.pk)
+                participants = list(
+                    AppointmentParticipant.objects.select_for_update()
+                    .select_related("person")
+                    .filter(appointment=appointment, pk__in=participant_ids)
+                    .order_by("pk")
+                )
+                eligible_person_ids = set(
+                    appointment_candidates(appointment.appointment_type)
+                    .filter(pk__in=[participant.person_id for participant in participants])
+                    .values_list("pk", flat=True)
+                )
+                invalid_participants = [
+                    participant
+                    for participant in participants
+                    if participant.person_id not in eligible_person_ids
+                ]
+                full_unconfirmed = appointment_is_full(appointment) and any(
+                    participant.response_status != AppointmentParticipant.ResponseStatus.CONFIRMED
+                    for participant in participants
+                )
+                if (
+                    appointment.status != Appointment.Status.SCHEDULED
+                    or not appointment_is_confirmable(appointment)
+                ):
+                    resend_form.add_error(None, "Event นี้ปิดรับแล้ว ไม่สามารถส่งข้อความซ้ำได้")
+                elif invalid_participants:
+                    resend_form.add_error("participants", "สถานะผู้รับบางคนเปลี่ยนแล้ว กรุณาเลือกใหม่")
+                elif full_unconfirmed:
+                    resend_form.add_error(
+                        "participants",
+                        "Event เต็มแล้ว ส่งซ้ำได้เฉพาะผู้ที่ยืนยันใน Event นี้แล้ว",
+                    )
+                else:
+                    message_data = invitation_message(resend_form.cleaned_data)
+                    for participant in participants:
+                        participant.invitation_message = message_data
+                        participant.save(update_fields=["invitation_message", "updated_at"])
+            if not resend_form.errors:
+                request.session["appointment_send_queue"] = [
+                    {
+                        "id": participant.pk,
+                        "at": appointment.starts_at.isoformat(),
+                        "force": True,
+                    }
+                    for participant in participants
+                ]
+                messages.success(request, f"เตรียมส่ง LINE ซ้ำให้ {len(participants)} คนแล้ว")
+                redirect_query = (
+                    f"type={appointment_type}&event={appointment.pk}&audience={request.POST.get('audience', 'waiting')}"
+                )
+                province = request.POST.get("province", "")
+                if province in {"metro", "provincial"}:
+                    redirect_query += f"&province={province}"
+                return redirect(f"{reverse('school:appointment_schedule')}?{redirect_query}")
+    if request.method == "POST" and not is_resend and not invalid_requested_event and form.is_valid():
         ids = list(form.cleaned_data["people"].values_list("pk", flat=True))
         appointment_type = form.cleaned_data["appointment_type"]
         with transaction.atomic():
@@ -536,8 +683,14 @@ def interview_schedule(request):
                         AppointmentSlot(appointment=appointment, **slot)
                         for slot in form.cleaned_data.get("slot_defs", [])
                     ])
+                message_data = invitation_message(form.cleaned_data)
                 participants = AppointmentParticipant.objects.bulk_create([
-                    AppointmentParticipant(appointment=appointment, person=person) for person in people
+                    AppointmentParticipant(
+                        appointment=appointment,
+                        person=person,
+                        invitation_message=message_data,
+                    )
+                    for person in people
                 ])
                 if appointment_type == Appointment.Type.INTERVIEW:
                     legacy_details = "\n".join(filter(None, [appointment.location, appointment.meeting_url, appointment.details]))
@@ -555,7 +708,10 @@ def interview_schedule(request):
             return redirect(f"{reverse('school:appointment_schedule')}?type={appointment_type}&event={appointment.pk}&audience=waiting")
 
     query = request.GET.get("q", "").strip()
-    filters = {key: request.GET.get(key, "") for key in ("appointment", "line", "notification", "confirmation")}
+    filters = {
+        key: request.GET.get(key, "")
+        for key in ("appointment", "line", "notification", "confirmation", "province")
+    }
     audience = request.GET.get("audience", "")
     if audience == "sent":
         audience = "waiting"
@@ -637,6 +793,7 @@ def interview_schedule(request):
             people = people.filter(pk__in=waiting_display_participations.values("person_id"))
     if query:
         people = people.filter(Q(first_name__icontains=query) | Q(last_name__icontains=query) | Q(phone__icontains=query) | Q(line_display_name__icontains=query))
+    people = filter_people_by_province(people, filters["province"])
     if filters["line"] == "connected":
         people = people.exclude(line_user_id="")
     elif filters["line"] == "missing":
@@ -715,8 +872,18 @@ def interview_schedule(request):
         and appointment_is_confirmable(selected_appointment)
         and not selected_appointment.is_full
     )
+    can_resend = bool(
+        selected_appointment
+        and selected_appointment.status == Appointment.Status.SCHEDULED
+        and appointment_is_confirmable(selected_appointment)
+        and (
+            not selected_appointment.is_full
+            or audience == "confirmed"
+        )
+        and audience not in {"unsent", "confirmed_other", "next_round"}
+    )
     return render(request, "school/interview_schedule.html", {
-        "form": form, "page_obj": page, "query": query, "filters": filters,
+        "form": form, "resend_form": resend_form, "page_obj": page, "query": query, "filters": filters,
         "has_filters": bool(query or any(filters.values())),
         "page_query_prefix": f"?{filter_query}&" if filter_query else "?",
         "selected_ids": request.POST.getlist("people"),
@@ -732,6 +899,7 @@ def interview_schedule(request):
         "selected_appointment": selected_appointment,
         "source_appointment": source_appointment,
         "selected_event_open": selected_event_open,
+        "can_resend": can_resend,
         "audience": audience,
         "audience_counts": audience_counts,
         "slot_rows": form.slot_rows(),
@@ -756,21 +924,39 @@ def interview_notify(request, pk):
             return JsonResponse({"error": "นัดนี้มีการเปลี่ยนแปลงหรือไม่สามารถส่งได้แล้ว"}, status=409)
         if not appointment_candidates(appointment.appointment_type).filter(pk=participant.person_id).exists():
             return JsonResponse({"error": "สถานะผู้เข้าร่วมไม่ตรงเงื่อนไขแล้ว"}, status=409)
-        if participant.notification_status == AppointmentParticipant.NotificationStatus.SENT:
+        force = request.POST.get("force") == "1"
+        if participant.notification_status == AppointmentParticipant.NotificationStatus.SENT and not force:
             return JsonResponse({"sent": True, "label": "LINE รับข้อความแล้ว"})
-        if appointment.appointment_type == Appointment.Type.INTERVIEW and appointment_is_full(appointment):
+        if (
+            appointment.appointment_type == Appointment.Type.INTERVIEW
+            and appointment_is_full(appointment)
+            and participant.response_status != AppointmentParticipant.ResponseStatus.CONFIRMED
+        ):
             return JsonResponse({"error": "รอบสัมภาษณ์เต็มแล้ว กรุณาสร้าง Event ใหม่"}, status=409)
         sent = send_line_push_message(participant.person.line_user_id, [build_appointment_invitation_flex_message(participant)])
         participant.notification_status = AppointmentParticipant.NotificationStatus.SENT if sent else AppointmentParticipant.NotificationStatus.FAILED
-        participant.notified_at = timezone.now() if sent else None
         participant.notification_error = "" if sent else "LINE ไม่รับข้อความ โปรดตรวจ token และการเชื่อมต่อ"
-        participant.save(update_fields=["notification_status", "notified_at", "notification_error", "updated_at"])
+        if sent:
+            participant.notified_at = timezone.now()
+            participant.notification_count += 1
+        participant.save(update_fields=[
+            "notification_status",
+            "notified_at",
+            "notification_error",
+            "notification_count",
+            "updated_at",
+        ])
         if appointment.appointment_type == Appointment.Type.INTERVIEW:
             Person.objects.filter(pk=participant.person_id).update(
                 interview_notification_state=participant.notification_status,
                 interview_notified_at=participant.notified_at,
             )
-        return JsonResponse({"sent": sent, "label": "LINE รับข้อความแล้ว" if sent else "ส่งไม่สำเร็จ ตรวจสอบ LINE / token แล้วลองใหม่"})
+        return JsonResponse({
+            "sent": sent,
+            "label": "LINE รับข้อความแล้ว" if sent else "ส่งไม่สำเร็จ ตรวจสอบ LINE / token แล้วลองใหม่",
+            "notification_count": participant.notification_count,
+            "notified_at": thai_date(participant.notified_at, include_time=True) if sent else "",
+        })
 
 
 @login_required(login_url="admin:login")
@@ -797,7 +983,7 @@ def interview_confirmation_status(request):
             ),
             sent_count=Count(
                 "participants",
-                filter=Q(participants__notification_status=AppointmentParticipant.NotificationStatus.SENT),
+                filter=Q(participants__notification_count__gt=0),
                 distinct=True,
             ),
             failed_count=Count(
@@ -964,6 +1150,9 @@ def interview_confirmation(request):
         "person": participant.person, "appointment": participant.appointment, "token": token,
         "slot_options": slot_options, "slots_are_full": slots_are_full,
         "selected_slot": participant.selected_slot, "slot_error": slot_error,
+        "invitation_location": participant.invitation_location,
+        "invitation_meeting_url": participant.invitation_meeting_url,
+        "invitation_details": participant.invitation_details,
         "event_eyebrow": "BRI Orientation" if is_orientation else "BRI Class" if is_class else "BRI Interview",
         "event_heading": "ยืนยันเข้าร่วมปฐมนิเทศ" if is_orientation else "ยืนยันนัดเรียน" if is_class else "เลือกเวลาสัมภาษณ์",
         "event_confirmed_heading": "ยืนยันเข้าร่วมปฐมนิเทศแล้ว" if is_orientation else "ยืนยันนัดเรียนแล้ว" if is_class else "ยืนยันนัดสัมภาษณ์แล้ว",

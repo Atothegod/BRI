@@ -13,8 +13,8 @@
             <div><dt>กิจกรรม</dt><dd>{{ appointment.title }}</dd></div>
             <div><dt>วันที่</dt><dd>{{ appointment.starts_at|thai_date:"weekday" }}</dd></div>
             <div><dt>เวลา</dt><dd>{% if selected_slot %}{{ selected_slot.starts_at|date:"H:i" }}-{{ selected_slot.ends_at|date:"H:i" }} น.{% elif slot_options %}เลือกช่วงเวลาที่สะดวกด้านล่าง{% else %}{{ appointment.starts_at|date:"H:i" }} น.{% endif %}</dd></div>
-            {% if appointment.location %}<div><dt>สถานที่</dt><dd>{{ appointment.location }}</dd></div>{% endif %}
-            {% if appointment.details %}<div><dt>รายละเอียด</dt><dd>{{ appointment.details|linebreaksbr }}</dd></div>{% endif %}
+            {% if invitation_location %}<div><dt>สถานที่</dt><dd>{{ invitation_location }}</dd></div>{% endif %}
+            {% if invitation_details %}<div><dt>รายละเอียด</dt><dd>{{ invitation_details|linebreaksbr }}</dd></div>{% endif %}
         {% endtimezone %}</dl>
         {% if confirmation_state == "ready" %}<form method="post" class="confirmation-form">{% csrf_token %}<input type="hidden" name="token" value="{{ token }}">
             {% if slot_options %}
@@ -37,7 +37,7 @@
         </form>
         {% elif confirmation_state == "full" %}<div class="confirmation-full confirmation-full-page" role="status"><strong>ขณะนี้มีผู้ยืนยันครบตามจำนวนแล้ว</strong><span>คุณยังไม่ได้ยืนยันในรอบนี้ ทีมงานจะนัดวันสัมภาษณ์รอบถัดไปให้อีกครั้ง</span></div><a class="meeting-link" href="{{ line_return_url }}">กลับไปยัง LINE</a>
         {% else %}<div class="confirmation-success" role="status">ทีมงานได้รับการยืนยันของคุณแล้ว</div><a class="meeting-link" href="{{ line_return_url }}">กลับไปยัง LINE</a>{% endif %}
-        {% if appointment.meeting_url %}<a class="meeting-link" href="{{ appointment.meeting_url }}" rel="noopener noreferrer">เปิดลิงก์เข้าร่วม</a>{% endif %}
+        {% if invitation_meeting_url %}<a class="meeting-link" href="{{ invitation_meeting_url }}" rel="noopener noreferrer">เปิดลิงก์เข้าร่วม</a>{% endif %}
     {% elif confirmation_state == "stale" %}<span class="confirmation-eyebrow">BRI Appointment</span><h1 id="confirmation-title">นัดนี้มีการเปลี่ยนแปลง</h1><p>กรุณาใช้ข้อความนัดหมายล่าสุด หรือติดต่อทีมงาน BRI</p>
     {% else %}<span class="confirmation-eyebrow">BRI Appointment</span><h1 id="confirmation-title">ไม่สามารถเปิดนัดนี้ได้</h1><p>ลิงก์ไม่ถูกต้อง กรุณากลับไปเปิดจากข้อความ LINE ที่ทีมงานส่งให้</p>{% endif %}
 </section></main>

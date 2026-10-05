@@ -1,6 +1,6 @@
 (() => {
     const form = document.querySelector('#schedule-form');
-    const boxes = [...form.querySelectorAll('[name="people"]')];
+    const boxes = [...form.querySelectorAll('[name="people"], [name="participants"]')];
     const selectAll = document.querySelector('#select-all');
     const submit = document.querySelector('#confirm-schedule');
     const slotRows = document.querySelector('[data-slot-rows]');
@@ -92,7 +92,9 @@
         const typeLabel = form.dataset.typeLabel || 'นัดหมาย';
         const eventTitle = form.dataset.eventTitle;
         const dateLabel = formatThaiDateInput(form.elements.date?.value);
-        const eventLabel = eventTitle
+        const eventLabel = form.dataset.resend
+            ? `ส่ง LINE ให้ ${count} คนใน Event “${eventTitle}” อีกครั้งด้วยข้อความนี้`
+            : eventTitle
             ? `เพิ่ม ${count} คนเข้า Event “${eventTitle}” และส่ง LINE`
             : `สร้าง Event ${typeLabel} วันที่ ${dateLabel} สำหรับ ${count} คน และส่ง LINE`;
         if (busy || !window.confirm(`${eventLabel} ใช่หรือไม่?`)) event.preventDefault();
@@ -106,10 +108,12 @@
         try {
             const response = await fetch(item.url || `${window.location.pathname}${item.id}/notify/`, {
                 method: 'POST', headers: { 'X-CSRFToken': form.elements.csrfmiddlewaretoken.value },
-                body: new URLSearchParams({ at: item.at }),
+                body: new URLSearchParams({ at: item.at, force: item.force ? '1' : '0' }),
             });
             const data = await response.json();
             if (status) { status.textContent = data.label || data.error; status.className = data.sent ? 'state-sent' : 'state-failed'; }
+            const meta = document.querySelector(`[data-notification-meta="${item.id}"]`);
+            if (meta && data.sent) meta.textContent = `ส่งสำเร็จ ${data.notification_count} ครั้ง · ${data.notified_at}`;
             if (button && data.sent) button.hidden = true;
             return !!data.sent;
         } catch (_) {

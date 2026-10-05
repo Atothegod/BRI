@@ -1,4 +1,5 @@
 import json
+import threading
 from datetime import timedelta
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlsplit
@@ -6,7 +7,8 @@ from zoneinfo import ZoneInfo
 
 from django.contrib.auth import get_user_model
 from django.core import signing
-from django.test import TestCase, override_settings
+from django.db import connections
+from django.test import Client, TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -195,7 +197,19 @@ class AppointmentScheduleTests(TestCase):
         confirmed = self.client.post(reverse("school:appointment_confirmation"), {"token": first_token, "slot": slot.pk})
         self.assertContains(confirmed, "ยืนยันนัดสัมภาษณ์แล้ว")
         participants[0].refresh_from_db()
+        participants[0].person.refresh_from_db()
         self.assertEqual(participants[0].selected_slot, slot)
+        self.assertEqual(participants[0].response_status, AppointmentParticipant.ResponseStatus.CONFIRMED)
+        self.assertIsNotNone(participants[0].confirmed_at)
+        self.assertEqual(participants[0].person.interview_confirmed_at, participants[0].confirmed_at)
+
+        repeated = self.client.post(
+            reverse("school:appointment_confirmation"),
+            {"token": first_token, "slot": slot.pk},
+        )
+        self.assertEqual(repeated.status_code, 200)
+        self.assertContains(repeated, "ยืนยันนัดสัมภาษณ์แล้ว")
+        self.assertEqual(slot.participants.filter(response_status="confirmed").count(), 1)
 
         full = self.client.get(reverse("school:appointment_confirmation"), {"token": second_token})
         self.assertContains(full, "เต็มแล้ว")
@@ -204,6 +218,50 @@ class AppointmentScheduleTests(TestCase):
         self.assertContains(rejected, "ทีมงานจะนัดวันสัมภาษณ์รอบถัดไปให้อีกครั้ง", status_code=409)
         participants[1].refresh_from_db()
         self.assertEqual(participants[1].response_status, AppointmentParticipant.ResponseStatus.WAITING)
+        self.assertIsNone(participants[1].selected_slot)
+        self.assertIsNone(participants[1].confirmed_at)
+
+    @override_settings(PUBLIC_BASE_URL="https://bri.example")
+    def test_person_can_choose_another_slot_when_only_selected_slot_is_full(self):
+        self.schedule(
+            slot_start=["09:30", "10:30"],
+            slot_end=["10:30", "11:30"],
+            slot_capacity=["1", "1"],
+        )
+        participants = list(AppointmentParticipant.objects.order_by("pk"))
+        first_slot, second_slot = AppointmentSlot.objects.order_by("starts_at")
+        tokens = [
+            parse_qs(urlsplit(self.confirmation_url(participant)).query)["token"][0]
+            for participant in participants
+        ]
+        self.client.post(
+            reverse("school:appointment_confirmation"),
+            {"token": tokens[0], "slot": first_slot.pk},
+        )
+
+        full_slot = self.client.post(
+            reverse("school:appointment_confirmation"),
+            {"token": tokens[1], "slot": first_slot.pk},
+        )
+        self.assertEqual(full_slot.status_code, 409)
+        self.assertContains(
+            full_slot,
+            "ช่วงเวลานี้เต็มแล้ว กรุณาเลือกช่วงเวลาอื่น",
+            status_code=409,
+        )
+        self.assertContains(full_slot, "10:30-11:30", status_code=409)
+
+        available_slot = self.client.post(
+            reverse("school:appointment_confirmation"),
+            {"token": tokens[1], "slot": second_slot.pk},
+        )
+        self.assertEqual(available_slot.status_code, 200)
+        participants[1].refresh_from_db()
+        self.assertEqual(participants[1].selected_slot, second_slot)
+        self.assertEqual(
+            participants[1].response_status,
+            AppointmentParticipant.ResponseStatus.CONFIRMED,
+        )
 
     def test_existing_event_can_invite_new_applicants_without_creating_another_event(self):
         self.schedule(people=[self.people[0].pk])
@@ -224,6 +282,109 @@ class AppointmentScheduleTests(TestCase):
         self.assertEqual(Appointment.objects.count(), 1)
         self.assertEqual(appointment.participants.count(), 2)
         self.assertEqual(len(self.client.session["appointment_send_queue"]), 1)
+
+    def test_people_can_be_filtered_into_metro_and_provincial_groups(self):
+        self.people[0].extra_data = {"province": "กรุงเทพมหานคร"}
+        self.people[0].save(update_fields=["extra_data"])
+        self.people[1].extra_data = {"address_th": {"province": "เชียงใหม่"}}
+        self.people[1].save(update_fields=["extra_data"])
+        unknown = Person.objects.create(
+            first_name="Unknown", last_name="Province", line_user_id="Uunknown"
+        )
+
+        metro = self.client.get(self.url, {
+            "type": "interview", "event": "new", "province": "metro",
+        })
+        self.assertContains(metro, self.people[0].full_name)
+        self.assertNotContains(metro, self.people[1].full_name)
+        self.assertNotContains(metro, unknown.full_name)
+
+        provincial = self.client.get(self.url, {
+            "type": "interview", "event": "new", "province": "provincial",
+        })
+        self.assertContains(provincial, self.people[1].full_name)
+        self.assertNotContains(provincial, self.people[0].full_name)
+        self.assertNotContains(provincial, unknown.full_name)
+
+    @override_settings(PUBLIC_BASE_URL="https://bri.example")
+    @patch("school.interviews.send_line_push_message", return_value=True)
+    def test_one_event_supports_per_batch_messages_and_explicit_resend(self, send):
+        self.people[0].extra_data = {"province": "กรุงเทพมหานคร"}
+        self.people[0].save(update_fields=["extra_data"])
+        self.people[1].extra_data = {"province": "เชียงใหม่"}
+        self.people[1].save(update_fields=["extra_data"])
+        self.schedule(
+            people=[self.people[0].pk],
+            location="BRI Bangkok",
+            meeting_url="",
+            details="มาสัมภาษณ์ที่สถาบัน",
+        )
+        appointment = Appointment.objects.get()
+        metro_participant = appointment.participants.get(person=self.people[0])
+
+        self.assertTrue(self.notify(metro_participant).json()["sent"])
+        metro_participant.refresh_from_db()
+        self.assertEqual(metro_participant.notification_count, 1)
+
+        added = self.client.post(self.url, {
+            "appointment_type": "interview",
+            "event_id": appointment.pk,
+            "people": [self.people[1].pk],
+            "location": "",
+            "meeting_url": "https://meet.example/provincial",
+            "details": "สัมภาษณ์ออนไลน์",
+        })
+        self.assertEqual(added.status_code, 302)
+        self.assertEqual(Appointment.objects.count(), 1)
+        provincial_participant = appointment.participants.get(person=self.people[1])
+
+        metro_message = json.dumps(
+            build_appointment_invitation_flex_message(metro_participant),
+            ensure_ascii=False,
+        )
+        provincial_message = json.dumps(
+            build_appointment_invitation_flex_message(provincial_participant),
+            ensure_ascii=False,
+        )
+        self.assertIn("BRI Bangkok", metro_message)
+        self.assertNotIn("meet.example/provincial", metro_message)
+        self.assertNotIn("BRI Bangkok", provincial_message)
+        self.assertIn("meet.example/provincial", provincial_message)
+        self.assertIn("สัมภาษณ์ออนไลน์", provincial_message)
+
+        confirmation = self.client.get(self.confirmation_url(provincial_participant))
+        self.assertContains(confirmation, "สัมภาษณ์ออนไลน์")
+        self.assertContains(confirmation, "https://meet.example/provincial")
+        self.assertNotContains(confirmation, "BRI Bangkok")
+
+        resend = self.client.post(self.url, {
+            "action": "resend",
+            "appointment_type": "interview",
+            "event_id": appointment.pk,
+            "audience": "waiting",
+            "province": "metro",
+            "participants": [metro_participant.pk],
+            "location": "BRI Bangkok อาคารใหม่",
+            "meeting_url": "",
+            "details": "กรุณามาก่อนเวลา 20 นาที",
+        })
+        self.assertEqual(resend.status_code, 302)
+        queue = self.client.session["appointment_send_queue"]
+        self.assertEqual(queue[0]["id"], metro_participant.pk)
+        self.assertTrue(queue[0]["force"])
+        metro_participant.refresh_from_db()
+        self.assertEqual(metro_participant.invitation_location, "BRI Bangkok อาคารใหม่")
+
+        resent = self.client.post(
+            reverse("school:appointment_notify", args=[metro_participant.pk]),
+            {"at": appointment.starts_at.isoformat(), "force": "1"},
+        )
+        self.assertTrue(resent.json()["sent"])
+        metro_participant.refresh_from_db()
+        self.assertEqual(metro_participant.notification_count, 2)
+        sent_content = json.dumps(send.call_args.args[1], ensure_ascii=False)
+        self.assertIn("BRI Bangkok อาคารใหม่", sent_content)
+        self.assertIn("กรุณามาก่อนเวลา 20 นาที", sent_content)
 
     def test_event_audiences_separate_sent_failed_and_unsent_people(self):
         third_person = Person.objects.create(
@@ -627,3 +788,79 @@ class AppointmentScheduleTests(TestCase):
         person.refresh_from_db()
         self.assertEqual(person.status, Person.Status.IN_PROGRESS)
         self.assertEqual(person.admission_type, "")
+
+
+class AppointmentSlotConcurrencyTests(TransactionTestCase):
+    reset_sequences = True
+
+    def test_only_one_person_can_take_the_last_slot(self):
+        starts_at = timezone.now() + timedelta(days=2)
+        appointment = Appointment.objects.create(
+            appointment_type=Appointment.Type.INTERVIEW,
+            title="สัมภาษณ์ slot สุดท้าย",
+            starts_at=starts_at,
+        )
+        slot = AppointmentSlot.objects.create(
+            appointment=appointment,
+            starts_at=starts_at,
+            ends_at=starts_at + timedelta(hours=1),
+            capacity=1,
+        )
+        participants = []
+        for index in range(2):
+            person = Person.objects.create(
+                first_name=f"Concurrent {index}",
+                last_name="Applicant",
+                line_user_id=f"Uconcurrent{index}",
+            )
+            participants.append(
+                AppointmentParticipant.objects.create(
+                    appointment=appointment,
+                    person=person,
+                )
+            )
+        tokens = [
+            signing.dumps(
+                {
+                    "participant_id": participant.pk,
+                    "starts_at": appointment.starts_at.isoformat(),
+                },
+                salt="school.appointment-confirmation",
+                compress=True,
+            )
+            for participant in participants
+        ]
+        barrier = threading.Barrier(2)
+        results = []
+        errors = []
+
+        def confirm(token):
+            connections.close_all()
+            try:
+                barrier.wait(timeout=5)
+                response = Client().post(
+                    reverse("school:appointment_confirmation"),
+                    {"token": token, "slot": slot.pk},
+                )
+                results.append(response.status_code)
+            except Exception as error:
+                errors.append(error)
+            finally:
+                connections.close_all()
+
+        threads = [threading.Thread(target=confirm, args=(token,)) for token in tokens]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=10)
+
+        self.assertFalse(errors)
+        self.assertFalse(any(thread.is_alive() for thread in threads))
+        self.assertCountEqual(results, [200, 409])
+        self.assertEqual(
+            AppointmentParticipant.objects.filter(
+                selected_slot=slot,
+                response_status=AppointmentParticipant.ResponseStatus.CONFIRMED,
+            ).count(),
+            1,
+        )

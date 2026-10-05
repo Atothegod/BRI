@@ -2,7 +2,7 @@
 {% load static tz school_dates %}
 {% block title %}จัดการนัดหมาย | BRI{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20261005-province-send-1">
+<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20261005-slot-visual-2">
 <link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261003-nav-dropdown-1">
 {% endblock %}
 {% block content %}
@@ -143,4 +143,4 @@
 </main>
 {{ send_queue|json_script:"interview-queue" }}<div hidden data-confirmation-status-url="{% url 'school:appointment_confirmation_status' %}"{% if selected_appointment %} data-event-id="{{ selected_appointment.pk }}"{% endif %}></div>
 {% endblock %}
-{% block extra_js %}<script src="{% static 'school/js/interviews.js' %}?v=20261005-province-send-1" defer></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'school/js/interviews.js' %}?v=20261005-slot-visual-2" defer></script>{% endblock %}

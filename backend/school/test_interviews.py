@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 
 from django.contrib.auth import get_user_model
 from django.core import signing
+from django.core.exceptions import ValidationError
 from django.db import connections
 from django.test import Client, TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
@@ -277,6 +278,177 @@ class AppointmentScheduleTests(TestCase):
             participants[1].response_status,
             AppointmentParticipant.ResponseStatus.CONFIRMED,
         )
+
+    def test_changing_participant_slot_syncs_person_interview_time(self):
+        self.schedule(
+            people=[self.people[0].pk],
+            slot_start=["09:30", "10:30"],
+            slot_end=["10:30", "11:30"],
+            slot_capacity=["1", "1"],
+        )
+        first_slot, second_slot = AppointmentSlot.objects.order_by("starts_at")
+        participant = AppointmentParticipant.objects.get()
+        participant.response_status = AppointmentParticipant.ResponseStatus.CONFIRMED
+        participant.confirmed_at = timezone.now()
+        participant.selected_slot = first_slot
+        participant.save(update_fields=["response_status", "confirmed_at", "selected_slot"])
+        self.people[0].refresh_from_db()
+        self.assertEqual(self.people[0].interview_at, first_slot.starts_at)
+
+        participant.selected_slot = second_slot
+        participant.save(update_fields=["selected_slot"])
+        self.people[0].refresh_from_db()
+        self.assertEqual(self.people[0].interview_at, second_slot.starts_at)
+
+        second_slot.starts_at = second_slot.starts_at + timedelta(minutes=15)
+        second_slot.ends_at = second_slot.ends_at + timedelta(minutes=15)
+        second_slot.save(update_fields=["starts_at", "ends_at"])
+        self.people[0].refresh_from_db()
+        self.assertEqual(self.people[0].interview_at, second_slot.starts_at)
+
+    def test_slot_capacity_cannot_be_reduced_below_confirmed_count(self):
+        self.schedule(slot_capacity=["2"])
+        slot = AppointmentSlot.objects.get()
+        participant = AppointmentParticipant.objects.order_by("pk").first()
+        participant.response_status = AppointmentParticipant.ResponseStatus.CONFIRMED
+        participant.selected_slot = slot
+        participant.confirmed_at = timezone.now()
+        participant.save(update_fields=["response_status", "selected_slot", "confirmed_at"])
+
+        slot.capacity = 0
+        with self.assertRaises(ValidationError):
+            slot.full_clean()
+
+        slot.capacity = 1
+        slot.full_clean()
+
+    @override_settings(
+        LINE_MESSAGING_CHANNEL_ACCESS_TOKEN="line-token",
+        PUBLIC_BASE_URL="https://bri.example",
+    )
+    @patch("school.admin.send_line_push_message", return_value=True)
+    def test_changing_notified_participant_slot_marks_and_sends_reschedule_notice(self, send):
+        self.schedule(
+            people=[self.people[0].pk],
+            slot_start=["09:30", "10:30"],
+            slot_end=["10:30", "11:30"],
+            slot_capacity=["1", "1"],
+        )
+        first_slot, second_slot = AppointmentSlot.objects.order_by("starts_at")
+        participant = AppointmentParticipant.objects.get()
+        participant.response_status = AppointmentParticipant.ResponseStatus.CONFIRMED
+        participant.confirmed_at = timezone.now()
+        participant.selected_slot = first_slot
+        participant.save(update_fields=["response_status", "confirmed_at", "selected_slot"])
+        participant.notification_status = AppointmentParticipant.NotificationStatus.SENT
+        participant.notification_count = 1
+        participant.notified_at = timezone.now()
+        participant.save(update_fields=["notification_status", "notification_count", "notified_at"])
+        participant.refresh_from_db()
+        self.assertFalse(participant.needs_reschedule_notice)
+
+        participant.selected_slot = second_slot
+        participant.save(update_fields=["selected_slot"])
+        participant.refresh_from_db()
+        self.assertTrue(participant.needs_reschedule_notice)
+        admin_url = reverse("admin:school_appointmentparticipant_changelist")
+        filtered = self.client.get(admin_url, {"reschedule_notice": "required"})
+        self.assertContains(filtered, self.people[0].full_name)
+
+        response = self.client.post(
+            admin_url,
+            {
+                "action": "send_interview_reschedule_line_notification",
+                "_selected_action": [participant.pk],
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        send.assert_called_once()
+        payload = json.dumps(send.call_args.args[1], ensure_ascii=False)
+        self.assertIn("แจ้งเปลี่ยนเวลาสัมภาษณ์", payload)
+        self.assertIn("10:30-11:30", payload)
+        participant.refresh_from_db()
+        self.assertFalse(participant.needs_reschedule_notice)
+        self.assertEqual(participant.notification_count, 2)
+
+    def test_changing_notified_slot_time_marks_reschedule_notice(self):
+        self.schedule(people=[self.people[0].pk], slot_capacity=["1"])
+        slot = AppointmentSlot.objects.get()
+        participant = AppointmentParticipant.objects.get()
+        participant.response_status = AppointmentParticipant.ResponseStatus.CONFIRMED
+        participant.confirmed_at = timezone.now()
+        participant.selected_slot = slot
+        participant.notification_status = AppointmentParticipant.NotificationStatus.SENT
+        participant.notification_count = 1
+        participant.notified_at = timezone.now()
+        participant.save(update_fields=[
+            "response_status",
+            "confirmed_at",
+            "selected_slot",
+            "notification_status",
+            "notification_count",
+            "notified_at",
+        ])
+        participant.refresh_from_db()
+        self.assertFalse(participant.needs_reschedule_notice)
+
+        slot.starts_at = slot.starts_at + timedelta(minutes=15)
+        slot.ends_at = slot.ends_at + timedelta(minutes=15)
+        slot.save(update_fields=["starts_at", "ends_at"])
+
+        participant.refresh_from_db()
+        self.assertTrue(participant.needs_reschedule_notice)
+
+    def test_saving_old_participant_does_not_overwrite_newer_interview_snapshot(self):
+        self.schedule(people=[self.people[0].pk], slot_capacity=["1"])
+        old_participant = AppointmentParticipant.objects.get()
+        next_event = Appointment.objects.create(
+            appointment_type=Appointment.Type.INTERVIEW,
+            title="สัมภาษณ์รอบใหม่",
+            starts_at=self.at + timedelta(days=7),
+        )
+        next_slot = AppointmentSlot.objects.create(
+            appointment=next_event,
+            starts_at=self.at + timedelta(days=7, hours=1),
+            ends_at=self.at + timedelta(days=7, hours=2),
+            capacity=1,
+        )
+        AppointmentParticipant.objects.create(
+            appointment=next_event,
+            person=self.people[0],
+            selected_slot=next_slot,
+            notification_status=AppointmentParticipant.NotificationStatus.SENT,
+        )
+        self.people[0].refresh_from_db()
+        self.assertEqual(self.people[0].interview_at, next_slot.starts_at)
+
+        old_participant.notification_status = AppointmentParticipant.NotificationStatus.FAILED
+        old_participant.save(update_fields=["notification_status"])
+        self.people[0].refresh_from_db()
+        self.assertEqual(self.people[0].interview_at, next_slot.starts_at)
+
+    def test_participant_slot_must_belong_to_same_event(self):
+        self.schedule(people=[self.people[0].pk])
+        participant = AppointmentParticipant.objects.get()
+        other_event = Appointment.objects.create(
+            appointment_type=Appointment.Type.INTERVIEW,
+            title="สัมภาษณ์คนละ Event",
+            starts_at=self.at + timedelta(days=3),
+        )
+        other_slot = AppointmentSlot.objects.create(
+            appointment=other_event,
+            starts_at=self.at + timedelta(days=3),
+            ends_at=self.at + timedelta(days=3, hours=1),
+            capacity=1,
+        )
+
+        participant.selected_slot = other_slot
+        participant.response_status = AppointmentParticipant.ResponseStatus.CONFIRMED
+
+        with self.assertRaises(ValidationError):
+            participant.full_clean()
 
     def test_existing_event_can_invite_new_applicants_without_creating_another_event(self):
         self.schedule(people=[self.people[0].pk])
@@ -605,6 +777,7 @@ class AppointmentScheduleTests(TestCase):
         self.schedule(people=[self.people[0].pk])
         participant = self.latest_participant()
         self.assertEqual(reverse("school:appointment_schedule"), "/school-admin/appointments/")
+        self.assertEqual(reverse("school:interview_roster"), "/school-admin/interview-roster/")
         self.assertEqual(reverse("school:appointment_confirmation"), "/appointments/confirm/")
         self.assertNotIn("/interviews/", self.confirmation_url(participant))
         response = self.client.get("/school-admin/interviews/", {"type": "orientation"})
@@ -782,6 +955,62 @@ class AppointmentScheduleTests(TestCase):
         search_again = self.client.get(url, {"q": "Result"})
         self.assertContains(search_again, "Result Applicant")
         self.assertContains(search_again, "ผ่านแบบออนไลน์")
+
+    def test_interview_roster_page_splits_online_and_onsite_with_line_ids(self):
+        appointment = Appointment.objects.create(
+            appointment_type=Appointment.Type.INTERVIEW,
+            title="สัมภาษณ์ Online Onsite",
+            starts_at=self.at,
+            location="BRI Bangkok",
+        )
+        onsite_slot = AppointmentSlot.objects.create(
+            appointment=appointment,
+            starts_at=self.at,
+            ends_at=self.at + timedelta(hours=1),
+            capacity=2,
+        )
+        online_slot = AppointmentSlot.objects.create(
+            appointment=appointment,
+            starts_at=self.at + timedelta(hours=1),
+            ends_at=self.at + timedelta(hours=2),
+            capacity=2,
+        )
+        AppointmentParticipant.objects.create(
+            appointment=appointment,
+            person=self.people[0],
+            selected_slot=onsite_slot,
+            response_status=AppointmentParticipant.ResponseStatus.CONFIRMED,
+            confirmed_at=timezone.now(),
+            invitation_message={"location": "BRI Bangkok"},
+        )
+        AppointmentParticipant.objects.create(
+            appointment=appointment,
+            person=self.people[1],
+            selected_slot=online_slot,
+            response_status=AppointmentParticipant.ResponseStatus.CONFIRMED,
+            confirmed_at=timezone.now(),
+            invitation_message={
+                "location": "ออนไลน์",
+                "meeting_url": "https://meet.example/interview",
+            },
+        )
+        url = reverse("school:interview_roster")
+
+        response = self.client.get(url, {"event": appointment.pk})
+
+        self.assertContains(response, "สัมภาษณ์ Online Onsite")
+        self.assertContains(response, self.people[0].full_name)
+        self.assertContains(response, self.people[1].full_name)
+        self.assertContains(response, "Utest0")
+        self.assertContains(response, "Utest1")
+        self.assertContains(response, "09:30-10:30")
+        self.assertContains(response, "10:30-11:30")
+        self.assertContains(response, "Onsite")
+        self.assertContains(response, "Online")
+
+        online = self.client.get(url, {"event": appointment.pk, "mode": "online"})
+        self.assertContains(online, self.people[1].full_name)
+        self.assertNotContains(online, self.people[0].full_name)
 
     @override_settings(LINE_MESSAGING_CHANNEL_ACCESS_TOKEN="line-token")
     @patch("school.line.request.urlopen")

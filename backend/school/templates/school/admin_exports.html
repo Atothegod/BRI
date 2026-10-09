@@ -96,6 +96,7 @@
                     <button type="submit">เปิดรายชื่อสัมภาษณ์</button>
                 </form>
                 <div class="export-workflow-actions">
+                    <a class="export-main-action" href="{% url 'school:interview_roster' %}">เปิดหน้า Online / Onsite</a>
                     <a class="export-secondary-action" href="{% url 'school:export_interview_slots_csv' %}">CSV slot สัมภาษณ์</a>
                 </div>
             </article>
@@ -123,6 +124,7 @@
                         <span>ยืนยันแล้ว</span>
                         <strong>{{ appointment.confirmed_count }}</strong>
                     </div>
+                    <a href="{% url 'school:interview_roster' %}?event={{ appointment.pk }}" target="_blank" rel="noopener">Online / Onsite</a>
                     <a href="{% url 'school:export_interview_roster' %}?appointment={{ appointment.pk }}" target="_blank" rel="noopener">เปิดรายชื่อ</a>
                 </article>
                 {% empty %}

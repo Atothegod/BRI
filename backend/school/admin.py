@@ -1,11 +1,18 @@
+from django import forms
 from django.contrib import admin, messages
 from django.db.models import Q
+from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin as UnfoldModelAdmin
 
 from .forms import load_country_data
-from .line import line_push_unavailable_reason, notify_interview_passed
+from .line import (
+    build_appointment_reschedule_flex_message,
+    line_push_unavailable_reason,
+    notify_interview_passed,
+    send_line_push_message,
+)
 from .models import (
     AttendanceRecord,
     AttendanceSession,
@@ -28,12 +35,103 @@ admin.site.site_title = "BRI Admin"
 admin.site.index_title = "ภาพรวมระบบโรงเรียน"
 
 
+class AppointmentParticipantAdminForm(forms.ModelForm):
+    class Meta:
+        model = AppointmentParticipant
+        fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if "selected_slot" not in self.fields:
+            return
+        appointment_id = self.instance.appointment_id
+        if self.data:
+            raw_appointment_id = self.data.get(self.add_prefix("appointment"))
+            if raw_appointment_id:
+                try:
+                    appointment_id = int(raw_appointment_id)
+                except (TypeError, ValueError):
+                    appointment_id = None
+        slots = AppointmentSlot.objects.select_related("appointment").order_by(
+            "-appointment__starts_at",
+            "starts_at",
+            "pk",
+        )
+        if appointment_id:
+            slots = slots.filter(appointment_id=appointment_id)
+        self.fields["selected_slot"].queryset = slots
+
+
+class AppointmentSlotInline(admin.TabularInline):
+    model = AppointmentSlot
+    extra = 1
+    fields = (
+        "starts_at",
+        "ends_at",
+        "capacity",
+        "confirmed_count_display",
+        "remaining_count_display",
+    )
+    readonly_fields = ("confirmed_count_display", "remaining_count_display")
+
+    @admin.display(description="ยืนยันแล้ว")
+    def confirmed_count_display(self, obj):
+        return obj.confirmed_participant_count if obj.pk else "-"
+
+    @admin.display(description="เหลือ")
+    def remaining_count_display(self, obj):
+        return obj.remaining_capacity if obj.pk else "-"
+
+
+class AppointmentParticipantInline(admin.TabularInline):
+    model = AppointmentParticipant
+    form = AppointmentParticipantAdminForm
+    extra = 0
+    autocomplete_fields = ("person", "selected_slot")
+    fields = (
+        "person",
+        "selected_slot",
+        "response_status",
+        "notification_status",
+        "reschedule_notice_display",
+        "notified_at",
+        "confirmed_at",
+    )
+    readonly_fields = ("reschedule_notice_display",)
+    show_change_link = True
+
+    @admin.display(description="แจ้งเปลี่ยนเวลา")
+    def reschedule_notice_display(self, obj):
+        if obj.pk and obj.needs_reschedule_notice:
+            return format_html('<strong style="color:#b42318;">ต้องส่งแจ้งเปลี่ยนเวลา</strong>')
+        return "-"
+
+
+class RescheduleNoticeFilter(admin.SimpleListFilter):
+    title = _("แจ้งเปลี่ยนเวลา")
+    parameter_name = "reschedule_notice"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("required", "ต้องส่งแจ้งเปลี่ยนเวลา"),
+            ("clear", "ไม่ค้างส่ง"),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == "required":
+            return queryset.filter(invitation_message___reschedule_notice_required=True)
+        if self.value() == "clear":
+            return queryset.exclude(invitation_message___reschedule_notice_required=True)
+        return queryset
+
+
 @admin.register(Appointment)
 class AppointmentAdmin(UnfoldModelAdmin):
     list_display = ("title", "appointment_type", "starts_at", "status", "participant_total", "created_by")
     list_filter = ("appointment_type", "status", "starts_at")
     search_fields = ("title", "location", "details")
     autocomplete_fields = ("created_by",)
+    inlines = (AppointmentSlotInline, AppointmentParticipantInline)
 
     @admin.display(description="ผู้เข้าร่วม")
     def participant_total(self, obj):
@@ -42,18 +140,143 @@ class AppointmentAdmin(UnfoldModelAdmin):
 
 @admin.register(AppointmentSlot)
 class AppointmentSlotAdmin(UnfoldModelAdmin):
-    list_display = ("appointment", "starts_at", "ends_at", "capacity")
+    list_display = (
+        "appointment",
+        "starts_at",
+        "ends_at",
+        "capacity",
+        "confirmed_count_display",
+        "remaining_count_display",
+    )
     list_filter = ("appointment__appointment_type", "starts_at")
     search_fields = ("appointment__title", "appointment__location")
     autocomplete_fields = ("appointment",)
 
+    @admin.display(description="ยืนยันแล้ว")
+    def confirmed_count_display(self, obj):
+        return obj.confirmed_participant_count
+
+    @admin.display(description="เหลือ")
+    def remaining_count_display(self, obj):
+        return obj.remaining_capacity
+
 
 @admin.register(AppointmentParticipant)
 class AppointmentParticipantAdmin(UnfoldModelAdmin):
-    list_display = ("appointment", "person", "selected_slot", "notification_status", "response_status", "notified_at", "confirmed_at")
-    list_filter = ("appointment__appointment_type", "notification_status", "response_status")
-    search_fields = ("appointment__title", "person__first_name", "person__last_name", "person__phone")
+    form = AppointmentParticipantAdminForm
+    list_display = (
+        "appointment",
+        "person",
+        "slot_time_display",
+        "line_user_id_display",
+        "reschedule_notice_display",
+        "notification_status",
+        "response_status",
+        "notified_at",
+        "confirmed_at",
+    )
+    list_filter = (
+        "appointment__appointment_type",
+        "appointment__status",
+        RescheduleNoticeFilter,
+        "notification_status",
+        "response_status",
+    )
+    search_fields = (
+        "appointment__title",
+        "person__first_name",
+        "person__last_name",
+        "person__nickname",
+        "person__phone",
+        "person__line_user_id",
+        "person__line_display_name",
+    )
     autocomplete_fields = ("appointment", "person", "selected_slot")
+    actions = ("send_interview_reschedule_line_notification",)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related(
+            "appointment",
+            "person",
+            "selected_slot",
+        )
+
+    @admin.display(ordering="selected_slot__starts_at", description="Slot / เวลา")
+    def slot_time_display(self, obj):
+        starts_at = obj.effective_starts_at
+        local_start = timezone.localtime(starts_at)
+        if obj.selected_slot_id:
+            local_end = timezone.localtime(obj.selected_slot.ends_at)
+            return f"{local_start:%d/%m/%Y %H:%M}-{local_end:%H:%M}"
+        return f"{local_start:%d/%m/%Y %H:%M} (ยังไม่เลือก slot)"
+
+    @admin.display(ordering="person__line_user_id", description="LINE user id")
+    def line_user_id_display(self, obj):
+        return obj.person.line_user_id or "-"
+
+    @admin.display(description="แจ้งเปลี่ยนเวลา")
+    def reschedule_notice_display(self, obj):
+        if obj.needs_reschedule_notice:
+            return format_html('<strong style="color:#b42318;">ต้องส่งแจ้งเปลี่ยนเวลา</strong>')
+        return "-"
+
+    @admin.action(description="ส่งแจ้งเปลี่ยนเวลาสัมภาษณ์ผ่าน LINE")
+    def send_interview_reschedule_line_notification(self, request, queryset):
+        stats = {
+            "sent": 0,
+            "missing_line_user_id": 0,
+            "missing_channel_access_token": 0,
+            "failed": 0,
+            "skipped": 0,
+        }
+        participants = queryset.select_related("appointment", "person", "selected_slot").filter(
+            appointment__appointment_type=Appointment.Type.INTERVIEW,
+        )
+        for participant in participants:
+            if not participant.needs_reschedule_notice:
+                stats["skipped"] += 1
+                continue
+            issue = line_push_unavailable_reason(participant.person)
+            if issue:
+                stats[issue] += 1
+                continue
+            sent = send_line_push_message(
+                participant.person.line_user_id,
+                [build_appointment_reschedule_flex_message(participant)],
+            )
+            if not sent:
+                stats["failed"] += 1
+                continue
+            participant.mark_reschedule_notice_sent()
+            participant.notification_status = AppointmentParticipant.NotificationStatus.SENT
+            participant.notification_error = ""
+            participant.notified_at = timezone.now()
+            participant.notification_count += 1
+            participant.save(update_fields=[
+                "invitation_message",
+                "notification_status",
+                "notification_error",
+                "notified_at",
+                "notification_count",
+                "updated_at",
+            ])
+            stats["sent"] += 1
+
+        summary = [f"ส่งแจ้งเปลี่ยนเวลาแล้ว {stats['sent']} คน"]
+        if stats["skipped"]:
+            summary.append(f"ข้าม {stats['skipped']} คนที่ไม่มีสถานะค้างส่ง")
+        if stats["missing_line_user_id"]:
+            summary.append(f"ยังไม่เชื่อม LINE {stats['missing_line_user_id']} คน")
+        if stats["missing_channel_access_token"]:
+            summary.append("ยังไม่ได้ตั้ง LINE token")
+        if stats["failed"]:
+            summary.append(f"ส่งไม่สำเร็จ {stats['failed']} คน")
+        level = messages.SUCCESS if stats["sent"] and not (
+            stats["missing_line_user_id"]
+            or stats["missing_channel_access_token"]
+            or stats["failed"]
+        ) else messages.WARNING
+        self.message_user(request, " · ".join(summary), level)
 
 
 class CountryCodeFilter(admin.SimpleListFilter):

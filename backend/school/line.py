@@ -444,6 +444,18 @@ def notify_payment_approved(person, student):
     )
 
 
+def appointment_confirmation_link(participant):
+    confirmation_token = signing.dumps(
+        {"participant_id": participant.pk, "starts_at": participant.appointment.starts_at.isoformat()},
+        salt="school.appointment-confirmation",
+        compress=True,
+    )
+    return (
+        f"{settings.PUBLIC_BASE_URL.rstrip('/')}{reverse('school:appointment_confirmation')}"
+        f"?{parse.urlencode({'token': confirmation_token})}"
+    )
+
+
 def build_appointment_invitation_flex_message(participant):
     from zoneinfo import ZoneInfo
     from django.utils import timezone
@@ -471,15 +483,7 @@ def build_appointment_invitation_flex_message(participant):
         else "BRI Interview"
     )
     alt_event = "ปฐมนิเทศ" if is_orientation else "นัดเรียน" if is_class else "นัดสัมภาษณ์"
-    confirmation_token = signing.dumps(
-        {"participant_id": participant.pk, "starts_at": appointment.starts_at.isoformat()},
-        salt="school.appointment-confirmation",
-        compress=True,
-    )
-    confirmation_link = (
-        f"{settings.PUBLIC_BASE_URL.rstrip('/')}{reverse('school:appointment_confirmation')}"
-        f"?{parse.urlencode({'token': confirmation_token})}"
-    )
+    confirmation_link = appointment_confirmation_link(participant)
     contents = [
         {"type": "text", "text": person.full_name, "weight": "bold", "wrap": True, "color": "#12271D"},
         {"type": "text", "text": appointment.title, "size": "sm", "wrap": True, "color": "#425B46"},
@@ -533,6 +537,89 @@ def build_appointment_invitation_flex_message(participant):
                 "contents": [
                     {"type": "text", "text": event_name, "color": "#C2A256", "size": "xs", "weight": "bold"},
                     {"type": "text", "text": heading, "color": "#FFFFFF", "size": "lg", "weight": "bold", "margin": "sm", "wrap": True},
+                ],
+            },
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "backgroundColor": "#F3F0E8",
+                "spacing": "md",
+                "contents": contents,
+            },
+            "footer": {
+                "type": "box",
+                "layout": "vertical",
+                "spacing": "sm",
+                "backgroundColor": "#F3F0E8",
+                "contents": buttons,
+            },
+        },
+    }
+
+
+def build_appointment_reschedule_flex_message(participant):
+    from zoneinfo import ZoneInfo
+    from django.utils import timezone
+
+    appointment = participant.appointment
+    person = participant.person
+    selected_slot = participant.selected_slot
+    if selected_slot:
+        local_start = timezone.localtime(selected_slot.starts_at, ZoneInfo("Asia/Bangkok"))
+        local_end = timezone.localtime(selected_slot.ends_at, ZoneInfo("Asia/Bangkok"))
+        date = thai_date(local_start, include_weekday=True)
+        time_text = f"{local_start:%H:%M}-{local_end:%H:%M} น."
+    else:
+        local_start = timezone.localtime(appointment.starts_at, ZoneInfo("Asia/Bangkok"))
+        date = thai_date(local_start, include_weekday=True)
+        time_text = f"{local_start:%H:%M} น."
+
+    confirmation_link = appointment_confirmation_link(participant)
+    contents = [
+        {"type": "text", "text": person.full_name, "weight": "bold", "wrap": True, "color": "#12271D"},
+        {"type": "text", "text": appointment.title, "size": "sm", "wrap": True, "color": "#425B46"},
+        build_flex_row("วันที่ใหม่", date),
+        build_flex_row("เวลาใหม่", time_text),
+    ]
+    if participant.invitation_location:
+        contents.append(build_flex_row("สถานที่", participant.invitation_location))
+    if participant.invitation_details:
+        contents.append({"type": "text", "text": participant.invitation_details, "size": "sm", "wrap": True, "color": "#425B46"})
+    contents.append({
+        "type": "text",
+        "text": "ทีมงาน BRI ได้อัปเดตเวลาสัมภาษณ์ กรุณากดตรวจสอบเวลาใหม่จากปุ่มด้านล่าง",
+        "size": "sm",
+        "wrap": True,
+        "color": "#425B46",
+    })
+    buttons = [{
+        "type": "button",
+        "style": "primary",
+        "height": "sm",
+        "color": "#425B46",
+        "action": {"type": "uri", "label": "ตรวจสอบเวลาใหม่", "uri": confirmation_link},
+    }]
+    if participant.invitation_meeting_url:
+        buttons.append({
+            "type": "button",
+            "style": "secondary",
+            "height": "sm",
+            "action": {"type": "uri", "label": "เปิดลิงก์เข้าร่วม", "uri": participant.invitation_meeting_url},
+        })
+    return {
+        "type": "flex",
+        "altText": f"BRI แจ้งเปลี่ยนเวลาสัมภาษณ์ {date} เวลา {time_text} (ประเทศไทย)",
+        "contents": {
+            "type": "bubble",
+            "size": "mega",
+            "header": {
+                "type": "box",
+                "layout": "vertical",
+                "backgroundColor": "#12271D",
+                "paddingAll": "20px",
+                "contents": [
+                    {"type": "text", "text": "BRI Interview", "color": "#C2A256", "size": "xs", "weight": "bold"},
+                    {"type": "text", "text": "แจ้งเปลี่ยนเวลาสัมภาษณ์", "color": "#FFFFFF", "size": "lg", "weight": "bold", "margin": "sm", "wrap": True},
                 ],
             },
             "body": {

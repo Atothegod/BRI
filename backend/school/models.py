@@ -1,6 +1,7 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models.signals import post_save, pre_save
+from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
 
@@ -183,6 +184,13 @@ class Appointment(TimeStampedModel):
         return f"{self.title} - {timezone.localtime(self.starts_at):%d/%m/%Y %H:%M}"
 
 
+RESCHEDULE_NOTICE_REQUIRED_KEY = "_reschedule_notice_required"
+RESCHEDULE_NOTICE_MARKED_AT_KEY = "_reschedule_notice_marked_at"
+RESCHEDULE_NOTICE_SENT_AT_KEY = "_reschedule_notice_sent_at"
+RESCHEDULE_PREVIOUS_START_KEY = "_reschedule_previous_start"
+RESCHEDULE_PREVIOUS_END_KEY = "_reschedule_previous_end"
+
+
 class AppointmentSlot(TimeStampedModel):
     appointment = models.ForeignKey(
         Appointment,
@@ -195,6 +203,31 @@ class AppointmentSlot(TimeStampedModel):
 
     class Meta:
         ordering = ("starts_at", "pk")
+
+    def clean(self):
+        super().clean()
+        errors = {}
+        if self.ends_at and self.starts_at and self.ends_at <= self.starts_at:
+            errors["ends_at"] = "เวลาสิ้นสุดต้องมากกว่าเวลาเริ่ม"
+        if self.pk and self.capacity < self.confirmed_participant_count:
+            errors["capacity"] = (
+                f"ลดจำนวนรับต่ำกว่าจำนวนที่ยืนยันแล้วไม่ได้ "
+                f"(ยืนยันแล้ว {self.confirmed_participant_count} คน)"
+            )
+        if errors:
+            raise ValidationError(errors)
+
+    @property
+    def confirmed_participant_count(self):
+        if not self.pk:
+            return 0
+        return self.participants.filter(
+            response_status=AppointmentParticipant.ResponseStatus.CONFIRMED,
+        ).count()
+
+    @property
+    def remaining_capacity(self):
+        return max(self.capacity - self.confirmed_participant_count, 0)
 
     def __str__(self):
         local_start = timezone.localtime(self.starts_at)
@@ -258,6 +291,43 @@ class AppointmentParticipant(TimeStampedModel):
     def __str__(self):
         return f"{self.appointment.title} - {self.person.full_name}"
 
+    def clean(self):
+        super().clean()
+        errors = {}
+        if (
+            self.selected_slot_id
+            and self.appointment_id
+            and self.selected_slot.appointment_id != self.appointment_id
+        ):
+            errors["selected_slot"] = "Slot ที่เลือกต้องอยู่ใน Event เดียวกับผู้เข้าร่วม"
+        if (
+            self.selected_slot_id
+            and self.response_status == self.ResponseStatus.CONFIRMED
+            and self.selected_slot.capacity
+        ):
+            confirmed = AppointmentParticipant.objects.filter(
+                selected_slot=self.selected_slot,
+                response_status=self.ResponseStatus.CONFIRMED,
+            )
+            if self.pk:
+                confirmed = confirmed.exclude(pk=self.pk)
+            if confirmed.count() >= self.selected_slot.capacity:
+                errors["selected_slot"] = "Slot นี้เต็มแล้ว กรุณาเลือกช่วงเวลาอื่น"
+        if errors:
+            raise ValidationError(errors)
+
+    @property
+    def effective_starts_at(self):
+        if self.selected_slot_id:
+            return self.selected_slot.starts_at
+        return self.appointment.starts_at
+
+    @property
+    def effective_ends_at(self):
+        if self.selected_slot_id:
+            return self.selected_slot.ends_at
+        return None
+
     def invitation_value(self, field_name):
         if field_name in self.invitation_message:
             return self.invitation_message.get(field_name) or ""
@@ -278,6 +348,123 @@ class AppointmentParticipant(TimeStampedModel):
     @property
     def invitation_details(self):
         return self.invitation_value("details")
+
+    def interview_snapshot_details(self):
+        return "\n".join(
+            filter(
+                None,
+                [
+                    self.invitation_location,
+                    self.invitation_meeting_url,
+                    self.invitation_details,
+                ],
+            )
+        )
+
+    @property
+    def needs_reschedule_notice(self):
+        return bool((self.invitation_message or {}).get(RESCHEDULE_NOTICE_REQUIRED_KEY))
+
+    def should_track_reschedule_notice(self):
+        return (
+            self.appointment.appointment_type == Appointment.Type.INTERVIEW
+            and self.notification_count > 0
+        )
+
+    def mark_reschedule_notice_required(self, previous_start=None, previous_end=None):
+        if not self.should_track_reschedule_notice():
+            return False
+        invitation_message = dict(self.invitation_message or {})
+        invitation_message[RESCHEDULE_NOTICE_REQUIRED_KEY] = True
+        invitation_message[RESCHEDULE_NOTICE_MARKED_AT_KEY] = timezone.now().isoformat()
+        if previous_start:
+            invitation_message[RESCHEDULE_PREVIOUS_START_KEY] = previous_start.isoformat()
+        if previous_end:
+            invitation_message[RESCHEDULE_PREVIOUS_END_KEY] = previous_end.isoformat()
+        self.invitation_message = invitation_message
+        return True
+
+    def mark_reschedule_notice_sent(self):
+        invitation_message = dict(self.invitation_message or {})
+        invitation_message.pop(RESCHEDULE_NOTICE_REQUIRED_KEY, None)
+        invitation_message.pop(RESCHEDULE_NOTICE_MARKED_AT_KEY, None)
+        invitation_message.pop(RESCHEDULE_PREVIOUS_START_KEY, None)
+        invitation_message.pop(RESCHEDULE_PREVIOUS_END_KEY, None)
+        invitation_message[RESCHEDULE_NOTICE_SENT_AT_KEY] = timezone.now().isoformat()
+        self.invitation_message = invitation_message
+
+    @classmethod
+    def current_interview_participant_for_person(cls, person_id):
+        interview_participants = cls.objects.filter(
+            person_id=person_id,
+            appointment__appointment_type=Appointment.Type.INTERVIEW,
+        ).select_related(
+            "appointment",
+            "selected_slot",
+        )
+        return (
+            interview_participants.filter(
+                response_status=cls.ResponseStatus.CONFIRMED,
+            ).order_by("-pk").first()
+            or interview_participants.order_by("-pk").first()
+        )
+
+    @classmethod
+    def sync_current_interview_snapshot(cls, person_id):
+        participant = cls.current_interview_participant_for_person(person_id)
+        if participant is None:
+            Person.objects.filter(pk=person_id).update(
+                interview_at=None,
+                interview_details="",
+                interview_notification_state="",
+                interview_notified_at=None,
+                interview_confirmed_at=None,
+                updated_at=timezone.now(),
+            )
+            return
+        participant.sync_person_interview_snapshot()
+
+    def sync_person_interview_snapshot(self):
+        if self.appointment.appointment_type != Appointment.Type.INTERVIEW:
+            return
+        Person.objects.filter(pk=self.person_id).update(
+            interview_at=self.effective_starts_at,
+            interview_details=self.interview_snapshot_details(),
+            interview_notification_state=self.notification_status,
+            interview_notified_at=self.notified_at,
+            interview_confirmed_at=(
+                self.confirmed_at
+                if self.response_status == self.ResponseStatus.CONFIRMED
+                else None
+            ),
+            updated_at=timezone.now(),
+        )
+
+    def save(self, *args, **kwargs):
+        previous_start = None
+        previous_end = None
+        previous_notification_count = 0
+        if self.pk:
+            previous = (
+                AppointmentParticipant.objects.select_related("appointment", "selected_slot")
+                .filter(pk=self.pk)
+                .first()
+            )
+            if previous:
+                previous_start = previous.effective_starts_at
+                previous_end = previous.effective_ends_at
+                previous_notification_count = previous.notification_count
+        update_fields = kwargs.get("update_fields")
+        if (
+            previous_start
+            and previous_notification_count > 0
+            and (previous_start != self.effective_starts_at or previous_end != self.effective_ends_at)
+            and self.mark_reschedule_notice_required(previous_start, previous_end)
+            and update_fields is not None
+        ):
+            kwargs["update_fields"] = set(update_fields) | {"invitation_message"}
+        super().save(*args, **kwargs)
+        self.sync_current_interview_snapshot(self.person_id)
 
 
 class TeacherGroup(TimeStampedModel):
@@ -380,6 +567,82 @@ def mark_line_notification_sent(person, key):
     extra_data["line_notifications"] = notifications
     Person.objects.filter(pk=person.pk).update(extra_data=extra_data)
     person.extra_data = extra_data
+
+
+@receiver(pre_save, sender=Appointment)
+def remember_previous_appointment_time(sender, instance, **kwargs):
+    instance._previous_starts_at = None
+    if instance.pk:
+        instance._previous_starts_at = (
+            Appointment.objects.filter(pk=instance.pk)
+            .values_list("starts_at", flat=True)
+            .first()
+        )
+
+
+@receiver(post_save, sender=Appointment)
+def sync_interview_snapshots_after_appointment_change(sender, instance, **kwargs):
+    if instance.appointment_type != Appointment.Type.INTERVIEW:
+        return
+    for participant in instance.participants.select_related(
+        "appointment",
+        "person",
+        "selected_slot",
+    ).iterator():
+        if (
+            getattr(instance, "_previous_starts_at", None)
+            and instance._previous_starts_at != instance.starts_at
+        ):
+            if participant.mark_reschedule_notice_required(instance._previous_starts_at):
+                participant.save(update_fields=["invitation_message"])
+        AppointmentParticipant.sync_current_interview_snapshot(participant.person_id)
+
+
+@receiver(pre_save, sender=AppointmentSlot)
+def remember_previous_slot_time(sender, instance, **kwargs):
+    instance._previous_starts_at = None
+    instance._previous_ends_at = None
+    if instance.pk:
+        previous = (
+            AppointmentSlot.objects.filter(pk=instance.pk)
+            .values("starts_at", "ends_at")
+            .first()
+        )
+        if previous:
+            instance._previous_starts_at = previous["starts_at"]
+            instance._previous_ends_at = previous["ends_at"]
+
+
+@receiver(post_save, sender=AppointmentSlot)
+def sync_interview_snapshots_after_slot_change(sender, instance, **kwargs):
+    if instance.appointment.appointment_type != Appointment.Type.INTERVIEW:
+        return
+    for participant in instance.participants.select_related(
+        "appointment",
+        "person",
+        "selected_slot",
+    ).iterator():
+        if (
+            getattr(instance, "_previous_starts_at", None)
+            and (
+                instance._previous_starts_at != instance.starts_at
+                or instance._previous_ends_at != instance.ends_at
+            )
+        ):
+            marked = participant.mark_reschedule_notice_required(
+                instance._previous_starts_at,
+                instance._previous_ends_at,
+            )
+            if marked:
+                participant.save(update_fields=["invitation_message"])
+        AppointmentParticipant.sync_current_interview_snapshot(participant.person_id)
+
+
+@receiver(post_delete, sender=AppointmentParticipant)
+def sync_interview_snapshots_after_participant_delete(sender, instance, **kwargs):
+    if instance.appointment.appointment_type != Appointment.Type.INTERVIEW:
+        return
+    AppointmentParticipant.sync_current_interview_snapshot(instance.person_id)
 
 
 @receiver(post_save, sender=Person)

@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from datetime import datetime
 from urllib.parse import urlencode
 from zoneinfo import ZoneInfo
@@ -56,6 +57,14 @@ METRO_PROVINCES = (
     "ปทุมธานี",
     "สมุทรปราการ",
     "สมุทรสาคร",
+)
+INTERVIEW_ONLINE_KEYWORDS = (
+    "online",
+    "zoom",
+    "google meet",
+    "meet.google",
+    "teams",
+    "ออนไลน์",
 )
 
 
@@ -341,6 +350,190 @@ def latest_interview_participations(person_ids):
     for participant in participants:
         latest_by_person.setdefault(participant.person_id, participant)
     return latest_by_person
+
+
+def participant_interview_mode(participant):
+    if participant.invitation_meeting_url.strip():
+        return "online"
+    searchable_text = " ".join(
+        [
+            participant.invitation_location,
+            participant.invitation_details,
+            participant.appointment.location,
+            participant.appointment.details,
+        ]
+    ).lower()
+    if any(keyword in searchable_text for keyword in INTERVIEW_ONLINE_KEYWORDS):
+        return "online"
+    return "onsite"
+
+
+def enrich_interview_roster_participants(participants):
+    appointment_ids = {participant.appointment_id for participant in participants}
+    slot_counts = {}
+    if appointment_ids:
+        slot_counts = dict(
+            AppointmentSlot.objects.filter(appointment_id__in=appointment_ids)
+            .values("appointment_id")
+            .annotate(count=Count("pk"))
+            .values_list("appointment_id", "count")
+        )
+    for participant in participants:
+        participant.interview_mode = participant_interview_mode(participant)
+        participant.interview_mode_label = "Online" if participant.interview_mode == "online" else "Onsite"
+        if participant.selected_slot_id:
+            start = timezone.localtime(participant.selected_slot.starts_at, THAI_TIMEZONE)
+            end = timezone.localtime(participant.selected_slot.ends_at, THAI_TIMEZONE)
+            participant.slot_label = f"{start:%H:%M}-{end:%H:%M}"
+            participant.time_label = f"{start:%d/%m/%Y} {start:%H:%M}-{end:%H:%M}"
+        else:
+            start = timezone.localtime(participant.appointment.starts_at, THAI_TIMEZONE)
+            participant.slot_label = "ยังไม่เลือก slot" if slot_counts.get(participant.appointment_id) else f"{start:%H:%M} น."
+            participant.time_label = f"{start:%d/%m/%Y} {start:%H:%M}"
+        participant.line_user_id_label = participant.person.line_user_id or "-"
+        participant.line_display_label = participant.person.line_display_name or "-"
+    return participants
+
+
+@login_required(login_url="admin:login")
+@never_cache
+def interview_roster(request):
+    if not is_school_admin(request.user):
+        raise PermissionDenied
+
+    query = request.GET.get("q", "").strip()
+    mode = request.GET.get("mode", "all")
+    if mode not in {"all", "online", "onsite"}:
+        mode = "all"
+    try:
+        selected_event_id = int(request.GET.get("event", ""))
+    except (TypeError, ValueError):
+        selected_event_id = None
+
+    appointment_options = list(
+        Appointment.objects.filter(appointment_type=Appointment.Type.INTERVIEW)
+        .annotate(
+            participant_count=Count("participants", distinct=True),
+            confirmed_count=Count(
+                "participants",
+                filter=Q(participants__response_status=AppointmentParticipant.ResponseStatus.CONFIRMED),
+                distinct=True,
+            ),
+        )
+        .order_by("-starts_at", "-pk")[:100]
+    )
+    if selected_event_id and not any(appointment.pk == selected_event_id for appointment in appointment_options):
+        selected_appointment = (
+            Appointment.objects.filter(
+                pk=selected_event_id,
+                appointment_type=Appointment.Type.INTERVIEW,
+            )
+            .annotate(
+                participant_count=Count("participants", distinct=True),
+                confirmed_count=Count(
+                    "participants",
+                    filter=Q(participants__response_status=AppointmentParticipant.ResponseStatus.CONFIRMED),
+                    distinct=True,
+                ),
+            )
+            .first()
+        )
+        if selected_appointment is None:
+            selected_event_id = None
+        else:
+            appointment_options.insert(0, selected_appointment)
+
+    participants = AppointmentParticipant.objects.filter(
+        appointment__appointment_type=Appointment.Type.INTERVIEW,
+    ).select_related(
+        "appointment",
+        "person",
+        "selected_slot",
+    ).order_by(
+        "-appointment__starts_at",
+        "selected_slot__starts_at",
+        "person__first_name",
+        "person__last_name",
+        "pk",
+    )
+    if selected_event_id:
+        participants = participants.filter(appointment_id=selected_event_id)
+    if query:
+        participants = participants.filter(
+            Q(person__first_name__icontains=query)
+            | Q(person__last_name__icontains=query)
+            | Q(person__nickname__icontains=query)
+            | Q(person__phone__icontains=query)
+            | Q(person__line_user_id__icontains=query)
+            | Q(person__line_display_name__icontains=query)
+        )
+
+    participants = enrich_interview_roster_participants(list(participants))
+    mode_counts = {
+        "all": len(participants),
+        "online": sum(1 for participant in participants if participant.interview_mode == "online"),
+        "onsite": sum(1 for participant in participants if participant.interview_mode == "onsite"),
+    }
+    if mode != "all":
+        participants = [
+            participant
+            for participant in participants
+            if participant.interview_mode == mode
+        ]
+
+    page = Paginator(participants, 200).get_page(request.GET.get("page"))
+    event_groups = OrderedDict()
+    for participant in page.object_list:
+        group = event_groups.setdefault(
+            participant.appointment_id,
+            {
+                "appointment": participant.appointment,
+                "participants": [],
+                "online_count": 0,
+                "onsite_count": 0,
+                "confirmed_count": 0,
+            },
+        )
+        group["participants"].append(participant)
+        if participant.interview_mode == "online":
+            group["online_count"] += 1
+        else:
+            group["onsite_count"] += 1
+        if participant.response_status == AppointmentParticipant.ResponseStatus.CONFIRMED:
+            group["confirmed_count"] += 1
+
+    base_params = {}
+    if selected_event_id:
+        base_params["event"] = selected_event_id
+    if query:
+        base_params["q"] = query
+    mode_tabs = []
+    for value, label in (
+        ("all", "ทั้งหมด"),
+        ("online", "Online"),
+        ("onsite", "Onsite"),
+    ):
+        tab_params = {**base_params, "mode": value}
+        mode_tabs.append({
+            "value": value,
+            "label": label,
+            "count": mode_counts[value],
+            "url": f"{reverse('school:interview_roster')}?{urlencode(tab_params)}",
+        })
+
+    page_params = {**base_params, "mode": mode}
+    page_query_prefix = f"?{urlencode(page_params)}&" if page_params else "?"
+    return render(request, "school/interview_roster.html", {
+        "appointment_options": appointment_options,
+        "selected_event_id": selected_event_id,
+        "query": query,
+        "mode": mode,
+        "mode_tabs": mode_tabs,
+        "mode_counts": mode_counts,
+        "page_obj": page,
+        "event_groups": list(event_groups.values()),
+        "page_query_prefix": page_query_prefix,
+    })
 
 
 def update_interview_result(person, result):

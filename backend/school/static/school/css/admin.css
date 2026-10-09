@@ -696,29 +696,64 @@ body:not(.login) select {
     background: #fffdf8 !important;
 }
 
-body:not(.login) .select2-container .select2-selection,
-body:not(.login) .select2-container .select2-selection--single,
-body:not(.login) .select2-container .select2-selection--multiple,
-body:not(.login) .select2-container--admin-autocomplete .select2-selection,
-body:not(.login) .select2-dropdown,
-body:not(.login) .select2-search__field {
+html body:not(.login) .select2-container,
+html body:not(.login) .select2-container .selection,
+html body:not(.login) .select2-container .select2-selection,
+html body:not(.login) .select2-container .select2-selection--single,
+html body:not(.login) .select2-container .select2-selection--multiple,
+html body:not(.login) .select2-container--admin-autocomplete .select2-selection,
+html body:not(.login) .select2-container--open .select2-dropdown,
+html body:not(.login) .select2-container--open .select2-results,
+html body:not(.login) .select2-container--open .select2-results__options,
+html body:not(.login) .select2-dropdown,
+html body:not(.login) .select2-search,
+html body:not(.login) .select2-search__field {
     border-color: var(--bri-admin-border-strong) !important;
     color: var(--bri-admin-ink) !important;
     background: #fffdf8 !important;
 }
 
-body:not(.login) .select2-container .select2-selection__rendered,
-body:not(.login) .select2-container .select2-selection__placeholder,
-body:not(.login) .select2-container .select2-selection__clear,
-body:not(.login) .select2-container .select2-selection__arrow,
-body:not(.login) .select2-results__option {
+html body:not(.login) .select2-container .select2-selection__rendered,
+html body:not(.login) .select2-container .select2-selection__rendered *,
+html body:not(.login) .select2-container .select2-selection__placeholder,
+html body:not(.login) .select2-container .select2-selection__clear,
+html body:not(.login) .select2-container .select2-selection__arrow,
+html body:not(.login) .select2-container .select2-selection__arrow *,
+html body:not(.login) .select2-container .select2-selection__choice,
+html body:not(.login) .select2-results__option,
+html body:not(.login) .select2-results__option * {
     color: var(--bri-admin-ink) !important;
 }
 
-body:not(.login) .select2-container--default .select2-results__option--highlighted[aria-selected],
-body:not(.login) .select2-container--default .select2-results__option--highlighted[data-selected] {
+html body:not(.login) .select2-results__option,
+html body:not(.login) .select2-results__message,
+html body:not(.login) .select2-container--default .select2-results__option[aria-selected="false"],
+html body:not(.login) .select2-container--default .select2-results__option[data-selected="false"],
+html body:not(.login) .select2-container--admin-autocomplete .select2-results__option[aria-selected="false"],
+html body:not(.login) .select2-container--admin-autocomplete .select2-results__option[data-selected="false"] {
+    color: var(--bri-admin-ink) !important;
+    background: #fffdf8 !important;
+}
+
+html body:not(.login) .select2-container--default .select2-results__option[aria-selected="true"],
+html body:not(.login) .select2-container--default .select2-results__option[data-selected="true"],
+html body:not(.login) .select2-container--admin-autocomplete .select2-results__option[aria-selected="true"],
+html body:not(.login) .select2-container--admin-autocomplete .select2-results__option[data-selected="true"] {
+    color: var(--bri-admin-ink) !important;
+    background: #edf4ed !important;
+}
+
+html body:not(.login) .select2-container--default .select2-results__option--highlighted[aria-selected],
+html body:not(.login) .select2-container--default .select2-results__option--highlighted[data-selected],
+html body:not(.login) .select2-container--admin-autocomplete .select2-results__option--highlighted[aria-selected],
+html body:not(.login) .select2-container--admin-autocomplete .select2-results__option--highlighted[data-selected] {
     color: #ffffff !important;
     background: var(--bri-admin-primary) !important;
+}
+
+html body:not(.login) .select2-container--default .select2-results__option--highlighted *,
+html body:not(.login) .select2-container--admin-autocomplete .select2-results__option--highlighted * {
+    color: #ffffff !important;
 }
 
 body:not(.login) #toolbar > form > div,

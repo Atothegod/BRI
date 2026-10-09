@@ -34,10 +34,14 @@ from .models import (
     Appointment,
     AppointmentParticipant,
     AppointmentSlot,
+    INTERVIEW_MODE_CHOICES,
+    INTERVIEW_MODE_LABELS,
+    INTERVIEW_MODE_ONSITE,
     Person,
     Student,
     line_notification_sent,
     mark_line_notification_sent,
+    normalize_interview_mode,
 )
 from .views import can_view_operation_tools, is_school_admin
 
@@ -85,11 +89,14 @@ def confirmed_interview_people():
 
 
 def invitation_message(data):
-    return {
+    message = {
         "location": data.get("location", "").strip(),
         "meeting_url": data.get("meeting_url", "").strip(),
         "details": data.get("details", "").strip(),
     }
+    if "interview_mode" in data:
+        message["interview_mode"] = normalize_interview_mode(data.get("interview_mode"))
+    return message
 
 
 def filter_people_by_province(people, province):
@@ -159,6 +166,12 @@ class AppointmentScheduleForm(forms.Form):
     location = forms.CharField(label="สถานที่", required=False, max_length=500)
     meeting_url = forms.URLField(label="ลิงก์เข้าร่วม (ถ้ามี)", required=False, max_length=1000)
     details = forms.CharField(label="รายละเอียดเพิ่มเติม", required=False, max_length=2000, widget=forms.Textarea(attrs={"rows": 3}))
+    interview_mode = forms.ChoiceField(
+        label="รูปแบบสัมภาษณ์",
+        choices=INTERVIEW_MODE_CHOICES,
+        required=False,
+        initial=INTERVIEW_MODE_ONSITE,
+    )
 
     def __init__(self, *args, appointment_type=Appointment.Type.INTERVIEW, selected_appointment=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -179,6 +192,8 @@ class AppointmentScheduleForm(forms.Form):
         self.fields["title"].initial = dict(Appointment.Type.choices)[appointment_type]
         self.appointment_type = appointment_type
         self.selected_appointment = selected_appointment
+        if appointment_type != Appointment.Type.INTERVIEW:
+            self.fields.pop("interview_mode")
         if selected_appointment is not None:
             self.fields["event_id"].initial = selected_appointment.pk
             for field_name in ("title", "date", "time", "location", "meeting_url", "details"):
@@ -291,6 +306,12 @@ class AppointmentResendForm(forms.Form):
         max_length=2000,
         widget=forms.Textarea(attrs={"rows": 3}),
     )
+    interview_mode = forms.ChoiceField(
+        label="รูปแบบสัมภาษณ์",
+        choices=INTERVIEW_MODE_CHOICES,
+        required=False,
+        initial=INTERVIEW_MODE_ONSITE,
+    )
 
     def __init__(self, *args, appointment=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -298,6 +319,8 @@ class AppointmentResendForm(forms.Form):
         if appointment is None:
             return
         self.fields["participants"].queryset = appointment.participants.all()
+        if appointment.appointment_type != Appointment.Type.INTERVIEW:
+            self.fields.pop("interview_mode")
         for field_name in ("location", "meeting_url", "details"):
             self.fields[field_name].initial = getattr(appointment, field_name)
 
@@ -353,6 +376,8 @@ def latest_interview_participations(person_ids):
 
 
 def participant_interview_mode(participant):
+    if participant.invitation_interview_mode:
+        return participant.invitation_interview_mode
     if participant.invitation_meeting_url.strip():
         return "online"
     searchable_text = " ".join(
@@ -380,7 +405,7 @@ def enrich_interview_roster_participants(participants):
         )
     for participant in participants:
         participant.interview_mode = participant_interview_mode(participant)
-        participant.interview_mode_label = "Online" if participant.interview_mode == "online" else "Onsite"
+        participant.interview_mode_label = INTERVIEW_MODE_LABELS.get(participant.interview_mode, "Onsite")
         if participant.selected_slot_id:
             start = timezone.localtime(participant.selected_slot.starts_at, THAI_TIMEZONE)
             end = timezone.localtime(participant.selected_slot.ends_at, THAI_TIMEZONE)
@@ -1409,6 +1434,10 @@ def interview_confirmation(request):
         "invitation_location": participant.invitation_location,
         "invitation_meeting_url": participant.invitation_meeting_url,
         "invitation_details": participant.invitation_details,
+        "invitation_interview_mode_label": INTERVIEW_MODE_LABELS.get(
+            participant_interview_mode(participant),
+            "",
+        ) if participant.appointment.appointment_type == Appointment.Type.INTERVIEW else "",
         "event_eyebrow": "BRI Orientation" if is_orientation else "BRI Class" if is_class else "BRI Interview",
         "event_heading": "ยืนยันเข้าร่วมปฐมนิเทศ" if is_orientation else "ยืนยันนัดเรียน" if is_class else "เลือกเวลาสัมภาษณ์",
         "event_confirmed_heading": "ยืนยันเข้าร่วมปฐมนิเทศแล้ว" if is_orientation else "ยืนยันนัดเรียนแล้ว" if is_class else "ยืนยันนัดสัมภาษณ์แล้ว",

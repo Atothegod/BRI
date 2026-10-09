@@ -189,6 +189,17 @@ RESCHEDULE_NOTICE_MARKED_AT_KEY = "_reschedule_notice_marked_at"
 RESCHEDULE_NOTICE_SENT_AT_KEY = "_reschedule_notice_sent_at"
 RESCHEDULE_PREVIOUS_START_KEY = "_reschedule_previous_start"
 RESCHEDULE_PREVIOUS_END_KEY = "_reschedule_previous_end"
+INTERVIEW_MODE_ONSITE = "onsite"
+INTERVIEW_MODE_ONLINE = "online"
+INTERVIEW_MODE_CHOICES = (
+    (INTERVIEW_MODE_ONSITE, "Onsite"),
+    (INTERVIEW_MODE_ONLINE, "Online"),
+)
+INTERVIEW_MODE_LABELS = dict(INTERVIEW_MODE_CHOICES)
+
+
+def normalize_interview_mode(value):
+    return value if value in INTERVIEW_MODE_LABELS else INTERVIEW_MODE_ONSITE
 
 
 class AppointmentSlot(TimeStampedModel):
@@ -347,6 +358,15 @@ class AppointmentParticipant(TimeStampedModel):
     @property
     def invitation_details(self):
         return self.invitation_value("details")
+
+    @property
+    def invitation_interview_mode(self):
+        value = (self.invitation_message or {}).get("interview_mode", "")
+        return value if value in INTERVIEW_MODE_LABELS else ""
+
+    @property
+    def invitation_interview_mode_label(self):
+        return INTERVIEW_MODE_LABELS.get(self.invitation_interview_mode, "")
 
     def interview_snapshot_details(self):
         return "\n".join(

@@ -13,6 +13,7 @@
             <div><dt>กิจกรรม</dt><dd>{{ appointment.title }}</dd></div>
             <div><dt>วันที่</dt><dd>{{ appointment.starts_at|thai_date:"weekday" }}</dd></div>
             <div><dt>เวลา</dt><dd>{% if selected_slot %}{{ selected_slot.starts_at|date:"H:i" }}-{{ selected_slot.ends_at|date:"H:i" }} น.{% elif slot_options %}เลือกช่วงเวลาที่สะดวกด้านล่าง{% else %}{{ appointment.starts_at|date:"H:i" }} น.{% endif %}</dd></div>
+            {% if invitation_interview_mode_label %}<div><dt>รูปแบบ</dt><dd>{{ invitation_interview_mode_label }}</dd></div>{% endif %}
             {% if invitation_location %}<div><dt>สถานที่</dt><dd>{{ invitation_location }}</dd></div>{% endif %}
             {% if invitation_details %}<div><dt>รายละเอียด</dt><dd>{{ invitation_details|linebreaksbr }}</dd></div>{% endif %}
         {% endtimezone %}</dl>

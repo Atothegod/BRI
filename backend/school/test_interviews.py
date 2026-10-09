@@ -37,6 +37,7 @@ class AppointmentScheduleTests(TestCase):
             "date": self.at.strftime("%Y-%m-%d"), "time": "09:30",
             "location": "ห้องประชุม BRI", "meeting_url": "https://meet.example/session",
             "details": "กรุณามาก่อนเวลา 15 นาที",
+            "interview_mode": "onsite",
         }
         if appointment_type == "interview":
             data.update({
@@ -66,6 +67,7 @@ class AppointmentScheduleTests(TestCase):
             "appointment_type": appointment.appointment_type,
             "event_id": appointment.pk,
             "people": [person.pk for person in people],
+            "interview_mode": "onsite",
         })
 
     @override_settings(TIME_ZONE="UTC")
@@ -520,9 +522,11 @@ class AppointmentScheduleTests(TestCase):
             location="BRI Bangkok",
             meeting_url="",
             details="มาสัมภาษณ์ที่สถาบัน",
+            interview_mode="onsite",
         )
         appointment = Appointment.objects.get()
         metro_participant = appointment.participants.get(person=self.people[0])
+        self.assertEqual(metro_participant.invitation_message["interview_mode"], "onsite")
 
         self.assertTrue(self.notify(metro_participant).json()["sent"])
         metro_participant.refresh_from_db()
@@ -532,13 +536,15 @@ class AppointmentScheduleTests(TestCase):
             "appointment_type": "interview",
             "event_id": appointment.pk,
             "people": [self.people[1].pk],
-            "location": "ออนไลน์",
+            "interview_mode": "online",
+            "location": "Remote room",
             "meeting_url": "",
             "details": "สัมภาษณ์ออนไลน์",
         })
         self.assertEqual(added.status_code, 302)
         self.assertEqual(Appointment.objects.count(), 1)
         provincial_participant = appointment.participants.get(person=self.people[1])
+        self.assertEqual(provincial_participant.invitation_message["interview_mode"], "online")
 
         metro_message = json.dumps(
             build_appointment_invitation_flex_message(metro_participant),
@@ -550,11 +556,14 @@ class AppointmentScheduleTests(TestCase):
         )
         self.assertIn("BRI Bangkok", metro_message)
         self.assertNotIn("BRI Bangkok", provincial_message)
-        self.assertIn("ออนไลน์", provincial_message)
+        self.assertIn("Online", provincial_message)
+        self.assertIn("รูปแบบ", provincial_message)
+        self.assertIn("Remote room", provincial_message)
         self.assertIn("สัมภาษณ์ออนไลน์", provincial_message)
 
         confirmation = self.client.get(self.confirmation_url(provincial_participant))
-        self.assertContains(confirmation, "ออนไลน์")
+        self.assertContains(confirmation, "Online")
+        self.assertContains(confirmation, "Remote room")
         self.assertContains(confirmation, "สัมภาษณ์ออนไลน์")
         self.assertNotContains(confirmation, "BRI Bangkok")
 
@@ -566,7 +575,7 @@ class AppointmentScheduleTests(TestCase):
             for option in waiting.context["place_options"]
         }
         self.assertIn("BRI Bangkok", place_options)
-        self.assertIn("ออนไลน์", place_options)
+        self.assertIn("Remote room", place_options)
 
         onsite_page = self.client.get(self.url, {
             "type": "interview",
@@ -581,10 +590,17 @@ class AppointmentScheduleTests(TestCase):
             "type": "interview",
             "event": appointment.pk,
             "audience": "waiting",
-            "place": place_options["ออนไลน์"],
+            "place": place_options["Remote room"],
         })
         self.assertContains(online_page, self.people[1].full_name)
         self.assertNotContains(online_page, self.people[0].full_name)
+
+        roster_online = self.client.get(reverse("school:interview_roster"), {
+            "event": appointment.pk,
+            "mode": "online",
+        })
+        self.assertContains(roster_online, self.people[1].full_name)
+        self.assertNotContains(roster_online, self.people[0].full_name)
 
         resend = self.client.post(self.url, {
             "action": "resend",
@@ -594,6 +610,7 @@ class AppointmentScheduleTests(TestCase):
             "province": "metro",
             "place": place_options["BRI Bangkok"],
             "participants": [metro_participant.pk],
+            "interview_mode": "onsite",
             "location": "BRI Bangkok อาคารใหม่",
             "meeting_url": "",
             "details": "กรุณามาก่อนเวลา 20 นาที",
@@ -604,6 +621,7 @@ class AppointmentScheduleTests(TestCase):
         self.assertTrue(queue[0]["force"])
         metro_participant.refresh_from_db()
         self.assertEqual(metro_participant.invitation_location, "BRI Bangkok อาคารใหม่")
+        self.assertEqual(metro_participant.invitation_message["interview_mode"], "onsite")
 
         resent = self.client.post(
             reverse("school:appointment_notify", args=[metro_participant.pk]),
@@ -613,6 +631,7 @@ class AppointmentScheduleTests(TestCase):
         metro_participant.refresh_from_db()
         self.assertEqual(metro_participant.notification_count, 2)
         sent_content = json.dumps(send.call_args.args[1], ensure_ascii=False)
+        self.assertIn("Onsite", sent_content)
         self.assertIn("BRI Bangkok อาคารใหม่", sent_content)
         self.assertIn("กรุณามาก่อนเวลา 20 นาที", sent_content)
 
@@ -1008,7 +1027,7 @@ class AppointmentScheduleTests(TestCase):
             selected_slot=onsite_slot,
             response_status=AppointmentParticipant.ResponseStatus.CONFIRMED,
             confirmed_at=timezone.now(),
-            invitation_message={"location": "BRI Bangkok"},
+            invitation_message={"location": "BRI Bangkok", "interview_mode": "onsite"},
         )
         AppointmentParticipant.objects.create(
             appointment=appointment,
@@ -1017,8 +1036,9 @@ class AppointmentScheduleTests(TestCase):
             response_status=AppointmentParticipant.ResponseStatus.CONFIRMED,
             confirmed_at=timezone.now(),
             invitation_message={
-                "location": "ออนไลน์",
-                "meeting_url": "https://meet.example/interview",
+                "location": "Remote room",
+                "meeting_url": "",
+                "interview_mode": "online",
             },
         )
         url = reverse("school:interview_roster")
@@ -1039,6 +1059,7 @@ class AppointmentScheduleTests(TestCase):
         self.assertContains(response, "10:30-11:30")
         self.assertContains(response, "Onsite")
         self.assertContains(response, "Online")
+        self.assertContains(response, "Remote room")
 
         online = self.client.get(url, {"event": appointment.pk, "mode": "online"})
         self.assertContains(online, self.people[1].full_name)

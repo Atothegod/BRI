@@ -489,6 +489,8 @@ def build_appointment_invitation_flex_message(participant):
         {"type": "text", "text": appointment.title, "size": "sm", "wrap": True, "color": "#425B46"},
         build_flex_row("วันที่", date),
     ]
+    if appointment.appointment_type == appointment.Type.INTERVIEW and participant.invitation_interview_mode_label:
+        contents.append(build_flex_row("รูปแบบ", participant.invitation_interview_mode_label))
     if slots:
         slot_labels = []
         for slot in slots[:4]:
@@ -581,6 +583,8 @@ def build_appointment_reschedule_flex_message(participant):
         build_flex_row("วันที่ใหม่", date),
         build_flex_row("เวลาใหม่", time_text),
     ]
+    if participant.invitation_interview_mode_label:
+        contents.append(build_flex_row("รูปแบบ", participant.invitation_interview_mode_label))
     if participant.invitation_location:
         contents.append(build_flex_row("สถานที่", participant.invitation_location))
     if participant.invitation_details:

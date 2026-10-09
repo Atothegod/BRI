@@ -390,7 +390,14 @@ def enrich_interview_roster_participants(participants):
             start = timezone.localtime(participant.appointment.starts_at, THAI_TIMEZONE)
             participant.slot_label = "ยังไม่เลือก slot" if slot_counts.get(participant.appointment_id) else f"{start:%H:%M} น."
             participant.time_label = f"{start:%d/%m/%Y} {start:%H:%M}"
-        participant.line_user_id_label = participant.person.line_user_id or "-"
+        extra_data = participant.person.extra_data or {}
+        participant.province_label = participant.person.province_name or "-"
+        participant.country_label = (
+            extra_data.get("country_name_th")
+            or extra_data.get("country_name_en")
+            or extra_data.get("country_code")
+            or "-"
+        )
         participant.line_display_label = participant.person.line_display_name or "-"
     return participants
 

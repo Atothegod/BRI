@@ -450,6 +450,21 @@ class AppointmentScheduleTests(TestCase):
         with self.assertRaises(ValidationError):
             participant.full_clean()
 
+    def test_participant_cannot_move_to_full_slot_even_before_confirming(self):
+        self.schedule(slot_capacity=["1"])
+        slot = AppointmentSlot.objects.get()
+        first, second = AppointmentParticipant.objects.order_by("pk")
+        first.selected_slot = slot
+        first.response_status = AppointmentParticipant.ResponseStatus.CONFIRMED
+        first.confirmed_at = timezone.now()
+        first.save(update_fields=["selected_slot", "response_status", "confirmed_at"])
+
+        second.selected_slot = slot
+        second.response_status = AppointmentParticipant.ResponseStatus.WAITING
+
+        with self.assertRaises(ValidationError):
+            second.full_clean()
+
     def test_existing_event_can_invite_new_applicants_without_creating_another_event(self):
         self.schedule(people=[self.people[0].pk])
         appointment = Appointment.objects.get()
@@ -956,7 +971,19 @@ class AppointmentScheduleTests(TestCase):
         self.assertContains(search_again, "Result Applicant")
         self.assertContains(search_again, "ผ่านแบบออนไลน์")
 
-    def test_interview_roster_page_splits_online_and_onsite_with_line_ids(self):
+    def test_interview_roster_page_shows_location_instead_of_line_user_ids(self):
+        self.people[0].extra_data = {
+            "province": "กรุงเทพมหานคร",
+            "country_name_th": "ไทย",
+        }
+        self.people[0].line_display_name = "Applicant 0 LINE"
+        self.people[0].save(update_fields=["extra_data", "line_display_name"])
+        self.people[1].extra_data = {
+            "address_en": {"state_province": "Chiang Mai"},
+            "country_name_en": "Thailand",
+        }
+        self.people[1].line_display_name = "Applicant 1 LINE"
+        self.people[1].save(update_fields=["extra_data", "line_display_name"])
         appointment = Appointment.objects.create(
             appointment_type=Appointment.Type.INTERVIEW,
             title="สัมภาษณ์ Online Onsite",
@@ -1001,8 +1028,13 @@ class AppointmentScheduleTests(TestCase):
         self.assertContains(response, "สัมภาษณ์ Online Onsite")
         self.assertContains(response, self.people[0].full_name)
         self.assertContains(response, self.people[1].full_name)
-        self.assertContains(response, "Utest0")
-        self.assertContains(response, "Utest1")
+        self.assertContains(response, "กรุงเทพมหานคร")
+        self.assertContains(response, "Chiang Mai")
+        self.assertContains(response, "ไทย")
+        self.assertContains(response, "Thailand")
+        self.assertContains(response, "Applicant 0 LINE")
+        self.assertNotContains(response, "Utest0")
+        self.assertNotContains(response, "Utest1")
         self.assertContains(response, "09:30-10:30")
         self.assertContains(response, "10:30-11:30")
         self.assertContains(response, "Onsite")

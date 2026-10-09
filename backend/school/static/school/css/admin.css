@@ -696,6 +696,31 @@ body:not(.login) select {
     background: #fffdf8 !important;
 }
 
+body:not(.login) .select2-container .select2-selection,
+body:not(.login) .select2-container .select2-selection--single,
+body:not(.login) .select2-container .select2-selection--multiple,
+body:not(.login) .select2-container--admin-autocomplete .select2-selection,
+body:not(.login) .select2-dropdown,
+body:not(.login) .select2-search__field {
+    border-color: var(--bri-admin-border-strong) !important;
+    color: var(--bri-admin-ink) !important;
+    background: #fffdf8 !important;
+}
+
+body:not(.login) .select2-container .select2-selection__rendered,
+body:not(.login) .select2-container .select2-selection__placeholder,
+body:not(.login) .select2-container .select2-selection__clear,
+body:not(.login) .select2-container .select2-selection__arrow,
+body:not(.login) .select2-results__option {
+    color: var(--bri-admin-ink) !important;
+}
+
+body:not(.login) .select2-container--default .select2-results__option--highlighted[aria-selected],
+body:not(.login) .select2-container--default .select2-results__option--highlighted[data-selected] {
+    color: #ffffff !important;
+    background: var(--bri-admin-primary) !important;
+}
+
 body:not(.login) #toolbar > form > div,
 body:not(.login) .filter-open-button,
 body:not(.login) .selector-available,

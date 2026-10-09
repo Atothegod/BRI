@@ -15,7 +15,7 @@
             <div>
                 <span class="eyebrow">Interview roster</span>
                 <h1>รายชื่อสัมภาษณ์ Online / Onsite</h1>
-                <p>ดูรายชื่อจาก Event สัมภาษณ์ พร้อม slot เวลาและ LINE user id</p>
+                <p>ดูรายชื่อจาก Event สัมภาษณ์ พร้อม slot เวลา จังหวัด และประเทศ</p>
             </div>
         </header>
 
@@ -38,7 +38,7 @@
                     </option>
                     {% endfor %}
                 </select>
-                <input name="q" value="{{ query }}" placeholder="ค้นชื่อ ชื่อเล่น เบอร์โทร LINE name หรือ LINE id">
+                <input name="q" value="{{ query }}" placeholder="ค้นชื่อ ชื่อเล่น เบอร์โทร หรือ LINE name">
                 <button type="submit">ค้นหา</button>
             </div>
         </form>
@@ -72,7 +72,8 @@
                             <th>ชื่อ</th>
                             <th>Slot / เวลา</th>
                             <th>รูปแบบ</th>
-                            <th>LINE user id</th>
+                            <th>จังหวัด</th>
+                            <th>ประเทศ</th>
                             <th>LINE name</th>
                             <th>สถานะ</th>
                             <th>สถานที่ / รายละเอียด</th>
@@ -90,7 +91,8 @@
                                 <small>{{ participant.time_label }}</small>
                             </td>
                             <td><span class="roster-pill roster-pill--{{ participant.interview_mode }}">{{ participant.interview_mode_label }}</span></td>
-                            <td>{{ participant.line_user_id_label }}</td>
+                            <td>{{ participant.province_label }}</td>
+                            <td>{{ participant.country_label }}</td>
                             <td>{{ participant.line_display_label }}</td>
                             <td>
                                 <strong>{{ participant.get_response_status_display }}</strong>

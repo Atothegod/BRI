@@ -302,7 +302,6 @@ class AppointmentParticipant(TimeStampedModel):
             errors["selected_slot"] = "Slot ที่เลือกต้องอยู่ใน Event เดียวกับผู้เข้าร่วม"
         if (
             self.selected_slot_id
-            and self.response_status == self.ResponseStatus.CONFIRMED
             and self.selected_slot.capacity
         ):
             confirmed = AppointmentParticipant.objects.filter(

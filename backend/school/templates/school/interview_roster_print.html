@@ -13,8 +13,9 @@
         .print-toolbar button, .print-toolbar a { min-height: 40px; padding: 8px 14px; color: #12271d; background: #f5e8bf; border: 1px solid #d8bd73; border-radius: 6px; font: inherit; font-weight: 800; text-decoration: none; cursor: pointer; }
         .page { width: 297mm; min-height: 210mm; margin: 18px auto; padding: 11mm; background: #fff; box-shadow: 0 12px 36px rgba(18, 39, 29, .18); page-break-after: always; }
         .page:last-child { page-break-after: auto; }
-        .header { display: grid; grid-template-columns: 65mm 1fr auto; gap: 12px; align-items: center; padding-bottom: 8px; border-bottom: 3px solid #12271d; }
-        .header img { width: 60mm; }
+        .header { display: grid; grid-template-columns: 68mm 1fr auto; gap: 12px; align-items: center; padding-bottom: 8px; border-bottom: 3px solid #12271d; }
+        .brand-mark { position: relative; display: block; width: 64mm; height: 18mm; overflow: hidden; background: #12271d; border-radius: 3px; }
+        .brand-mark img { position: absolute; top: 50%; left: 50%; display: block; width: 91mm; height: 91mm; max-width: none; transform: translate(-50%, -50%); }
         .header h1 { margin: 0; font-size: 22pt; line-height: 1.15; }
         .header p { margin: 4px 0 0; color: #425b46; font-size: 10pt; }
         .summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 12px 0; }
@@ -47,7 +48,7 @@
     {% for appointment in appointments %}
     <article class="page">
         <header class="header">
-            <img src="{% static 'school/images/ci-bri.png' %}" alt="BRI School of Fivefold">
+            <span class="brand-mark" aria-label="BRI School of Fivefold"><img src="{% static 'school/images/logo_white.png' %}" alt=""></span>
             <div>
                 <h1>รายชื่อผู้สัมภาษณ์</h1>
                 <p>{{ appointment.title }} · {{ appointment.starts_at|thai_date }}</p>
@@ -112,7 +113,7 @@
     {% empty %}
     <article class="page">
         <header class="header">
-            <img src="{% static 'school/images/ci-bri.png' %}" alt="BRI School of Fivefold">
+            <span class="brand-mark" aria-label="BRI School of Fivefold"><img src="{% static 'school/images/logo_white.png' %}" alt=""></span>
             <div><h1>ไม่พบกิจกรรมสัมภาษณ์</h1></div>
         </header>
         <div class="empty">เลือกกิจกรรมจากหน้า Export อีกครั้ง</div>

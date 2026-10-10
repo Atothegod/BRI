@@ -14,7 +14,8 @@
         .page { position: relative; width: 210mm; min-height: 297mm; margin: 18px auto; padding: 13mm 13mm 14mm; overflow: hidden; background: #fff; box-shadow: 0 12px 36px rgba(18, 39, 29, .18); page-break-after: always; }
         .page:last-child { page-break-after: auto; }
         .brand { display: grid; justify-items: center; gap: 4px; margin-bottom: 10px; text-align: center; }
-        .brand-mark { display: block; width: 128mm; height: 30mm; background: #244431; -webkit-mask: url("{% static 'school/images/logo_white.png' %}") center / 170mm 170mm no-repeat; mask: url("{% static 'school/images/logo_white.png' %}") center / 170mm 170mm no-repeat; }
+        .brand-mark { position: relative; display: block; width: 104mm; height: 25mm; overflow: hidden; background: #12271d; border-radius: 3px; }
+        .brand-mark img { position: absolute; top: 50%; left: 50%; display: block; width: 148mm; height: 148mm; max-width: none; transform: translate(-50%, -50%); }
         .brand h1 { margin: 0; font-size: 22pt; line-height: 1.15; }
         .document-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
         .line-field { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: end; min-height: 38px; padding: 8px 10px; border: 2px solid #111; font-size: 15pt; }
@@ -65,7 +66,7 @@
     {% with student=person.student extra=person.extra_data %}
     <article class="page">
         <header class="brand">
-            <span class="brand-mark" aria-label="BRI School of Fivefold"></span>
+            <span class="brand-mark" aria-label="BRI School of Fivefold"><img src="{% static 'school/images/logo_white.png' %}" alt=""></span>
             <h1>ใบสมัครเรียน BRI รุ่นที่ 5</h1>
         </header>
 
@@ -152,7 +153,7 @@
     {% empty %}
     <article class="page">
         <header class="brand">
-            <span class="brand-mark" aria-label="BRI School of Fivefold"></span>
+            <span class="brand-mark" aria-label="BRI School of Fivefold"><img src="{% static 'school/images/logo_white.png' %}" alt=""></span>
             <h1>ไม่พบข้อมูลใบสมัคร</h1>
         </header>
     </article>

@@ -821,6 +821,20 @@ class AppointmentScheduleTests(TestCase):
             fetch_redirect_response=False,
         )
 
+    def test_interview_roster_export_uses_stable_print_logo(self):
+        self.schedule()
+        appointment = Appointment.objects.get()
+
+        response = self.client.get(
+            reverse("school:export_interview_roster"),
+            {"appointment": appointment.pk},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "school/images/logo_white.png")
+        self.assertNotContains(response, "school/images/ci-bri.png")
+        self.assertNotContains(response, "-webkit-mask")
+
     def test_invalid_changed_and_cancelled_confirmation_links_are_rejected(self):
         path = reverse("school:appointment_confirmation")
         self.assertEqual(self.client.get(path, {"token": "invalid"}).status_code, 400)
@@ -889,6 +903,17 @@ class AppointmentScheduleTests(TestCase):
 
         self.assertContains(response, "นัดหมายและ LINE")
         self.assertContains(response, self.url)
+
+    def test_appointment_admin_keeps_participants_out_of_inline_form(self):
+        self.schedule()
+        appointment = Appointment.objects.get()
+
+        response = self.client.get(reverse("admin:school_appointment_change", args=[appointment.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "slots-0-capacity")
+        self.assertContains(response, "เปิดหน้า Appointment participants")
+        self.assertNotContains(response, "participants-0-person")
 
     def test_operation_urls_use_operations_prefix(self):
         self.assertEqual(reverse("school:interview_results"), "/operations/interview-results/")

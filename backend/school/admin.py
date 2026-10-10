@@ -1,6 +1,9 @@
+from urllib.parse import urlencode
+
 from django import forms
 from django.contrib import admin, messages
 from django.db.models import Q
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
@@ -131,11 +134,26 @@ class AppointmentAdmin(UnfoldModelAdmin):
     list_filter = ("appointment_type", "status", "starts_at")
     search_fields = ("title", "location", "details")
     autocomplete_fields = ("created_by",)
-    inlines = (AppointmentSlotInline, AppointmentParticipantInline)
+    inlines = (AppointmentSlotInline,)
+    readonly_fields = ("participant_admin_link",)
 
     @admin.display(description="ผู้เข้าร่วม")
     def participant_total(self, obj):
         return obj.participants.count()
+
+    @admin.display(description="จัดการผู้เข้าร่วม")
+    def participant_admin_link(self, obj):
+        if not obj or not obj.pk:
+            return "-"
+        url = (
+            f"{reverse('admin:school_appointmentparticipant_changelist')}"
+            f"?{urlencode({'q': obj.title})}"
+        )
+        return format_html(
+            '<a href="{}">เปิดหน้า Appointment participants ({} คน)</a>',
+            url,
+            obj.participants.count(),
+        )
 
 
 @admin.register(AppointmentSlot)

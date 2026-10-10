@@ -402,6 +402,9 @@ class ApplicationExportTests(TestCase):
         response = self.client.get(reverse("school:export_application_forms"))
 
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "brand-mark")
+        self.assertContains(response, "school/images/logo_white.png")
+        self.assertNotContains(response, "-webkit-mask")
         self.assertContains(response, "รหัสไปรษณีย์")
         self.assertContains(response, "99/1 สีลม เขตบางรัก กรุงเทพมหานคร")
         self.assertContains(response, "ประเทศ ไทย")
@@ -443,7 +446,9 @@ class ApplicationExportTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "width: 128mm")
+        self.assertContains(response, "width: 104mm")
+        self.assertContains(response, "school/images/logo_white.png")
+        self.assertNotContains(response, "-webkit-mask")
         self.assertNotContains(response, "Postal code")
         self.assertContains(response, "2 Chammany Road Vientiane Vientiane Prefecture")
         self.assertContains(response, "ประเทศ ลาว")

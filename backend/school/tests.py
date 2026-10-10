@@ -1146,6 +1146,30 @@ class TeacherFlowTests(TestCase):
         self.assertNotContains(response, "ส่งสลิปให้ตรวจสอบ")
         self.assertNotContains(response, 'name="payment_slip"')
 
+    def test_student_payment_upload_ready_shows_payment_image_and_copy_button(self):
+        Person.objects.create(
+            first_name="Ready",
+            last_name="Payment",
+            line_user_id="Ureadypayment",
+            line_display_name="Ready Payment",
+            status=Person.Status.PASSED,
+        )
+        session = self.client.session
+        session["line_profile"] = {
+            "line_user_id": "Ureadypayment",
+            "line_display_name": "Ready Payment",
+            "line_picture_url": "",
+            "verified": True,
+        }
+        session.save()
+
+        response = self.client.get(reverse("school:student_payment_upload"))
+
+        self.assertContains(response, "school/images/payment.jpg")
+        self.assertContains(response, "คัดลอกเลขบัญชี 111-8-33249-7")
+        self.assertContains(response, 'data-copy-value="1118332497"')
+        self.assertContains(response, "ส่งสลิปให้ตรวจสอบ")
+
     def test_student_payment_upload_requires_line_session(self):
         person = Person.objects.create(first_name="Paid", last_name="Student")
         student = Student.objects.create(person=person)

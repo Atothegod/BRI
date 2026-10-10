@@ -2558,6 +2558,63 @@ select.form-control {
     letter-spacing: 0;
 }
 
+.payment-shell.success-shell.auth-shell {
+    width: min(calc(100vw - 32px), 640px);
+    max-width: 640px;
+}
+
+.payment-reference {
+    width: 100%;
+    margin: 18px 0 0;
+    overflow: hidden;
+    background: #0c1712;
+    border: 1px solid #ded8c9;
+    border-radius: 8px;
+    box-shadow: 0 16px 36px rgba(5, 46, 26, 0.12);
+}
+
+.payment-reference img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.payment-bank-actions {
+    display: grid;
+    width: 100%;
+    max-width: min(420px, calc(100vw - 72px));
+    margin: 16px auto 20px;
+    gap: 7px;
+}
+
+.payment-copy-button {
+    width: 100%;
+}
+
+.payment-copy-button span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.payment-copy-button.is-copied {
+    color: #ffffff;
+    background: var(--color-brand-700);
+    border-color: var(--color-brand-700);
+}
+
+.payment-copy-status {
+    min-height: 1.2em;
+    color: var(--color-brand-700);
+    font-size: 0.76rem;
+    font-weight: 760;
+    line-height: 1.35;
+}
+
+.payment-shell .stack-form {
+    max-width: min(420px, calc(100vw - 72px));
+    margin-top: 0;
+}
+
 .payment-action {
     margin-top: 24px;
 }

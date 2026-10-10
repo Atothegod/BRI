@@ -22,6 +22,8 @@
     const menuOpenButton = app.querySelector("[data-menu-open]");
     const uploadInput = form.querySelector("[data-upload-input]");
     const fileLabel = form.querySelector("[data-file-label]");
+    const copyAccountButtons = Array.from(app.querySelectorAll("[data-copy-account]"));
+    const copyStatus = app.querySelector("[data-copy-status]");
     const provinceInput = form.querySelector("[data-address-province]");
     const districtInput = form.querySelector("[data-address-district]");
     const subdistrictInput = form.querySelector("[data-address-subdistrict]");
@@ -1188,6 +1190,46 @@
             fileLabel.textContent = file ? file.name : "เลือกรูปสลิป";
         });
     }
+
+    copyAccountButtons.forEach((button) => {
+        button.addEventListener("click", async () => {
+            const value = button.dataset.copyValue || "";
+            if (!value) return;
+
+            let copied = false;
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(value);
+                    copied = true;
+                }
+            } catch {
+                copied = false;
+            }
+
+            if (!copied) {
+                const textarea = document.createElement("textarea");
+                textarea.value = value;
+                textarea.setAttribute("readonly", "");
+                textarea.style.position = "fixed";
+                textarea.style.top = "-1000px";
+                document.body.appendChild(textarea);
+                textarea.focus();
+                textarea.select();
+                try {
+                    copied = document.execCommand("copy");
+                } catch {
+                    copied = false;
+                }
+                textarea.remove();
+            }
+
+            if (copyStatus) {
+                copyStatus.textContent = copied ? "คัดลอกเลขบัญชีแล้ว" : "คัดลอกไม่สำเร็จ กรุณากดเลขบัญชีจากภาพ";
+            }
+            button.classList.toggle("is-copied", copied);
+            window.setTimeout(() => button.classList.remove("is-copied"), 1800);
+        });
+    });
 
     document.addEventListener("keydown", (event) => {
         if (event.key !== "Escape") {

@@ -4,12 +4,12 @@
 {% block title %}อัปโหลดสลิป | BRI School of Fivefold{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20260914-journey-1">
+<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20261010-payment-1">
 {% endblock %}
 
 {% block content %}
 <main class="success-page auth-page" data-registration-app>
-    <section class="success-shell journey-shell auth-shell" aria-labelledby="payment-title">
+    <section class="success-shell journey-shell auth-shell payment-shell" aria-labelledby="payment-title">
         <a class="mobile-brand success-brand" href="{% url 'school:registration' %}" aria-label="BRI School of Fivefold">
             {% include "school/includes/brand_logo.html" with variant="success" %}
         </a>
@@ -45,12 +45,21 @@
         {% elif payment_state == "missing" or payment_state == "missing_line" %}
         {% include "school/includes/missing_application.html" with missing_title_id="payment-title" %}
         {% elif payment_state == "ready" %}
-        <div class="success-mark status-mark--success" aria-hidden="true">
-            <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#check"></use></svg>
-        </div>
         <span class="eyebrow">แจ้งชำระเงิน</span>
         <h1 id="payment-title">อัปโหลดสลิปการโอนเงิน</h1>
-        <p class="success-lead">ระบบตรวจสอบแล้วว่าคุณผ่านสัมภาษณ์ สามารถส่งสลิปเพื่อยืนยันการเข้าเรียนได้</p>
+        <p class="success-lead">โอนชำระตามข้อมูลในภาพนี้ แล้วอัปโหลดสลิปเพื่อให้ทีมงานตรวจสอบ</p>
+
+        <figure class="payment-reference">
+            <img src="{% static 'school/images/payment.jpg' %}" alt="ข้อมูลบัญชีสำหรับชำระค่าเทอม BRI 5" width="1200" height="1691">
+        </figure>
+
+        <div class="payment-bank-actions">
+            <button class="button button--secondary payment-copy-button" type="button" data-copy-account data-copy-value="1118332497" aria-describedby="payment-copy-status">
+                <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#copy"></use></svg>
+                <span>คัดลอกเลขบัญชี 111-8-33249-7</span>
+            </button>
+            <span id="payment-copy-status" class="payment-copy-status" data-copy-status aria-live="polite"></span>
+        </div>
 
         {% if messages %}
         {% for message in messages %}
@@ -88,5 +97,5 @@
 
 {% block extra_js %}
 {% include "school/includes/liff_bridge.html" %}
-<script src="{% static 'school/js/registration.js' %}?v=20260828-4" defer></script>
+<script src="{% static 'school/js/registration.js' %}?v=20261010-payment-1" defer></script>
 {% endblock %}

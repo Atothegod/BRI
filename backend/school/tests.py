@@ -447,9 +447,11 @@ class ApplicationExportTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "@page { size: A4; margin: 6mm; }")
         self.assertContains(response, "width: 104mm")
         self.assertContains(response, "school/images/logo_green.png")
         self.assertContains(response, "background: transparent")
+        self.assertContains(response, "max-height: 18mm")
         self.assertNotContains(response, "-webkit-mask")
         self.assertNotContains(response, "Postal code")
         self.assertContains(response, "2 Chammany Road Vientiane Vientiane Prefecture")

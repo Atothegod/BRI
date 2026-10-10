@@ -403,7 +403,8 @@ class ApplicationExportTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "brand-mark")
-        self.assertContains(response, "school/images/logo_white.png")
+        self.assertContains(response, "school/images/logo_green.png")
+        self.assertContains(response, "padding: 0")
         self.assertNotContains(response, "-webkit-mask")
         self.assertContains(response, "รหัสไปรษณีย์")
         self.assertContains(response, "99/1 สีลม เขตบางรัก กรุงเทพมหานคร")
@@ -447,7 +448,8 @@ class ApplicationExportTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "width: 104mm")
-        self.assertContains(response, "school/images/logo_white.png")
+        self.assertContains(response, "school/images/logo_green.png")
+        self.assertContains(response, "background: transparent")
         self.assertNotContains(response, "-webkit-mask")
         self.assertNotContains(response, "Postal code")
         self.assertContains(response, "2 Chammany Road Vientiane Vientiane Prefecture")

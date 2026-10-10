@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>รายชื่อสัมภาษณ์ BRI</title>
     <style>
-        @page { size: A4 landscape; margin: 10mm; }
+        @page { size: A4 landscape; margin: 8mm; }
         * { box-sizing: border-box; }
         body { margin: 0; color: #111; background: #eef2ee; font-family: "Noto Sans Thai", "Noto Sans", Arial, sans-serif; }
         .print-toolbar { position: sticky; top: 0; z-index: 10; display: flex; gap: 10px; justify-content: center; padding: 12px; background: #12271d; }
@@ -14,7 +14,7 @@
         .page { width: 297mm; min-height: 210mm; margin: 18px auto; padding: 11mm; background: #fff; box-shadow: 0 12px 36px rgba(18, 39, 29, .18); page-break-after: always; }
         .page:last-child { page-break-after: auto; }
         .header { display: grid; grid-template-columns: 68mm 1fr auto; gap: 12px; align-items: center; padding-bottom: 8px; border-bottom: 3px solid #12271d; }
-        .brand-mark { position: relative; display: block; width: 64mm; height: 18mm; overflow: hidden; background: #12271d; border-radius: 3px; }
+        .brand-mark { position: relative; display: block; width: 64mm; height: 18mm; overflow: hidden; background: transparent; }
         .brand-mark img { position: absolute; top: 50%; left: 50%; display: block; width: 91mm; height: 91mm; max-width: none; transform: translate(-50%, -50%); }
         .header h1 { margin: 0; font-size: 22pt; line-height: 1.15; }
         .header p { margin: 4px 0 0; color: #425b46; font-size: 10pt; }
@@ -33,9 +33,11 @@
         .sign-cell { height: 28px; }
         .empty { padding: 18px; color: #667168; text-align: center; background: #f7f9f7; border: 1px dashed #c7d2c8; }
         @media print {
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             body { background: #fff; }
             .print-toolbar { display: none; }
-            .page { width: auto; min-height: auto; margin: 0; box-shadow: none; }
+            .page { width: auto; min-height: auto; margin: 0; padding: 0; box-shadow: none; break-after: page; page-break-after: always; }
+            .page:last-child { break-after: auto; page-break-after: auto; }
         }
     </style>
 </head>
@@ -48,7 +50,7 @@
     {% for appointment in appointments %}
     <article class="page">
         <header class="header">
-            <span class="brand-mark" aria-label="BRI School of Fivefold"><img src="{% static 'school/images/logo_white.png' %}" alt=""></span>
+            <span class="brand-mark" aria-label="BRI School of Fivefold"><img src="{% static 'school/images/logo_green.png' %}" alt=""></span>
             <div>
                 <h1>รายชื่อผู้สัมภาษณ์</h1>
                 <p>{{ appointment.title }} · {{ appointment.starts_at|thai_date }}</p>
@@ -113,7 +115,7 @@
     {% empty %}
     <article class="page">
         <header class="header">
-            <span class="brand-mark" aria-label="BRI School of Fivefold"><img src="{% static 'school/images/logo_white.png' %}" alt=""></span>
+            <span class="brand-mark" aria-label="BRI School of Fivefold"><img src="{% static 'school/images/logo_green.png' %}" alt=""></span>
             <div><h1>ไม่พบกิจกรรมสัมภาษณ์</h1></div>
         </header>
         <div class="empty">เลือกกิจกรรมจากหน้า Export อีกครั้ง</div>

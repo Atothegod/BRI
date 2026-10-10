@@ -831,7 +831,8 @@ class AppointmentScheduleTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "school/images/logo_white.png")
+        self.assertContains(response, "school/images/logo_green.png")
+        self.assertContains(response, "padding: 0")
         self.assertNotContains(response, "school/images/ci-bri.png")
         self.assertNotContains(response, "-webkit-mask")
 

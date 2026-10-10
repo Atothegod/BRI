@@ -6,14 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ document_title }}</title>
     <style>
-        @page { size: A4 landscape; margin: 10mm; }
+        @page { size: A4 landscape; margin: 8mm; }
         * { box-sizing: border-box; }
         body { margin: 0; color: #111; background: #eef2ee; font-family: "Noto Sans Thai", "Noto Sans", Arial, sans-serif; }
         .print-toolbar { position: sticky; top: 0; z-index: 10; display: flex; gap: 10px; justify-content: center; padding: 12px; background: #12271d; }
         .print-toolbar button, .print-toolbar a { min-height: 40px; padding: 8px 14px; color: #12271d; background: #f5e8bf; border: 1px solid #d8bd73; border-radius: 6px; font: inherit; font-weight: 800; text-decoration: none; cursor: pointer; }
         .page { width: 297mm; min-height: 210mm; margin: 18px auto; padding: 11mm; background: #fff; box-shadow: 0 12px 36px rgba(18, 39, 29, .18); }
         .header { display: grid; grid-template-columns: 68mm 1fr auto; gap: 14px; align-items: center; padding-bottom: 9px; border-bottom: 3px solid #12271d; }
-        .brand-mark { position: relative; display: block; width: 64mm; height: 18mm; overflow: hidden; background: #12271d; border-radius: 3px; }
+        .brand-mark { position: relative; display: block; width: 64mm; height: 18mm; overflow: hidden; background: transparent; }
         .brand-mark img { position: absolute; top: 50%; left: 50%; display: block; width: 91mm; height: 91mm; max-width: none; transform: translate(-50%, -50%); }
         .header h1 { margin: 0; font-size: 21pt; line-height: 1.15; }
         .header p { margin: 4px 0 0; color: #425b46; font-size: 10pt; }
@@ -32,9 +32,10 @@
         .badge.failed { color: #8a3418; background: #fff1e8; }
         .empty { padding: 22px; color: #667168; text-align: center; background: #f7f9f7; border: 1px dashed #c7d2c8; }
         @media print {
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             body { background: #fff; }
             .print-toolbar { display: none; }
-            .page { width: auto; min-height: auto; margin: 0; box-shadow: none; }
+            .page { width: auto; min-height: auto; margin: 0; padding: 0; box-shadow: none; }
         }
     </style>
 </head>
@@ -46,7 +47,7 @@
 
     <main class="page">
         <header class="header">
-            <span class="brand-mark" aria-label="BRI School of Fivefold"><img src="{% static 'school/images/logo_white.png' %}" alt=""></span>
+            <span class="brand-mark" aria-label="BRI School of Fivefold"><img src="{% static 'school/images/logo_green.png' %}" alt=""></span>
             <div>
                 <h1>ตารางรายชื่อผู้สมัคร</h1>
                 <p>{% if query %}คำค้น: {{ query }}{% else %}รวมผู้สมัครทั้งหมด{% endif %}</p>

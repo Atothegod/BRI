@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ document_title }}</title>
     <style>
-        @page { size: A4; margin: 12mm; }
+        @page { size: A4; margin: 8mm; }
         * { box-sizing: border-box; }
         body { margin: 0; color: #111; background: #eef2ee; font-family: "Noto Sans Thai", "Noto Sans", Arial, sans-serif; }
         .print-toolbar { position: sticky; top: 0; z-index: 10; display: flex; gap: 10px; justify-content: center; padding: 12px; background: #12271d; }
@@ -14,7 +14,7 @@
         .page { position: relative; width: 210mm; min-height: 297mm; margin: 18px auto; padding: 13mm 13mm 14mm; overflow: hidden; background: #fff; box-shadow: 0 12px 36px rgba(18, 39, 29, .18); page-break-after: always; }
         .page:last-child { page-break-after: auto; }
         .brand { display: grid; justify-items: center; gap: 4px; margin-bottom: 10px; text-align: center; }
-        .brand-mark { position: relative; display: block; width: 104mm; height: 25mm; overflow: hidden; background: #12271d; border-radius: 3px; }
+        .brand-mark { position: relative; display: block; width: 104mm; height: 25mm; overflow: hidden; background: transparent; }
         .brand-mark img { position: absolute; top: 50%; left: 50%; display: block; width: 148mm; height: 148mm; max-width: none; transform: translate(-50%, -50%); }
         .brand h1 { margin: 0; font-size: 22pt; line-height: 1.15; }
         .document-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
@@ -50,9 +50,11 @@
         .signature { display: grid; gap: 18px; font-size: 15pt; }
         .signature-line { display: inline-block; min-width: 70mm; border-bottom: 2px dashed #111; transform: translateY(-3px); }
         @media print {
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             body { background: #fff; }
             .print-toolbar { display: none; }
-            .page { width: auto; min-height: auto; margin: 0; box-shadow: none; }
+            .page { width: auto; min-height: auto; margin: 0; padding: 0; overflow: visible; box-shadow: none; break-after: page; page-break-after: always; }
+            .page:last-child { break-after: auto; page-break-after: auto; }
         }
     </style>
 </head>
@@ -66,7 +68,7 @@
     {% with student=person.student extra=person.extra_data %}
     <article class="page">
         <header class="brand">
-            <span class="brand-mark" aria-label="BRI School of Fivefold"><img src="{% static 'school/images/logo_white.png' %}" alt=""></span>
+            <span class="brand-mark" aria-label="BRI School of Fivefold"><img src="{% static 'school/images/logo_green.png' %}" alt=""></span>
             <h1>ใบสมัครเรียน BRI รุ่นที่ 5</h1>
         </header>
 
@@ -153,7 +155,7 @@
     {% empty %}
     <article class="page">
         <header class="brand">
-            <span class="brand-mark" aria-label="BRI School of Fivefold"><img src="{% static 'school/images/logo_white.png' %}" alt=""></span>
+            <span class="brand-mark" aria-label="BRI School of Fivefold"><img src="{% static 'school/images/logo_green.png' %}" alt=""></span>
             <h1>ไม่พบข้อมูลใบสมัคร</h1>
         </header>
     </article>

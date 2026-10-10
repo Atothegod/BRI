@@ -12,7 +12,18 @@ services:
     command:
       - sh
       - -c
-      - python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --worker-class ${GUNICORN_WORKER_CLASS:-gthread} --workers ${GUNICORN_WORKERS:-2} --threads ${GUNICORN_THREADS:-4} --timeout ${GUNICORN_TIMEOUT:-60} --max-requests ${GUNICORN_MAX_REQUESTS:-1000} --max-requests-jitter ${GUNICORN_MAX_REQUESTS_JITTER:-100} --access-logfile - --error-logfile -
+      - >
+        python manage.py collectstatic --noinput &&
+        gunicorn config.wsgi:application
+        --bind 0.0.0.0:8000
+        --worker-class ${GUNICORN_WORKER_CLASS:-gthread}
+        --workers ${GUNICORN_WORKERS:-2}
+        --threads ${GUNICORN_THREADS:-4}
+        --timeout ${GUNICORN_TIMEOUT:-60}
+        --max-requests ${GUNICORN_MAX_REQUESTS:-1000}
+        --max-requests-jitter ${GUNICORN_MAX_REQUESTS_JITTER:-100}
+        --access-logfile -
+        --error-logfile -
     env_file:
       - .env
     volumes:

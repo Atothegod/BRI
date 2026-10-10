@@ -26,10 +26,6 @@
                 <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#calendar-days"></use></svg>
                 <span>จัดการนัดหมาย</span>
             </a>
-            <a href="{% url 'school:interview_roster' %}"{% if request.resolver_match.url_name == "interview_roster" %} class="is-active" aria-current="page"{% endif %}>
-                <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#clock"></use></svg>
-                <span>รายชื่อสัมภาษณ์</span>
-            </a>
             <details class="school-admin-navbar__dropdown"{% if request.resolver_match.url_name == "interview_results" or request.resolver_match.url_name == "admin_payment_slip_review" or request.resolver_match.url_name == "admin_student_photo_import" %} open{% endif %}>
                 <summary>
                     <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#shield-check"></use></svg>

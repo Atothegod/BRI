@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from datetime import datetime
 from urllib.parse import urlencode
 from zoneinfo import ZoneInfo
@@ -367,7 +366,7 @@ def latest_interview_participations(person_ids):
             person_id__in=person_ids,
             appointment__appointment_type=Appointment.Type.INTERVIEW,
         )
-        .select_related("appointment", "selected_slot")
+        .select_related("appointment", "person", "selected_slot")
         .order_by("person_id", "-pk")
     )
     for participant in participants:
@@ -427,22 +426,15 @@ def enrich_interview_roster_participants(participants):
     return participants
 
 
-@login_required(login_url="admin:login")
-@never_cache
-def interview_roster(request):
-    if not is_school_admin(request.user):
-        raise PermissionDenied
-
-    query = request.GET.get("q", "").strip()
-    mode = request.GET.get("mode", "all")
-    if mode not in {"all", "online", "onsite"}:
-        mode = "all"
+def parse_optional_int(value):
     try:
-        selected_event_id = int(request.GET.get("event", ""))
+        return int(value)
     except (TypeError, ValueError):
-        selected_event_id = None
+        return None
 
-    appointment_options = list(
+
+def interview_appointment_options(selected_event_id=None):
+    appointments = list(
         Appointment.objects.filter(appointment_type=Appointment.Type.INTERVIEW)
         .annotate(
             participant_count=Count("participants", distinct=True),
@@ -454,7 +446,7 @@ def interview_roster(request):
         )
         .order_by("-starts_at", "-pk")[:100]
     )
-    if selected_event_id and not any(appointment.pk == selected_event_id for appointment in appointment_options):
+    if selected_event_id and not any(appointment.pk == selected_event_id for appointment in appointments):
         selected_appointment = (
             Appointment.objects.filter(
                 pk=selected_event_id,
@@ -470,102 +462,51 @@ def interview_roster(request):
             )
             .first()
         )
-        if selected_appointment is None:
-            selected_event_id = None
-        else:
-            appointment_options.insert(0, selected_appointment)
+        if selected_appointment:
+            appointments.insert(0, selected_appointment)
+    return appointments
 
-    participants = AppointmentParticipant.objects.filter(
+
+def interview_result_slot_filter_options(selected_event_id=None, selected_slot_id=None):
+    slots = AppointmentSlot.objects.filter(
         appointment__appointment_type=Appointment.Type.INTERVIEW,
-    ).select_related(
-        "appointment",
-        "person",
-        "selected_slot",
-    ).order_by(
-        "-appointment__starts_at",
-        "selected_slot__starts_at",
-        "person__first_name",
-        "person__last_name",
-        "pk",
+    ).select_related("appointment")
+    if selected_event_id:
+        slots = slots.filter(appointment_id=selected_event_id)
+    slots = list(slots.order_by("-appointment__starts_at", "starts_at", "pk")[:200])
+    if selected_slot_id and not any(slot.pk == selected_slot_id for slot in slots):
+        selected_slot = (
+            AppointmentSlot.objects.filter(
+                pk=selected_slot_id,
+                appointment__appointment_type=Appointment.Type.INTERVIEW,
+            )
+            .select_related("appointment")
+            .first()
+        )
+        if selected_slot and (not selected_event_id or selected_slot.appointment_id == selected_event_id):
+            slots.insert(0, selected_slot)
+    for slot in slots:
+        start = timezone.localtime(slot.starts_at, THAI_TIMEZONE)
+        end = timezone.localtime(slot.ends_at, THAI_TIMEZONE)
+        slot.filter_label = f"{start:%d/%m/%Y} {start:%H:%M}-{end:%H:%M}"
+        if not selected_event_id:
+            slot.filter_label = f"{slot.appointment.title} · {slot.filter_label}"
+    return slots
+
+
+def interview_participant_filter_options():
+    participants = enrich_interview_roster_participants(
+        list(
+            AppointmentParticipant.objects.filter(
+                appointment__appointment_type=Appointment.Type.INTERVIEW,
+            )
+            .select_related("appointment", "person", "selected_slot")
+            .order_by("-appointment__starts_at", "selected_slot__starts_at", "person__first_name")
+        )
     )
-    if selected_event_id:
-        participants = participants.filter(appointment_id=selected_event_id)
-    if query:
-        participants = participants.filter(
-            Q(person__first_name__icontains=query)
-            | Q(person__last_name__icontains=query)
-            | Q(person__nickname__icontains=query)
-            | Q(person__phone__icontains=query)
-            | Q(person__line_user_id__icontains=query)
-            | Q(person__line_display_name__icontains=query)
-        )
-
-    participants = enrich_interview_roster_participants(list(participants))
-    mode_counts = {
-        "all": len(participants),
-        "online": sum(1 for participant in participants if participant.interview_mode == "online"),
-        "onsite": sum(1 for participant in participants if participant.interview_mode == "onsite"),
-    }
-    if mode != "all":
-        participants = [
-            participant
-            for participant in participants
-            if participant.interview_mode == mode
-        ]
-
-    page = Paginator(participants, 200).get_page(request.GET.get("page"))
-    event_groups = OrderedDict()
-    for participant in page.object_list:
-        group = event_groups.setdefault(
-            participant.appointment_id,
-            {
-                "appointment": participant.appointment,
-                "participants": [],
-                "online_count": 0,
-                "onsite_count": 0,
-                "confirmed_count": 0,
-            },
-        )
-        group["participants"].append(participant)
-        if participant.interview_mode == "online":
-            group["online_count"] += 1
-        else:
-            group["onsite_count"] += 1
-        if participant.response_status == AppointmentParticipant.ResponseStatus.CONFIRMED:
-            group["confirmed_count"] += 1
-
-    base_params = {}
-    if selected_event_id:
-        base_params["event"] = selected_event_id
-    if query:
-        base_params["q"] = query
-    mode_tabs = []
-    for value, label in (
-        ("all", "ทั้งหมด"),
-        ("online", "Online"),
-        ("onsite", "Onsite"),
-    ):
-        tab_params = {**base_params, "mode": value}
-        mode_tabs.append({
-            "value": value,
-            "label": label,
-            "count": mode_counts[value],
-            "url": f"{reverse('school:interview_roster')}?{urlencode(tab_params)}",
-        })
-
-    page_params = {**base_params, "mode": mode}
-    page_query_prefix = f"?{urlencode(page_params)}&" if page_params else "?"
-    return render(request, "school/interview_roster.html", {
-        "appointment_options": appointment_options,
-        "selected_event_id": selected_event_id,
-        "query": query,
-        "mode": mode,
-        "mode_tabs": mode_tabs,
-        "mode_counts": mode_counts,
-        "page_obj": page,
-        "event_groups": list(event_groups.values()),
-        "page_query_prefix": page_query_prefix,
-    })
+    provinces = sorted({participant.province_label for participant in participants if participant.province_label != "-"})
+    countries = sorted({participant.country_label for participant in participants if participant.country_label != "-"})
+    return provinces, countries
 
 
 def update_interview_result(person, result):
@@ -653,6 +594,20 @@ def interview_results(request):
 
     query = request.GET.get("q", "").strip()
     status = request.GET.get("status") or ("all" if query else "pending")
+    mode = request.GET.get("mode", "all")
+    if mode not in {"all", "online", "onsite"}:
+        mode = "all"
+    selected_event_id = parse_optional_int(request.GET.get("event", ""))
+    selected_slot_id = parse_optional_int(request.GET.get("slot", ""))
+    province_filter = request.GET.get("province", "").strip()
+    country_filter = request.GET.get("country", "").strip()
+    appointment_options = interview_appointment_options(selected_event_id)
+    if selected_event_id and not any(appointment.pk == selected_event_id for appointment in appointment_options):
+        selected_event_id = None
+    slot_options = interview_result_slot_filter_options(selected_event_id, selected_slot_id)
+    if selected_slot_id and not any(slot.pk == selected_slot_id for slot in slot_options):
+        selected_slot_id = None
+
     people = Person.objects.all().order_by("first_name", "last_name", "pk")
     if status == "passed":
         people = people.filter(status=Person.Status.PASSED)
@@ -671,25 +626,121 @@ def interview_results(request):
             | Q(phone__icontains=query)
             | Q(line_display_name__icontains=query)
         )
+
+    filtered_people_base = Person.objects.all().order_by("first_name", "last_name", "pk")
+    if query:
+        filtered_people_base = filtered_people_base.filter(
+            Q(first_name__icontains=query)
+            | Q(last_name__icontains=query)
+            | Q(nickname__icontains=query)
+            | Q(phone__icontains=query)
+            | Q(line_display_name__icontains=query)
+        )
+
+    interview_filters_active = bool(
+        selected_event_id
+        or selected_slot_id
+        or mode != "all"
+        or province_filter
+        or country_filter
+    )
+    filtered_participants_by_person = {}
+    if interview_filters_active:
+        participant_queryset = AppointmentParticipant.objects.filter(
+            appointment__appointment_type=Appointment.Type.INTERVIEW,
+        ).select_related("appointment", "person", "selected_slot")
+        if selected_event_id:
+            participant_queryset = participant_queryset.filter(appointment_id=selected_event_id)
+        if selected_slot_id:
+            participant_queryset = participant_queryset.filter(selected_slot_id=selected_slot_id)
+        participants = enrich_interview_roster_participants(
+            list(
+                participant_queryset.order_by(
+                    "-appointment__starts_at",
+                    "selected_slot__starts_at",
+                    "person__first_name",
+                    "person__last_name",
+                    "-pk",
+                )
+            )
+        )
+        for participant in participants:
+            if mode != "all" and participant.interview_mode != mode:
+                continue
+            if province_filter and participant.province_label != province_filter:
+                continue
+            if country_filter and participant.country_label != country_filter:
+                continue
+            filtered_participants_by_person.setdefault(participant.person_id, participant)
+        people = people.filter(pk__in=filtered_participants_by_person)
+        filtered_people_base = filtered_people_base.filter(pk__in=filtered_participants_by_person)
+
     counts = {
-        "pending": Person.objects.filter(status=Person.Status.IN_PROGRESS).count(),
-        "passed": Person.objects.filter(status=Person.Status.PASSED).count(),
-        "failed": Person.objects.filter(status=Person.Status.FAILED).count(),
-        "all": Person.objects.count(),
+        "pending": filtered_people_base.filter(status=Person.Status.IN_PROGRESS).count(),
+        "passed": filtered_people_base.filter(status=Person.Status.PASSED).count(),
+        "failed": filtered_people_base.filter(status=Person.Status.FAILED).count(),
+        "all": filtered_people_base.count(),
     }
     page = Paginator(people, 60).get_page(request.GET.get("page"))
-    latest_by_person = latest_interview_participations([person.pk for person in page.object_list])
+    latest_by_person = (
+        filtered_participants_by_person
+        if interview_filters_active
+        else latest_interview_participations([person.pk for person in page.object_list])
+    )
+    page_participants = enrich_interview_roster_participants(
+        [
+            participant
+            for person in page.object_list
+            if (participant := latest_by_person.get(person.pk))
+        ]
+    )
+    page_participant_by_person = {participant.person_id: participant for participant in page_participants}
     for person in page.object_list:
-        person.latest_interview_participant = latest_by_person.get(person.pk)
+        person.latest_interview_participant = page_participant_by_person.get(person.pk)
         person.has_result_line_notification = interview_result_notification_sent(person)
         person.student_record = getattr(person, "student", None)
     query_params = request.GET.copy()
     query_params.pop("page", None)
+    status_tab_params = query_params.copy()
+    status_tab_params.pop("status", None)
+    status_tabs = []
+    for value, label in (
+        ("pending", "รอตัดสิน"),
+        ("passed", "ผ่านแล้ว"),
+        ("failed", "ไม่ผ่าน"),
+        ("all", "ทั้งหมด"),
+    ):
+        tab_params = status_tab_params.copy()
+        tab_params["status"] = value
+        status_tabs.append({
+            "value": value,
+            "label": label,
+            "count": counts[value],
+            "url": f"?{tab_params.urlencode()}",
+        })
+    mode_counts = {"all": 0, "online": 0, "onsite": 0}
+    summary_participants = page_participants
+    for participant in summary_participants:
+        mode_counts["all"] += 1
+        mode_counts[participant.interview_mode] += 1
+    province_options, country_options = interview_participant_filter_options()
     return render(request, "school/interview_results.html", {
         "page_obj": page,
         "query": query,
         "status": status,
         "counts": counts,
+        "status_tabs": status_tabs,
+        "mode": mode,
+        "mode_counts": mode_counts,
+        "appointment_options": appointment_options,
+        "slot_options": slot_options,
+        "selected_event_id": selected_event_id,
+        "selected_slot_id": selected_slot_id,
+        "province_filter": province_filter,
+        "country_filter": country_filter,
+        "province_options": province_options,
+        "country_options": country_options,
+        "interview_filters_active": interview_filters_active,
         "page_query_prefix": f"?{query_params.urlencode()}&" if query_params else "?",
         "next_url": request.get_full_path(),
     })

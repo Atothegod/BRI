@@ -12,24 +12,84 @@
         <div>
             <span>BRI INTERVIEW RESULTS</span>
             <h1>บันทึกผลสัมภาษณ์</h1>
+            <p>ดูผลสัมภาษณ์พร้อมรูปแบบ Online / Onsite, slot เวลา, จังหวัด และประเทศในหน้าเดียว</p>
         </div>
-        <form method="get" class="results-search">
+        <form method="get" class="results-filter-panel">
             <input type="hidden" name="status" value="{{ status }}">
-            <label for="result-search">ค้นหาผู้สมัคร</label>
-            <div>
+            <div class="results-filter-panel__search">
+                <label for="result-search">ค้นหาผู้สมัคร</label>
                 <input id="result-search" name="q" value="{{ query }}" placeholder="ชื่อ เบอร์โทร หรือชื่อ LINE">
+            </div>
+            <div class="results-filter-grid">
+                <label>
+                    <span>Event สัมภาษณ์</span>
+                    <select name="event">
+                        <option value="">ทุก Event</option>
+                        {% for appointment in appointment_options %}
+                        <option value="{{ appointment.pk }}"{% if selected_event_id == appointment.pk %} selected{% endif %}>
+                            {{ appointment.title }} · {{ appointment.starts_at|thai_date }} · {{ appointment.confirmed_count }}/{{ appointment.participant_count }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>
+                    <span>Slot เวลา</span>
+                    <select name="slot">
+                        <option value="">ทุก Slot</option>
+                        {% for slot in slot_options %}
+                        <option value="{{ slot.pk }}"{% if selected_slot_id == slot.pk %} selected{% endif %}>{{ slot.filter_label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>
+                    <span>รูปแบบ</span>
+                    <select name="mode">
+                        <option value="all"{% if mode == "all" %} selected{% endif %}>Online + Onsite</option>
+                        <option value="online"{% if mode == "online" %} selected{% endif %}>Online</option>
+                        <option value="onsite"{% if mode == "onsite" %} selected{% endif %}>Onsite</option>
+                    </select>
+                </label>
+                <label>
+                    <span>จังหวัด</span>
+                    <select name="province">
+                        <option value="">ทุกจังหวัด</option>
+                        {% for province in province_options %}
+                        <option value="{{ province }}"{% if province_filter == province %} selected{% endif %}>{{ province }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>
+                    <span>ประเทศ</span>
+                    <select name="country">
+                        <option value="">ทุกประเทศ</option>
+                        {% for country in country_options %}
+                        <option value="{{ country }}"{% if country_filter == country %} selected{% endif %}>{{ country }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
+            <div class="results-filter-actions">
                 <button type="submit">ค้นหา</button>
+                <a href="{% url 'school:interview_results' %}?status={{ status }}">ล้าง filter</a>
             </div>
         </form>
     </header>
 
     {% for message in messages %}<p class="result-notice {{ message.tags }}" role="status">{{ message }}</p>{% endfor %}
 
+    <section class="result-summary-strip" aria-label="สรุปข้อมูลสัมภาษณ์ในหน้านี้">
+        <div><span>ผลลัพธ์</span><strong>{{ page_obj.paginator.count }}</strong></div>
+        <div><span>มีนัดสัมภาษณ์ในหน้านี้</span><strong>{{ mode_counts.all }}</strong></div>
+        <div><span>Online</span><strong>{{ mode_counts.online }}</strong></div>
+        <div><span>Onsite</span><strong>{{ mode_counts.onsite }}</strong></div>
+    </section>
+
     <nav class="result-tabs" aria-label="สถานะผลสัมภาษณ์">
-        <a href="?status=pending{% if query %}&q={{ query|urlencode }}{% endif %}" class="{% if status == 'pending' %}active{% endif %}"><span>รอตัดสิน</span><b>{{ counts.pending }}</b></a>
-        <a href="?status=passed{% if query %}&q={{ query|urlencode }}{% endif %}" class="{% if status == 'passed' %}active{% endif %}"><span>ผ่านแล้ว</span><b>{{ counts.passed }}</b></a>
-        <a href="?status=failed{% if query %}&q={{ query|urlencode }}{% endif %}" class="{% if status == 'failed' %}active{% endif %}"><span>ไม่ผ่าน</span><b>{{ counts.failed }}</b></a>
-        <a href="?status=all{% if query %}&q={{ query|urlencode }}{% endif %}" class="{% if status == 'all' %}active{% endif %}"><span>ทั้งหมด</span><b>{{ counts.all }}</b></a>
+        {% for tab in status_tabs %}
+        <a href="{{ tab.url }}" class="{% if status == tab.value %}active{% endif %}"{% if status == tab.value %} aria-current="page"{% endif %}>
+            <span>{{ tab.label }}</span><b>{{ tab.count }}</b>
+        </a>
+        {% endfor %}
     </nav>
 
     <section class="result-grid" aria-label="รายชื่อผู้สมัคร">
@@ -45,9 +105,32 @@
                             <p>{{ person.nickname|default:"-" }} · {{ person.phone|default:"ไม่มีเบอร์" }}</p>
                         </div>
                     </div>
+                    <div class="result-interview-strip">
+                        <div>
+                            <span>Event</span>
+                            <strong>{% if participant %}{{ participant.appointment.title }}{% else %}-{% endif %}</strong>
+                        </div>
+                        <div>
+                            <span>Slot / เวลา</span>
+                            <strong>{% if participant %}{{ participant.slot_label }}{% else %}-{% endif %}</strong>
+                            <small>{% if participant %}{{ participant.time_label }}{% endif %}</small>
+                        </div>
+                        <div>
+                            <span>รูปแบบ</span>
+                            {% if participant %}
+                            <strong><span class="result-mode-pill result-mode-pill--{{ participant.interview_mode }}">{{ participant.interview_mode_label }}</span></strong>
+                            {% else %}
+                            <strong>-</strong>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <span>จังหวัด / ประเทศ</span>
+                            <strong>{% if participant %}{{ participant.province_label }} · {{ participant.country_label }}{% else %}-{% endif %}</strong>
+                        </div>
+                    </div>
                     <dl class="result-meta">
                         <div><dt>LINE</dt><dd>{{ person.line_display_name|default:"-" }}</dd></div>
-                        <div><dt>นัดล่าสุด</dt><dd>{% if participant %}{{ participant.appointment.starts_at|thai_date }}{% if participant.selected_slot %} · {{ participant.selected_slot.starts_at|date:"H:i" }}-{{ participant.selected_slot.ends_at|date:"H:i" }}{% endif %}{% else %}-{% endif %}</dd></div>
+                        <div><dt>สถานที่</dt><dd>{% if participant %}{{ participant.invitation_location_label }}{% else %}-{% endif %}</dd></div>
                         <div><dt>สถานะ</dt><dd>{{ person.get_status_display }}{% if person.status == 'passed' and person.admission_type_name %} · {{ person.admission_type_name }}{% endif %}</dd></div>
                         <div><dt>LINE ประกาศผล</dt><dd>{% if person.has_result_line_notification %}ส่งแล้ว{% elif person.status == 'passed' or person.status == 'failed' %}ยังไม่ส่ง{% else %}-{% endif %}</dd></div>
                     </dl>

@@ -595,7 +595,7 @@ class AppointmentScheduleTests(TestCase):
         self.assertContains(online_page, self.people[1].full_name)
         self.assertNotContains(online_page, self.people[0].full_name)
 
-        roster_online = self.client.get(reverse("school:interview_roster"), {
+        roster_online = self.client.get(reverse("school:interview_results"), {
             "event": appointment.pk,
             "mode": "online",
         })
@@ -811,9 +811,9 @@ class AppointmentScheduleTests(TestCase):
         self.schedule(people=[self.people[0].pk])
         participant = self.latest_participant()
         self.assertEqual(reverse("school:appointment_schedule"), "/school-admin/appointments/")
-        self.assertEqual(reverse("school:interview_roster"), "/school-admin/interview-roster/")
         self.assertEqual(reverse("school:appointment_confirmation"), "/appointments/confirm/")
         self.assertNotIn("/interviews/", self.confirmation_url(participant))
+        self.assertEqual(self.client.get("/school-admin/interview-roster/").status_code, 404)
         response = self.client.get("/school-admin/interviews/", {"type": "orientation"})
         self.assertRedirects(
             response,
@@ -1016,7 +1016,7 @@ class AppointmentScheduleTests(TestCase):
         self.assertContains(search_again, "Result Applicant")
         self.assertContains(search_again, "ผ่านแบบออนไลน์")
 
-    def test_interview_roster_page_shows_location_instead_of_line_user_ids(self):
+    def test_interview_results_page_shows_interview_filters_and_location(self):
         self.people[0].extra_data = {
             "province": "กรุงเทพมหานคร",
             "country_name_th": "ไทย",
@@ -1067,7 +1067,7 @@ class AppointmentScheduleTests(TestCase):
                 "interview_mode": "online",
             },
         )
-        url = reverse("school:interview_roster")
+        url = reverse("school:interview_results")
 
         response = self.client.get(url, {"event": appointment.pk})
 

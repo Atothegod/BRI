@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ document_title }}</title>
     <style>
-        @page { size: A4; margin: 6mm; }
+        @page { size: A4; margin: 0; }
         * { box-sizing: border-box; }
         body { margin: 0; color: #111; background: #eef2ee; font-family: "Noto Sans Thai", "Noto Sans", Arial, sans-serif; }
         .print-toolbar { position: sticky; top: 0; z-index: 10; display: flex; gap: 10px; justify-content: center; padding: 12px; background: #12271d; }
@@ -51,39 +51,45 @@
         .signature-line { display: inline-block; min-width: 70mm; border-bottom: 2px dashed #111; transform: translateY(-3px); }
         @media print {
             * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            body { background: #fff; }
+            html, body { width: 210mm; background: #fff; }
             .print-toolbar { display: none; }
-            .page { width: auto; min-height: auto; margin: 0; padding: 0; overflow: visible; box-shadow: none; break-after: page; page-break-after: always; }
+            .page { width: 210mm; min-height: auto; margin: 0; padding: 7mm 9mm 7mm; overflow: hidden; box-shadow: none; break-after: page; page-break-after: always; }
             .page:last-child { break-after: auto; page-break-after: auto; }
-            .brand { gap: 2px; margin-bottom: 5px; }
-            .brand-mark { width: 88mm; height: 18mm; }
-            .brand-mark img { width: 125mm; height: 125mm; }
-            .brand h1 { font-size: 16pt; line-height: 1.08; }
-            .document-meta { gap: 5px; margin: 6px 0; }
-            .line-field { min-height: 26px; padding: 4px 6px; border-width: 1.4px; font-size: 10.5pt; }
-            .line-field span:last-child { min-height: 16px; }
-            .section { margin-top: 6px; border-width: 1.4px; }
-            .section-title { padding: 4px 7px; border-bottom-width: 1.4px; font-size: 10.5pt; }
-            .field { grid-template-columns: 28mm minmax(0, 1fr); min-height: 22px; }
-            .field label { padding: 4px 6px; font-size: 7.5pt; }
-            .value { padding: 4px 6px; font-size: 8pt; line-height: 1.25; }
-            .photo-box { grid-template-columns: 25mm 1fr; gap: 7px; padding: 7px; }
-            .photo-box img, .photo-placeholder { width: 25mm; height: 30mm; }
-            .photo-placeholder { font-size: 7.5pt; }
-            .identity strong { margin-bottom: 2px; font-size: 12pt; }
-            .identity span { font-size: 8pt; }
-            .choice-section { gap: 4px; padding: 6px 10px; border-width: 1.4px; }
-            .choice-row { grid-template-columns: 45mm 1fr; gap: 8px; min-height: 21px; font-size: 9.5pt; }
-            .choice-options { gap: 14px; }
-            .choice-options span, .decision-pass-options span { gap: 5px; }
-            .box { width: 10px; height: 10px; border-width: 1.3px; font-size: 7pt; }
-            .long-text { min-height: 0; max-height: 18mm; overflow: hidden; line-height: 1.22; white-space: normal; }
-            .decision-box { margin-top: 6px; padding: 7px 10px; border-width: 1.4px; }
-            .decision-grid { gap: 10px; }
-            .decision-options { gap: 5px; font-size: 11pt; }
-            .decision-pass-options { gap: 10px; padding-left: 14px; font-size: 9pt; }
-            .signature { gap: 8px; font-size: 10.5pt; }
-            .signature-line { min-width: 48mm; border-bottom-width: 1.4px; transform: translateY(-2px); }
+            .brand { gap: 4px; margin-bottom: 8px; }
+            .brand-mark { width: 104mm; height: 25mm; }
+            .brand-mark img { width: 148mm; height: 148mm; }
+            .brand h1 { font-size: 21pt; line-height: 1.12; }
+            .document-meta { gap: 7px; margin: 10px 0; }
+            .line-field { min-height: 35px; padding: 7px 9px; border-width: 1.8px; font-size: 14pt; }
+            .line-field span:last-child { min-height: 21px; }
+            .section,
+            .choice-section,
+            .decision-box {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+            .section { margin-top: 8px; border-width: 1.8px; }
+            .section-title { padding: 6px 9px; border-bottom-width: 1.8px; font-size: 14pt; }
+            .field { grid-template-columns: 33mm minmax(0, 1fr); min-height: 29px; }
+            .field label { padding: 6px 8px; font-size: 8.8pt; }
+            .value { padding: 6px 8px; font-size: 9.5pt; line-height: 1.3; }
+            .photo-box { grid-template-columns: 34mm 1fr; gap: 11px; padding: 11px; }
+            .photo-box img, .photo-placeholder { width: 34mm; height: 40mm; }
+            .photo-placeholder { font-size: 8.6pt; }
+            .identity strong { margin-bottom: 4px; font-size: 15pt; }
+            .identity span { font-size: 9.8pt; }
+            .choice-section { gap: 7px; padding: 10px 15px; border-width: 1.8px; }
+            .choice-row { grid-template-columns: 58mm 1fr; gap: 11px; min-height: 27px; font-size: 12.5pt; }
+            .choice-options { gap: 23px; }
+            .choice-options span, .decision-pass-options span { gap: 7px; }
+            .box { width: 14px; height: 14px; border-width: 1.6px; font-size: 9pt; }
+            .long-text { min-height: 0; max-height: 24mm; overflow: hidden; line-height: 1.24; white-space: normal; }
+            .decision-box { display: grid; min-height: 40mm; margin-top: 9px; padding: 11px 15px; border-width: 1.8px; align-items: center; }
+            .decision-grid { gap: 16px; }
+            .decision-options { gap: 9px; font-size: 14pt; }
+            .decision-pass-options { gap: 16px; padding-left: 20px; font-size: 11pt; }
+            .signature { gap: 13px; font-size: 13.5pt; }
+            .signature-line { min-width: 62mm; border-bottom-width: 1.8px; transform: translateY(-2px); }
         }
     </style>
 </head>

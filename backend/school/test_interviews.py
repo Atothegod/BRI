@@ -452,20 +452,44 @@ class AppointmentScheduleTests(TestCase):
         with self.assertRaises(ValidationError):
             participant.full_clean()
 
-    def test_participant_cannot_move_to_full_slot_even_before_confirming(self):
-        self.schedule(slot_capacity=["1"])
-        slot = AppointmentSlot.objects.get()
+    def test_admin_can_move_confirmed_participant_to_full_slot_on_demand(self):
+        self.schedule(
+            slot_start=["09:30", "10:30"],
+            slot_end=["10:30", "11:30"],
+            slot_capacity=["1", "1"],
+        )
+        first_slot, full_slot = AppointmentSlot.objects.order_by("starts_at")
         first, second = AppointmentParticipant.objects.order_by("pk")
-        first.selected_slot = slot
+        first.selected_slot = full_slot
         first.response_status = AppointmentParticipant.ResponseStatus.CONFIRMED
         first.confirmed_at = timezone.now()
         first.save(update_fields=["selected_slot", "response_status", "confirmed_at"])
+        second.selected_slot = first_slot
+        second.response_status = AppointmentParticipant.ResponseStatus.CONFIRMED
+        second.confirmed_at = timezone.now()
+        second.save(update_fields=["selected_slot", "response_status", "confirmed_at"])
 
-        second.selected_slot = slot
-        second.response_status = AppointmentParticipant.ResponseStatus.WAITING
+        response = self.client.post(
+            reverse("admin:school_appointmentparticipant_change", args=[second.pk]),
+            {
+                "appointment": second.appointment_id,
+                "person": second.person_id,
+                "selected_slot": full_slot.pk,
+                "response_status": AppointmentParticipant.ResponseStatus.CONFIRMED,
+                "notification_status": second.notification_status,
+                "notification_error": second.notification_error,
+                "invitation_message": json.dumps(second.invitation_message),
+                "notification_count": second.notification_count,
+                "_save": "Save",
+            },
+        )
 
-        with self.assertRaises(ValidationError):
-            second.full_clean()
+        self.assertEqual(response.status_code, 302)
+        second.refresh_from_db()
+        full_slot.refresh_from_db()
+        self.assertEqual(second.selected_slot, full_slot)
+        self.assertEqual(full_slot.confirmed_participant_count, 2)
+        self.assertEqual(full_slot.capacity, 2)
 
     def test_existing_event_can_invite_new_applicants_without_creating_another_event(self):
         self.schedule(people=[self.people[0].pk])

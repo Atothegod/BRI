@@ -311,18 +311,6 @@ class AppointmentParticipant(TimeStampedModel):
             and self.selected_slot.appointment_id != self.appointment_id
         ):
             errors["selected_slot"] = "Slot ที่เลือกต้องอยู่ใน Event เดียวกับผู้เข้าร่วม"
-        if (
-            self.selected_slot_id
-            and self.selected_slot.capacity
-        ):
-            confirmed = AppointmentParticipant.objects.filter(
-                selected_slot=self.selected_slot,
-                response_status=self.ResponseStatus.CONFIRMED,
-            )
-            if self.pk:
-                confirmed = confirmed.exclude(pk=self.pk)
-            if confirmed.count() >= self.selected_slot.capacity:
-                errors["selected_slot"] = "Slot นี้เต็มแล้ว กรุณาเลือกช่วงเวลาอื่น"
         if errors:
             raise ValidationError(errors)
 
@@ -483,6 +471,15 @@ class AppointmentParticipant(TimeStampedModel):
         ):
             kwargs["update_fields"] = set(update_fields) | {"invitation_message"}
         super().save(*args, **kwargs)
+        if self.selected_slot_id and self.response_status == self.ResponseStatus.CONFIRMED:
+            confirmed_count = AppointmentParticipant.objects.filter(
+                selected_slot_id=self.selected_slot_id,
+                response_status=self.ResponseStatus.CONFIRMED,
+            ).count()
+            AppointmentSlot.objects.filter(
+                pk=self.selected_slot_id,
+                capacity__lt=confirmed_count,
+            ).update(capacity=confirmed_count)
         self.sync_current_interview_snapshot(self.person_id)
 
 

@@ -1205,6 +1205,7 @@ def interview_schedule(request):
         )
         and audience not in {"unsent", "confirmed_other", "next_round"}
     )
+    can_send_direct = selected_appointment is not None
     place_options = place_filter_options(participations) if selected_appointment is not None else []
     selected_slot_options = (
         interview_slot_options(selected_appointment)
@@ -1229,6 +1230,7 @@ def interview_schedule(request):
         "source_appointment": source_appointment,
         "selected_event_open": selected_event_open,
         "can_resend": can_resend,
+        "can_send_direct": can_send_direct,
         "audience": audience,
         "audience_counts": audience_counts,
         "place_options": place_options,
@@ -1288,6 +1290,33 @@ def interview_notify(request, pk):
             "notification_count": participant.notification_count,
             "notified_at": thai_date(participant.notified_at, include_time=True) if sent else "",
         })
+
+
+@login_required(login_url="admin:login")
+@require_POST
+def person_direct_message(request, pk):
+    if not is_school_admin(request.user):
+        raise PermissionDenied
+    person = Person.objects.filter(pk=pk).first()
+    if person is None:
+        return JsonResponse({"error": "ไม่พบผู้รับ"}, status=404)
+    message = request.POST.get("message", "").strip()
+    if not message:
+        return JsonResponse({"error": "กรุณากรอกข้อความ"}, status=400)
+    if len(message) > 5000:
+        return JsonResponse({"error": "ข้อความต้องยาวไม่เกิน 5,000 ตัวอักษร"}, status=400)
+    issue = line_push_unavailable_reason(person)
+    if issue == "missing_line_user_id":
+        return JsonResponse({"error": "ผู้รับยังไม่เชื่อม LINE"}, status=409)
+    if issue == "missing_channel_access_token":
+        return JsonResponse({"error": "ยังไม่ได้ตั้งค่า LINE token"}, status=503)
+    sent = send_line_push_message(
+        person.line_user_id,
+        [{"type": "text", "text": message}],
+    )
+    if not sent:
+        return JsonResponse({"error": "LINE ไม่รับข้อความ"}, status=502)
+    return JsonResponse({"sent": True, "label": "LINE รับข้อความแล้ว"})
 
 
 @login_required(login_url="admin:login")

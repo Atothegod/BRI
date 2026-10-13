@@ -2,7 +2,7 @@
 {% load static tz school_dates %}
 {% block title %}จัดการนัดหมาย | BRI{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20261005-slot-visual-2">
+<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20261013-direct-line-1">
 <link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261003-nav-dropdown-1">
 {% endblock %}
 {% block content %}
@@ -95,10 +95,22 @@
             <div class="filter-actions"><button type="submit">ค้นหา</button>{% if has_filters %}<a href="?type={{ appointment_type }}&event={% if selected_appointment %}{{ selected_appointment.pk }}{% else %}new{% endif %}&audience={{ audience }}{% if source_appointment %}&source_event={{ source_appointment.pk }}{% endif %}">ล้างตัวกรอง</a>{% endif %}</div>
         </form>
 
-        <form method="post" id="schedule-form" data-type-label="{% if appointment_type == 'orientation' %}ปฐมนิเทศ{% else %}สัมภาษณ์{% endif %}" data-event-title="{% if selected_appointment %}{{ selected_appointment.title }}{% endif %}"{% if can_resend %} data-resend="true"{% endif %}>
+        <form method="post" id="schedule-form" data-type-label="{% if appointment_type == 'orientation' %}ปฐมนิเทศ{% else %}สัมภาษณ์{% endif %}" data-event-title="{% if selected_appointment %}{{ selected_appointment.title }}{% endif %}"{% if can_resend %} data-resend="true"{% endif %}{% if can_send_direct %} data-direct-line="true"{% endif %}>
             {% csrf_token %}
             {% if can_resend %}<input type="hidden" name="action" value="resend"><input type="hidden" name="appointment_type" value="{{ appointment_type }}"><input type="hidden" name="event_id" value="{{ selected_appointment.pk }}"><input type="hidden" name="audience" value="{{ audience }}"><input type="hidden" name="province" value="{{ filters.province }}"><input type="hidden" name="place" value="{{ filters.place }}">{% else %}{{ form.appointment_type }}{{ form.event_id }}{% endif %}
             {% if can_resend and resend_form.errors %}<div role="alert" class="errors">{{ resend_form.errors }}</div>{% elif form.errors %}<div role="alert" class="errors">{{ form.errors }}</div>{% endif %}
+            {% if can_send_direct %}
+                <section class="direct-line-message" aria-labelledby="direct-line-title">
+                    <div class="message-fields-heading"><strong id="direct-line-title">ส่งข้อความ LINE แบบข้อความล้วน</strong><small>ส่งตรงด้วย LINE user ID โดยไม่เปลี่ยนสถานะนัดหมาย</small></div>
+                    <label for="direct-line-text">ข้อความ</label>
+                    <textarea id="direct-line-text" maxlength="5000" rows="4" placeholder="พิมพ์ข้อความที่ต้องการส่ง เช่น ลิงก์ประชุมและคำแนะนำ"></textarea>
+                    <div class="direct-line-actions">
+                        <button type="button" data-send-line-selected>ส่งให้รายชื่อที่เลือก</button>
+                        <button type="button" data-send-line-all>ส่งทั้งหมดในหน้านี้</button>
+                    </div>
+                    <small>ถ้าต้องการให้ชื่อปรากฏใน LINE OA กรุณาขอให้ผู้รับตอบกลับข้อความอย่างน้อยหนึ่งครั้ง</small>
+                </section>
+            {% endif %}
             {% if not selected_appointment %}
                 <section class="schedule-fields{% if appointment_type == 'interview' %} interview-slot-mode{% endif %}" aria-label="รายละเอียด Event ใหม่">
                     <div class="title-field">{{ form.title.label_tag }}{{ form.title }}</div><div>{{ form.date.label_tag }}{{ form.date }}</div>
@@ -124,14 +136,14 @@
                 </section>
             {% endif %}
 
-            <div class="selection-bar"><strong>พบ {{ page_obj.paginator.count }} คน</strong>{% if not selected_appointment or audience == 'unsent' or can_resend %}<span>เลือก <b id="selected-count">0</b> คน</span>{% endif %}</div>
+            <div class="selection-bar"><strong>พบ {{ page_obj.paginator.count }} คน</strong>{% if not selected_appointment or audience == 'unsent' or can_resend or can_send_direct %}<span>เลือก <b id="selected-count">0</b> คน</span>{% endif %}</div>
             <div class="table-scroll"><table>
-                <thead><tr><th>{% if not selected_appointment or audience == 'unsent' or can_resend %}<input type="checkbox" id="select-all" aria-label="เลือกทุกคนในหน้านี้"{% if selected_appointment and not selected_event_open and not can_resend %} disabled{% endif %}>{% endif %}</th><th>ผู้สมัคร</th><th>จังหวัด</th><th>LINE</th><th>สถานะสัมภาษณ์รวม</th><th>Event นี้</th><th>การส่ง LINE</th><th>การตอบรับ</th></tr></thead>
+                <thead><tr><th>{% if not selected_appointment or audience == 'unsent' or can_resend or can_send_direct %}<input type="checkbox" id="select-all" aria-label="เลือกทุกคนในหน้านี้"{% if selected_appointment and not selected_event_open and not can_resend and not can_send_direct %} disabled{% endif %}>{% endif %}</th><th>ผู้สมัคร</th><th>จังหวัด</th><th>LINE</th><th>สถานะสัมภาษณ์รวม</th><th>Event นี้</th><th>การส่ง LINE</th><th>การตอบรับ</th></tr></thead>
                 <tbody>{% timezone "Asia/Bangkok" %}{% for person in page_obj %}{% with participant=person.latest_appointment_participant overall=person.overall_appointment_participant confirmed=person.confirmed_appointment_participant %}<tr{% if confirmed %} class="has-confirmed-appointment"{% endif %}>
-                    <td>{% if can_resend %}<input type="checkbox" name="participants" value="{{ participant.pk }}" aria-label="เลือก {{ person.full_name }}">{% elif not selected_appointment or audience == 'unsent' %}<input type="checkbox" name="people" value="{{ person.pk }}" aria-label="เลือก {{ person.full_name }}" {% if person.pk|stringformat:"s" in selected_ids %}checked{% endif %}{% if confirmed or selected_appointment and not selected_event_open %} disabled{% endif %}>{% if confirmed %}<small class="state-confirmed-note">ยืนยันแล้ว</small>{% endif %}{% endif %}</td>
+                    <td>{% if can_resend %}<input type="checkbox" name="participants" value="{{ participant.pk }}" data-person-id="{{ person.pk }}" aria-label="เลือก {{ person.full_name }}">{% elif not selected_appointment or audience == 'unsent' %}<input type="checkbox" name="people" value="{{ person.pk }}" data-person-id="{{ person.pk }}" aria-label="เลือก {{ person.full_name }}" {% if person.pk|stringformat:"s" in selected_ids %}checked{% endif %}{% if confirmed or selected_appointment and not selected_event_open and not can_send_direct %} disabled{% endif %}>{% if confirmed %}<small class="state-confirmed-note">ยืนยันแล้ว</small>{% endif %}{% elif can_send_direct %}<input type="checkbox" name="direct_people" value="{{ person.pk }}" data-person-id="{{ person.pk }}" aria-label="เลือก {{ person.full_name }}">{% endif %}</td>
                     <td><strong>{{ person.full_name }}</strong><small>{{ person.phone|default:"-" }}</small></td>
                     <td>{{ person.province_name|default:"-" }}</td>
-                    <td>{{ person.line_display_name|default:"-" }}{% if not person.line_user_id %}<small class="warning">ยังไม่เชื่อม LINE</small>{% endif %}</td>
+                    <td>{{ person.line_display_name|default:"-" }}{% if not person.line_user_id %}<small class="warning">ยังไม่เชื่อม LINE</small>{% elif can_send_direct %}<button type="button" class="direct-line-one" data-direct-line="{{ person.pk }}" data-direct-line-url="{% url 'school:person_direct_message' person.pk %}">ส่งข้อความ</button>{% endif %}</td>
                     <td>{% if confirmed %}<strong class="state-sent">ยืนยันแล้ว</strong><small>{{ confirmed.appointment.title }}</small><small>{{ confirmed.appointment.starts_at|thai_date }}{% if confirmed.selected_slot %} · {{ confirmed.selected_slot.starts_at|date:"H:i" }}-{{ confirmed.selected_slot.ends_at|date:"H:i" }}{% endif %}</small>{% elif overall %}{% if person.overall_waiting_next_round %}<span class="state-next-round">รอบสัมเต็มแล้ว</span><small>{{ overall.appointment.title }}</small><small>รอนัดรอบถัดไป · {{ overall.appointment.starts_at|thai_date }}</small>{% else %}<span class="state-pending">รอยืนยัน</span><small>{{ overall.appointment.title }}</small><small>{{ overall.appointment.starts_at|thai_date }}</small>{% endif %}{% else %}<span class="state-unsent">ยังไม่เคยนัด</span>{% endif %}</td>
                     <td>{% if participant %}<strong>{{ participant.appointment.title }}</strong><small>{{ participant.appointment.starts_at|thai_date }}{% if participant.selected_slot %} · {{ participant.selected_slot.starts_at|date:"H:i" }}-{{ participant.selected_slot.ends_at|date:"H:i" }}{% elif person.event_waiting_next_round %} · รอนัดรอบถัดไป{% elif appointment_type == 'interview' %} · ยังไม่เลือกเวลา{% else %} · {{ participant.appointment.starts_at|date:"H:i" }}{% endif %}</small>{% if appointment_type == 'interview' and participant.invitation_interview_mode_label %}<small>รูปแบบ: {{ participant.invitation_interview_mode_label }}</small>{% endif %}<small>สถานที่: {{ participant.invitation_location_label }}</small>{% if person.event_waiting_next_round %}<small class="state-next-round">Event นี้เต็มแล้ว</small>{% endif %}{% elif selected_appointment %}<span class="state-unsent">ยังไม่อยู่ใน Event นี้</span>{% else %}<span class="state-unsent">พร้อมส่งนัด</span>{% endif %}</td>
                     <td>{% if participant %}<span data-status="{{ participant.pk }}" class="state-{{ participant.notification_status }}">{{ participant.get_notification_status_display }}</span><small data-notification-meta="{{ participant.pk }}">{% if participant.notification_count %}ส่งสำเร็จ {{ participant.notification_count }} ครั้ง{% if participant.notified_at %} · {{ participant.notified_at|thai_date:"time" }}{% endif %}{% endif %}</small>{% if participant.notification_status != 'sent' and selected_event_open %}<button class="retry" type="button" data-notify="{{ participant.pk }}" data-at="{{ participant.appointment.starts_at|date:'c' }}" data-url="{% url 'school:appointment_notify' participant.pk %}">ลองส่งอีกครั้ง</button>{% endif %}{% else %}-{% endif %}</td>
@@ -144,4 +156,4 @@
 </main>
 {{ send_queue|json_script:"interview-queue" }}<div hidden data-confirmation-status-url="{% url 'school:appointment_confirmation_status' %}"{% if selected_appointment %} data-event-id="{{ selected_appointment.pk }}"{% endif %}></div>
 {% endblock %}
-{% block extra_js %}<script src="{% static 'school/js/interviews.js' %}?v=20261005-slot-visual-2" defer></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'school/js/interviews.js' %}?v=20261013-direct-line-1" defer></script>{% endblock %}

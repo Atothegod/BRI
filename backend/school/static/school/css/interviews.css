@@ -101,6 +101,10 @@ button:disabled { opacity: .5; cursor: default; }
 .capacity-summary span, .capacity-summary small { color: #5f6b63; font-size: 14px; font-weight: 700; }
 .capacity-summary strong { display: block; font-size: 34px; line-height: 1; }
 .capacity-summary strong::after { content: " คน"; font-size: 16px; color: #5f6b63; }
+.direct-line-message { display: grid; gap: 10px; margin-bottom: 18px; padding: 16px; background: #f7faf7; border: 1px solid var(--bri-border); border-radius: 8px; }
+.direct-line-message textarea { width: 100%; resize: vertical; }
+.direct-line-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.direct-line-one { display: block; margin-top: 6px; padding: 3px 8px; font-size: 12px; }
 .slot-editor { grid-column: 1 / -1; padding: 16px; background: #fff; border: 1px solid var(--bri-border); border-radius: 6px; box-shadow: 0 1px 8px rgba(18, 39, 29, .04); }
 .slot-editor-heading { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 12px; }
 .slot-editor-heading small { display: block; color: #5f6b63; margin-top: 2px; }

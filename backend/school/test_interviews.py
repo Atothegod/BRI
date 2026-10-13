@@ -156,6 +156,90 @@ class AppointmentScheduleTests(TestCase):
         self.assertEqual(participant.notification_status, "failed")
         self.assertTrue(self.notify(participant).json()["sent"])
 
+    @override_settings(LINE_MESSAGING_CHANNEL_ACCESS_TOKEN="line-token")
+    @patch("school.interviews.send_line_push_message", return_value=True)
+    def test_admin_can_send_plain_line_message_to_one_participant(self, send):
+        self.schedule()
+        participant = self.latest_participant()
+
+        response = self.client.post(
+            reverse("school:person_direct_message", args=[participant.person_id]),
+            {"message": "  ลิงก์ประชุม: https://meet.example/room  "},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["sent"])
+        send.assert_called_once_with(
+            participant.person.line_user_id,
+            [{"type": "text", "text": "ลิงก์ประชุม: https://meet.example/room"}],
+        )
+        participant.refresh_from_db()
+        self.assertEqual(participant.notification_count, 0)
+
+    @override_settings(LINE_MESSAGING_CHANNEL_ACCESS_TOKEN="line-token")
+    def test_plain_line_message_rejects_person_without_line(self):
+        self.schedule()
+        participant = self.latest_participant()
+        Person.objects.filter(pk=participant.person_id).update(line_user_id="")
+
+        response = self.client.post(
+            reverse("school:person_direct_message", args=[participant.person_id]),
+            {"message": "ทดสอบ"},
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["error"], "ผู้รับยังไม่เชื่อม LINE")
+
+    @override_settings(LINE_MESSAGING_CHANNEL_ACCESS_TOKEN="line-token")
+    @patch("school.interviews.send_line_push_message", return_value=True)
+    def test_admin_can_send_plain_line_message_to_person_not_yet_in_event(self, send):
+        self.schedule(people=[self.people[0].pk])
+        appointment = Appointment.objects.get()
+
+        page = self.client.get(self.url, {
+            "type": "interview",
+            "event": appointment.pk,
+            "audience": "unsent",
+        })
+        self.assertContains(page, "ส่งข้อความ LINE แบบข้อความล้วน")
+        self.assertContains(
+            page,
+            reverse("school:person_direct_message", args=[self.people[1].pk]),
+        )
+
+        response = self.client.post(
+            reverse("school:person_direct_message", args=[self.people[1].pk]),
+            {"message": "กรุณาตรวจสอบข้อความจาก BRI"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        send.assert_called_once_with(
+            self.people[1].line_user_id,
+            [{"type": "text", "text": "กรุณาตรวจสอบข้อความจาก BRI"}],
+        )
+
+    def test_confirmed_list_has_plain_line_message_controls(self):
+        self.schedule()
+        participant = self.latest_participant()
+        participant.response_status = AppointmentParticipant.ResponseStatus.CONFIRMED
+        participant.confirmed_at = timezone.now()
+        participant.selected_slot = participant.appointment.slots.get()
+        participant.save(update_fields=["response_status", "confirmed_at", "selected_slot"])
+
+        response = self.client.get(self.url, {
+            "type": "interview",
+            "event": participant.appointment_id,
+            "audience": "confirmed",
+        })
+
+        self.assertContains(response, "ส่งข้อความ LINE แบบข้อความล้วน")
+        self.assertContains(response, "ส่งให้รายชื่อที่เลือก")
+        self.assertContains(response, "ส่งทั้งหมดในหน้านี้")
+        self.assertContains(
+            response,
+            reverse("school:person_direct_message", args=[participant.person_id]),
+        )
+
     @override_settings(PUBLIC_BASE_URL="https://bri.example")
     def test_orientation_message_and_confirmation_flow(self):
         Person.objects.filter(pk=self.people[0].pk).update(status=Person.Status.PASSED)

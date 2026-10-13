@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% load static tz school_dates %}
+{% block title %}ส่งข้อความ LINE | BRI{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261003-nav-dropdown-1">
+<link rel="stylesheet" href="{% static 'school/css/line_messages.css' %}?v=20261013-message-center-1">
+{% endblock %}
+{% block content %}
+{% include "school/includes/school_admin_nav.html" %}
+<main class="line-message-page">
+    <header class="line-message-hero">
+        <div><span>BRI LINE MESSAGE CENTER</span><h1>ส่งข้อความ LINE</h1><p>เขียนครั้งเดียว ส่งรายคน ส่งหลายคน หรือส่งทุกคนที่ตรงตัวกรอง</p></div>
+        <div class="line-message-metrics" aria-label="สรุปผู้รับ">
+            <div><small>รายชื่อที่พบ</small><strong>{{ total_count }}</strong></div>
+            <div><small>พร้อมส่ง LINE</small><strong>{{ connected_count }}</strong></div>
+            <div><small>ยังไม่เชื่อม</small><strong>{{ missing_count }}</strong></div>
+        </div>
+    </header>
+
+    <div class="line-message-layout">
+        <aside class="line-composer" aria-labelledby="composer-title">
+            <div class="composer-heading"><span>01 · COMPOSE</span><h2 id="composer-title">เขียนข้อความ</h2><p>ลิงก์ในข้อความจะเปิดกดได้จาก LINE</p></div>
+            <label for="line-message-text">ข้อความที่ต้องการส่ง</label>
+            <textarea id="line-message-text" maxlength="5000" rows="10" placeholder="ตัวอย่าง:&#10;สวัสดีครับ แจ้งลิงก์สัมภาษณ์ออนไลน์&#10;https://meet.example.com/room&#10;&#10;กรุณาตอบกลับว่า “รับทราบ”"></textarea>
+            <div class="composer-meta"><span>ข้อความธรรมดา</span><b><span data-character-count>0</span>/5,000</b></div>
+            <div class="composer-actions">
+                <button type="button" class="primary" data-send-selected disabled>ส่งให้ที่เลือก <span data-selected-button-count>0</span> คน</button>
+                <button type="button" class="secondary" data-send-filtered{% if not connected_count %} disabled{% endif %}>ส่งทั้งหมดตามตัวกรอง {{ connected_count }} คน</button>
+            </div>
+            <p class="composer-tip"><strong>ต้องการให้ชื่อขึ้นใน LINE OA?</strong> ขอให้ผู้รับตอบกลับข้อความนี้อย่างน้อยหนึ่งครั้ง</p>
+        </aside>
+
+        <section class="recipient-panel" aria-labelledby="recipient-title">
+            <div class="recipient-heading"><div><span>02 · RECIPIENTS</span><h2 id="recipient-title">เลือกผู้รับ</h2></div><div class="selection-pill">เลือกแล้ว <strong data-selected-count>0</strong> คน</div></div>
+            <form method="get" class="recipient-filters">
+                <label class="search-field"><span>ค้นหา</span><input type="search" name="q" value="{{ query }}" placeholder="ชื่อ เบอร์โทร อีเมล หรือชื่อ LINE"></label>
+                <label><span>Event</span><select name="event"><option value="">ทุกคนในระบบ</option>{% for item in appointments %}<option value="{{ item.pk }}"{% if event_id == item.pk %} selected{% endif %}>{{ item.title }} · {{ item.starts_at|thai_date }}</option>{% endfor %}</select></label>
+                <label><span>กลุ่มผู้รับ</span><select name="audience"><option value="all"{% if audience == 'all' %} selected{% endif %}>ทั้งหมดใน Event</option><option value="confirmed"{% if audience == 'confirmed' %} selected{% endif %}>ยืนยันแล้ว</option><option value="waiting"{% if audience == 'waiting' %} selected{% endif %}>รอยืนยัน</option><option value="failed"{% if audience == 'failed' %} selected{% endif %}>ส่งนัดไม่สำเร็จ</option><option value="unsent"{% if audience == 'unsent' %} selected{% endif %}>พร้อมส่ง / ยังไม่อยู่ใน Event</option></select></label>
+                <label><span>Slot</span><select name="slot"{% if not slot_options %} disabled{% endif %}><option value="">ทุก Slot</option>{% timezone "Asia/Bangkok" %}{% for slot in slot_options %}<option value="{{ slot.pk }}"{% if slot_id == slot.pk %} selected{% endif %}>{{ slot.starts_at|date:"H:i" }}–{{ slot.ends_at|date:"H:i" }}</option>{% endfor %}{% endtimezone %}</select></label>
+                <label><span>สถานะ LINE</span><select name="line"><option value="connected"{% if line_status == 'connected' %} selected{% endif %}>พร้อมส่ง LINE</option><option value="all"{% if line_status == 'all' %} selected{% endif %}>ทั้งหมด</option><option value="missing"{% if line_status == 'missing' %} selected{% endif %}>ยังไม่เชื่อม LINE</option></select></label>
+                <button type="submit">ใช้ตัวกรอง</button>
+            </form>
+
+            <div class="recipient-toolbar">
+                <label class="select-page"><input type="checkbox" data-select-page> เลือกทั้งหน้านี้</label>
+                <span>แสดง {{ page_obj.start_index }}–{{ page_obj.end_index }} จาก {{ total_count }} คน</span>
+            </div>
+
+            <div class="recipient-list">
+                {% for person in page_obj %}
+                    <article class="recipient-card" data-recipient-card="{{ person.pk }}">
+                        <label class="recipient-check"><input type="checkbox" value="{{ person.pk }}" data-recipient{% if not person.line_user_id %} disabled{% endif %}><span class="sr-only">เลือก {{ person.full_name }}</span></label>
+                        <div class="recipient-avatar">{{ person.first_name|first|default:"B" }}</div>
+                        <div class="recipient-identity"><strong>{{ person.full_name }}</strong><span>{{ person.phone|default:"ไม่มีเบอร์โทร" }}{% if person.nickname %} · {{ person.nickname }}{% endif %}</span></div>
+                        <div class="recipient-line"><small>LINE</small><strong>{{ person.line_display_name|default:"ไม่พบชื่อ LINE" }}</strong>{% if person.line_user_id %}<span class="line-ready">พร้อมส่ง</span>{% else %}<span class="line-missing">ยังไม่เชื่อม</span>{% endif %}</div>
+                        <div class="recipient-appointment"><small>สถานะนัด</small>{% with participant=person.message_participation %}{% if participant %}<strong>{{ participant.get_response_status_display }}</strong><span>{{ participant.appointment.title }}{% if participant.selected_slot %}{% timezone "Asia/Bangkok" %} · {{ participant.selected_slot.starts_at|date:"H:i" }}–{{ participant.selected_slot.ends_at|date:"H:i" }}{% endtimezone %}{% endif %}</span>{% else %}<strong>ยังไม่มีนัดใน Event</strong><span>ส่งข้อความทั่วไปได้</span>{% endif %}{% endwith %}</div>
+                        <div class="recipient-action">{% if person.line_user_id %}<button type="button" data-send-one="{{ person.pk }}">ส่งคนนี้</button><span data-recipient-status></span>{% else %}<span class="unavailable">ส่งไม่ได้</span>{% endif %}</div>
+                    </article>
+                {% empty %}
+                    <div class="recipient-empty"><strong>ไม่พบรายชื่อ</strong><p>ลองเปลี่ยน Event, สถานะ หรือล้างคำค้นหา</p></div>
+                {% endfor %}
+            </div>
+
+            {% if page_obj.paginator.num_pages > 1 %}<nav class="message-pagination" aria-label="หน้ารายชื่อ">{% if page_obj.has_previous %}<a href="{{ page_query_prefix }}page={{ page_obj.previous_page_number }}">ก่อนหน้า</a>{% endif %}<span>หน้า {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>{% if page_obj.has_next %}<a href="{{ page_query_prefix }}page={{ page_obj.next_page_number }}">ถัดไป</a>{% endif %}</nav>{% endif %}
+        </section>
+    </div>
+</main>
+
+<div class="send-progress" data-send-progress hidden><div><strong data-progress-title>กำลังส่งข้อความ</strong><span data-progress-detail></span></div><progress value="0" max="1" data-progress-bar></progress></div>
+<dialog class="send-dialog" data-send-dialog><form method="dialog"><span>ยืนยันการส่ง</span><h2>ส่งข้อความถึง <b data-dialog-count>0</b> คน?</h2><p data-dialog-preview></p><small>LINE อาจตอบรับคำขอแม้ผู้ใช้บล็อก OA อยู่ กรุณาตรวจสอบการตอบกลับเมื่อจำเป็น</small><div><button value="cancel">ยกเลิก</button><button value="confirm" class="confirm">ยืนยันส่ง</button></div></form></dialog>
+<form hidden>{% csrf_token %}</form>
+{{ all_recipient_ids|json_script:"all-line-recipient-ids" }}
+<div hidden data-message-url-template="{% url 'school:person_direct_message' 0 %}"></div>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'school/js/line_messages.js' %}?v=20261013-message-center-1" defer></script>{% endblock %}

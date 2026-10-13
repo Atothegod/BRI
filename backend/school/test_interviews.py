@@ -157,7 +157,7 @@ class AppointmentScheduleTests(TestCase):
         self.assertTrue(self.notify(participant).json()["sent"])
 
     @override_settings(LINE_MESSAGING_CHANNEL_ACCESS_TOKEN="line-token")
-    @patch("school.interviews.send_line_push_message", return_value=True)
+    @patch("school.line_messages.send_line_push_message", return_value=True)
     def test_admin_can_send_plain_line_message_to_one_participant(self, send):
         self.schedule()
         participant = self.latest_participant()
@@ -191,20 +191,21 @@ class AppointmentScheduleTests(TestCase):
         self.assertEqual(response.json()["error"], "ผู้รับยังไม่เชื่อม LINE")
 
     @override_settings(LINE_MESSAGING_CHANNEL_ACCESS_TOKEN="line-token")
-    @patch("school.interviews.send_line_push_message", return_value=True)
+    @patch("school.line_messages.send_line_push_message", return_value=True)
     def test_admin_can_send_plain_line_message_to_person_not_yet_in_event(self, send):
         self.schedule(people=[self.people[0].pk])
         appointment = Appointment.objects.get()
 
-        page = self.client.get(self.url, {
-            "type": "interview",
+        page = self.client.get(reverse("school:line_message_center"), {
             "event": appointment.pk,
             "audience": "unsent",
         })
-        self.assertContains(page, "ส่งข้อความ LINE แบบข้อความล้วน")
+        self.assertContains(page, "ส่งข้อความ LINE")
+        self.assertContains(page, self.people[1].full_name)
+        self.assertNotContains(page, self.people[0].full_name)
         self.assertContains(
             page,
-            reverse("school:person_direct_message", args=[self.people[1].pk]),
+            f'data-send-one="{self.people[1].pk}"',
         )
 
         response = self.client.post(
@@ -218,7 +219,7 @@ class AppointmentScheduleTests(TestCase):
             [{"type": "text", "text": "กรุณาตรวจสอบข้อความจาก BRI"}],
         )
 
-    def test_confirmed_list_has_plain_line_message_controls(self):
+    def test_message_center_has_confirmed_audience_controls(self):
         self.schedule()
         participant = self.latest_participant()
         participant.response_status = AppointmentParticipant.ResponseStatus.CONFIRMED
@@ -226,19 +227,32 @@ class AppointmentScheduleTests(TestCase):
         participant.selected_slot = participant.appointment.slots.get()
         participant.save(update_fields=["response_status", "confirmed_at", "selected_slot"])
 
-        response = self.client.get(self.url, {
-            "type": "interview",
+        response = self.client.get(reverse("school:line_message_center"), {
             "event": participant.appointment_id,
             "audience": "confirmed",
         })
 
-        self.assertContains(response, "ส่งข้อความ LINE แบบข้อความล้วน")
-        self.assertContains(response, "ส่งให้รายชื่อที่เลือก")
-        self.assertContains(response, "ส่งทั้งหมดในหน้านี้")
+        self.assertContains(response, "BRI LINE MESSAGE CENTER")
+        self.assertContains(response, "ส่งให้ที่เลือก")
+        self.assertContains(response, "ส่งทั้งหมดตามตัวกรอง")
+        self.assertContains(response, participant.person.full_name)
         self.assertContains(
             response,
-            reverse("school:person_direct_message", args=[participant.person_id]),
+            f'data-send-one="{participant.person_id}"',
         )
+
+    def test_appointment_page_no_longer_contains_plain_message_composer(self):
+        self.schedule()
+        appointment = Appointment.objects.get()
+
+        response = self.client.get(self.url, {
+            "type": "interview",
+            "event": appointment.pk,
+            "audience": "confirmed",
+        })
+
+        self.assertNotContains(response, "ส่งข้อความ LINE แบบข้อความล้วน")
+        self.assertNotContains(response, "data-send-line-all")
 
     @override_settings(PUBLIC_BASE_URL="https://bri.example")
     def test_orientation_message_and_confirmation_flow(self):

@@ -1,0 +1,60 @@
+:root { --lm-ink: #12271d; --lm-sage: #425b46; --lm-gold: #c2a256; --lm-paper: #f3f0e8; --lm-line: #d6ded7; --lm-muted: #657269; }
+body { background: #f4f6f2; }
+.line-message-page { width: min(1440px, calc(100% - 32px)); margin: 28px auto 80px; color: var(--lm-ink); }
+.line-message-hero { display: flex; justify-content: space-between; gap: 28px; align-items: end; padding: 30px; color: #fff; background: linear-gradient(125deg, #0b2116, #1f4933); border-radius: 18px; box-shadow: 0 18px 45px rgba(18,39,29,.16); }
+.line-message-hero span, .recipient-heading span, .composer-heading span { color: var(--lm-gold); font-size: 12px; font-weight: 900; letter-spacing: .13em; }
+.line-message-hero h1 { margin: 5px 0; font-size: clamp(32px, 4vw, 54px); line-height: 1; }
+.line-message-hero p { margin: 0; color: #dce7df; }
+.line-message-metrics { display: grid; grid-template-columns: repeat(3, minmax(105px, 1fr)); gap: 8px; }
+.line-message-metrics div { padding: 13px 16px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.15); border-radius: 12px; }
+.line-message-metrics small { display: block; color: #dce7df; }
+.line-message-metrics strong { display: block; margin-top: 3px; font-size: 25px; }
+.line-message-layout { display: grid; grid-template-columns: minmax(300px, 370px) minmax(0, 1fr); gap: 18px; margin-top: 18px; align-items: start; }
+.line-composer, .recipient-panel { background: #fff; border: 1px solid var(--lm-line); border-radius: 16px; box-shadow: 0 10px 28px rgba(18,39,29,.07); }
+.line-composer { position: sticky; top: 18px; display: grid; gap: 13px; padding: 22px; }
+.composer-heading h2, .recipient-heading h2 { margin: 3px 0; font-size: 25px; }
+.composer-heading p { margin: 0; color: var(--lm-muted); }
+.line-composer label, .recipient-filters label span { color: var(--lm-muted); font-size: 13px; font-weight: 850; }
+.line-composer textarea { width: 100%; min-height: 230px; padding: 14px; resize: vertical; color: var(--lm-ink); background: #fbfcfa; border: 1px solid var(--lm-line); border-radius: 10px; font: inherit; line-height: 1.6; box-sizing: border-box; }
+.line-composer textarea:focus { outline: 3px solid rgba(194,162,86,.22); border-color: var(--lm-gold); }
+.line-composer textarea.needs-attention { border-color: #b42318; }
+.composer-meta { display: flex; justify-content: space-between; color: var(--lm-muted); font-size: 12px; }
+.composer-actions { display: grid; gap: 8px; }
+.composer-actions button, .recipient-filters button, .recipient-action button, .send-dialog button { min-height: 44px; padding: 10px 14px; border-radius: 9px; border: 1px solid var(--lm-ink); font: inherit; font-weight: 850; cursor: pointer; }
+.composer-actions .primary, .recipient-filters button, .recipient-action button, .send-dialog .confirm { color: #fff; background: var(--lm-ink); }
+.composer-actions .secondary { color: var(--lm-ink); background: var(--lm-paper); border-color: #ded3b8; }
+button:disabled { opacity: .45; cursor: default; }
+.composer-tip { margin: 0; padding: 12px; color: var(--lm-sage); background: #eef5ef; border-radius: 9px; font-size: 13px; }
+.composer-tip strong { display: block; }
+.recipient-panel { padding: 22px; }
+.recipient-heading { display: flex; justify-content: space-between; align-items: center; gap: 15px; margin-bottom: 16px; }
+.selection-pill { padding: 8px 12px; color: var(--lm-sage); background: var(--lm-paper); border-radius: 999px; font-size: 13px; }
+.recipient-filters { display: grid; grid-template-columns: 1.4fr repeat(4, 1fr) auto; gap: 9px; align-items: end; padding: 13px; background: #f6f8f5; border: 1px solid var(--lm-line); border-radius: 12px; }
+.recipient-filters label { display: grid; gap: 5px; min-width: 0; }
+.recipient-filters input, .recipient-filters select { width: 100%; min-height: 42px; padding: 8px 10px; color: var(--lm-ink); background: #fff; border: 1px solid var(--lm-line); border-radius: 8px; font: inherit; box-sizing: border-box; }
+.recipient-toolbar { display: flex; justify-content: space-between; gap: 12px; padding: 15px 4px 10px; color: var(--lm-muted); font-size: 13px; }
+.select-page { color: var(--lm-ink); font-weight: 850; }
+.recipient-list { display: grid; gap: 8px; }
+.recipient-card { display: grid; grid-template-columns: 30px 42px minmax(150px,1.2fr) minmax(140px,1fr) minmax(170px,1.25fr) 95px; gap: 11px; align-items: center; padding: 12px; border: 1px solid var(--lm-line); border-radius: 11px; transition: border-color .15s, transform .15s, box-shadow .15s; }
+.recipient-card:hover { border-color: #aebfb1; transform: translateY(-1px); box-shadow: 0 7px 18px rgba(18,39,29,.07); }
+.recipient-avatar { display: grid; width: 40px; height: 40px; place-items: center; color: #fff; background: var(--lm-sage); border-radius: 50%; font-weight: 900; }
+.recipient-identity, .recipient-line, .recipient-appointment, .recipient-action { display: grid; gap: 3px; min-width: 0; }
+.recipient-card strong, .recipient-card span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recipient-card small, .recipient-identity span, .recipient-appointment span { color: var(--lm-muted); font-size: 12px; }
+.line-ready, .line-missing { width: fit-content; padding: 2px 7px; border-radius: 99px; font-size: 11px; font-weight: 800; }
+.line-ready { color: #176534; background: #e9f7ed; }.line-missing { color: #944019; background: #fff1e7; }
+.recipient-action button { min-height: 36px; padding: 7px 9px; font-size: 12px; }
+.recipient-action span { text-align: center; font-size: 11px; font-weight: 800; }.recipient-action .sent { color: #176534; }.recipient-action .failed { color: #b42318; }
+.unavailable { color: var(--lm-muted); text-align: center; }
+.recipient-empty { padding: 55px 20px; text-align: center; color: var(--lm-muted); border: 1px dashed var(--lm-line); border-radius: 12px; }
+.recipient-empty strong { color: var(--lm-ink); font-size: 20px; }.recipient-empty p { margin-bottom: 0; }
+.message-pagination { display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 18px; }
+.message-pagination a { color: var(--lm-ink); font-weight: 850; }
+.send-progress { position: fixed; z-index: 30; right: 20px; bottom: 20px; width: min(390px, calc(100% - 40px)); padding: 15px; color: #fff; background: var(--lm-ink); border-radius: 12px; box-shadow: 0 18px 45px rgba(0,0,0,.25); }
+.send-progress div { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 9px; }.send-progress progress { width: 100%; accent-color: var(--lm-gold); }.send-progress.has-error { background: #7a2e1b; }
+.send-dialog { width: min(540px, calc(100% - 30px)); padding: 0; border: 0; border-radius: 16px; box-shadow: 0 25px 80px rgba(0,0,0,.3); }
+.send-dialog::backdrop { background: rgba(6,18,11,.58); backdrop-filter: blur(3px); }
+.send-dialog form { display: grid; gap: 13px; padding: 24px; }.send-dialog form > span { color: var(--lm-gold); font-size: 12px; font-weight: 900; letter-spacing: .12em; }.send-dialog h2 { margin: 0; }.send-dialog p { max-height: 180px; overflow: auto; margin: 0; padding: 13px; white-space: pre-wrap; background: #f6f8f5; border-radius: 9px; }.send-dialog small { color: var(--lm-muted); }.send-dialog form > div { display: flex; justify-content: flex-end; gap: 8px; }.send-dialog button { color: var(--lm-ink); background: #fff; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+@media (max-width: 1100px) { .line-message-layout { grid-template-columns: 1fr; }.line-composer { position: static; }.recipient-filters { grid-template-columns: repeat(2, minmax(0,1fr)); }.recipient-filters .search-field { grid-column: 1 / -1; }.recipient-card { grid-template-columns: 30px 42px 1fr 1fr 100px; }.recipient-appointment { grid-column: 3 / 5; grid-row: 2; } }
+@media (max-width: 720px) { .line-message-page { width: min(100% - 20px, 1440px); margin-top: 14px; }.line-message-hero { display: grid; padding: 22px; }.line-message-metrics { width: 100%; }.recipient-panel, .line-composer { padding: 15px; }.recipient-filters { grid-template-columns: 1fr; }.recipient-filters .search-field { grid-column: auto; }.recipient-card { grid-template-columns: 28px 40px 1fr auto; }.recipient-line, .recipient-appointment { grid-column: 3 / -1; }.recipient-action { grid-column: 4; grid-row: 1 / 3; }.recipient-toolbar { align-items: start; }.line-message-metrics div { padding: 10px; } }

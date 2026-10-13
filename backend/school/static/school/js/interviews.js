@@ -6,9 +6,6 @@
     const slotRows = document.querySelector('[data-slot-rows]');
     const slotTotal = document.querySelector('[data-slot-total]');
     const slotCapacityValue = document.querySelector('[data-slot-capacity-value]');
-    const directLineText = document.querySelector('#direct-line-text');
-    const directLineSelected = document.querySelector('[data-send-line-selected]');
-    const directLineAll = document.querySelector('[data-send-line-all]');
     let busy = false;
     let eventClosed = false;
     const thaiMonths = [
@@ -125,70 +122,6 @@
         } finally { if (button) button.disabled = false; }
     }
     document.querySelectorAll('[data-notify]').forEach(button => button.addEventListener('click', () => send({ id: button.dataset.notify, at: button.dataset.at, url: button.dataset.url })));
-    async function sendDirectMessage(button, message) {
-        const originalLabel = button.textContent;
-        button.disabled = true;
-        button.textContent = 'กำลังส่ง...';
-        try {
-            const response = await fetch(button.dataset.directLineUrl, {
-                method: 'POST',
-                headers: { 'X-CSRFToken': form.elements.csrfmiddlewaretoken.value },
-                body: new URLSearchParams({ message }),
-            });
-            const data = await response.json();
-            button.textContent = data.sent ? 'ส่งแล้ว' : (data.error || 'ส่งไม่สำเร็จ');
-            return !!data.sent;
-        } catch (_) {
-            button.textContent = 'เชื่อมต่อไม่สำเร็จ';
-            return false;
-        } finally {
-            window.setTimeout(() => {
-                button.textContent = originalLabel;
-                button.disabled = false;
-            }, 2500);
-        }
-    }
-    async function sendDirectMessageBatch(buttons, label) {
-        const message = directLineText?.value.trim() || '';
-        if (!message) {
-            window.alert('กรุณากรอกข้อความที่ต้องการส่ง');
-            directLineText?.focus();
-            return;
-        }
-        if (!buttons.length) {
-            window.alert('กรุณาเลือกรายชื่ออย่างน้อย 1 คน');
-            return;
-        }
-        if (!window.confirm(`${label} ${buttons.length} คน ใช่หรือไม่?`)) return;
-        busy = true;
-        sync();
-        directLineSelected.disabled = true;
-        directLineAll.disabled = true;
-        const summary = document.querySelector('#send-summary');
-        summary.hidden = false;
-        let sent = 0;
-        for (let index = 0; index < buttons.length; index++) {
-            summary.textContent = `กำลังส่งข้อความ LINE ${index + 1}/${buttons.length}`;
-            if (await sendDirectMessage(buttons[index], message)) sent++;
-        }
-        summary.textContent = `ส่งข้อความแล้ว ${sent}/${buttons.length} คน · ส่งไม่สำเร็จ ${buttons.length - sent} คน`;
-        busy = false;
-        directLineSelected.disabled = false;
-        directLineAll.disabled = false;
-        sync();
-    }
-    const directLineButtons = [...document.querySelectorAll('[data-direct-line]')];
-    directLineButtons.forEach(button => button.addEventListener('click', () => {
-        sendDirectMessageBatch([button], `ส่งข้อความถึง ${button.closest('tr')?.querySelector('td:nth-child(2) strong')?.textContent || 'ผู้รับ'}`);
-    }));
-    directLineSelected?.addEventListener('click', () => {
-        const selectedIds = new Set(boxes.filter(box => box.checked).map(box => box.dataset.personId || box.value));
-        sendDirectMessageBatch(
-            directLineButtons.filter(button => selectedIds.has(button.dataset.directLine)),
-            'ส่งข้อความให้รายชื่อที่เลือก',
-        );
-    });
-    directLineAll?.addEventListener('click', () => sendDirectMessageBatch(directLineButtons, 'ส่งข้อความให้ทั้งหมดในหน้านี้'));
     async function runQueue() {
         const queueElement = document.querySelector('#interview-queue');
         if (!queueElement) return;
@@ -240,10 +173,8 @@
                     if (state) state.textContent = 'เต็มแล้ว';
                     const message = document.querySelector('[data-event-full-message]');
                     if (message) message.hidden = false;
-                    if (!form.dataset.directLine) {
-                        boxes.forEach(box => { box.checked = false; box.disabled = true; });
-                        if (selectAll) selectAll.disabled = true;
-                    }
+                    boxes.forEach(box => { box.checked = false; box.disabled = true; });
+                    if (selectAll) selectAll.disabled = true;
                     document.querySelectorAll('[data-notify]').forEach(button => { button.disabled = true; });
                     sync();
                 }

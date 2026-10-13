@@ -4,6 +4,7 @@ from django.views.generic import RedirectView
 
 from . import views
 from . import interviews
+from . import line_messages
 from . import student_groups
 
 
@@ -16,10 +17,11 @@ urlpatterns = [
         name="student_group_assignment",
     ),
     path("school-admin/appointments/", interviews.interview_schedule, name="appointment_schedule"),
+    path("school-admin/line-messages/", line_messages.line_message_center, name="line_message_center"),
     path("operations/interview-results/", interviews.interview_results, name="interview_results"),
     path("school-admin/interview-announcements/", interviews.interview_announcements, name="interview_announcements"),
     path("school-admin/appointments/<int:pk>/notify/", interviews.interview_notify, name="appointment_notify"),
-    path("school-admin/people/<int:pk>/message/", interviews.person_direct_message, name="person_direct_message"),
+    path("school-admin/people/<int:pk>/message/", line_messages.person_direct_message, name="person_direct_message"),
     path("school-admin/appointments/status/", interviews.interview_confirmation_status, name="appointment_confirmation_status"),
     path("appointments/confirm/", interviews.interview_confirmation, name="appointment_confirmation"),
     path(

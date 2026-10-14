@@ -1517,6 +1517,19 @@ def admin_exports(request):
     applicant_result_count = applicants.count()
     applicant_options = list(applicants[:80])
     appointment_options = list(interview_appointment_queryset()[:80])
+    interview_slots_by_appointment = {
+        str(appointment.pk): [
+            {
+                "id": slot.pk,
+                "label": (
+                    f"{timezone.localtime(slot.starts_at):%d/%m/%Y %H:%M}–"
+                    f"{timezone.localtime(slot.ends_at):%H:%M}"
+                ),
+            }
+            for slot in appointment.slots.all()
+        ]
+        for appointment in appointment_options
+    }
     context = {
         "application_count": Person.objects.count(),
         "student_count": Student.objects.count(),
@@ -1531,6 +1544,7 @@ def admin_exports(request):
         "applicant_result_count": applicant_result_count,
         "applicant_options": applicant_options,
         "appointment_options": appointment_options,
+        "interview_slots_by_appointment": interview_slots_by_appointment,
     }
     return render(request, "school/admin_exports.html", context)
 
@@ -1584,16 +1598,39 @@ def export_application_forms(request):
     )
 
 
-def appointment_roster_rows(appointment):
+def export_participant_interview_mode(participant):
+    if participant.invitation_interview_mode:
+        return participant.invitation_interview_mode
+    if participant.invitation_meeting_url.strip():
+        return "online"
+    searchable_text = " ".join([
+        participant.invitation_location,
+        participant.invitation_details,
+        participant.appointment.location,
+        participant.appointment.details,
+    ]).lower()
+    online_keywords = ("online", "zoom", "google meet", "meet.google", "teams", "ออนไลน์")
+    return "online" if any(keyword in searchable_text for keyword in online_keywords) else "onsite"
+
+
+def appointment_roster_rows(appointment, selected_slot_id=None, selected_mode=""):
     rows = []
     slots = list(appointment.slots.all()) or [None]
+    if selected_slot_id:
+        slots = [slot for slot in slots if slot and slot.pk == selected_slot_id]
     participants = list(appointment.participants.all())
+    for participant in participants:
+        participant.export_interview_mode = export_participant_interview_mode(participant)
+        participant.export_interview_mode_label = (
+            "Online" if participant.export_interview_mode == "online" else "Onsite"
+        )
     for slot in slots:
         slot_participants = [
             participant
             for participant in participants
             if participant.response_status == AppointmentParticipant.ResponseStatus.CONFIRMED
             and (slot is None or participant.selected_slot_id == slot.pk)
+            and (not selected_mode or participant.export_interview_mode == selected_mode)
         ]
         starts_at = slot.starts_at if slot else appointment.starts_at
         ends_at = slot.ends_at if slot else None
@@ -1616,18 +1653,36 @@ def export_interview_roster(request):
         raise PermissionDenied
 
     appointment_id = request.GET.get("appointment", "")
+    try:
+        selected_slot_id = int(request.GET.get("slot", ""))
+    except (TypeError, ValueError):
+        selected_slot_id = None
+    selected_mode = request.GET.get("mode", "")
+    if selected_mode not in {"online", "onsite"}:
+        selected_mode = ""
     appointments = interview_appointment_queryset()
     if appointment_id:
         appointments = appointments.filter(pk=appointment_id)
+    if selected_slot_id:
+        appointments = appointments.filter(slots__pk=selected_slot_id)
     appointments = list(appointments[:20])
     for appointment in appointments:
-        appointment.roster_rows = appointment_roster_rows(appointment)
+        appointment.roster_rows = appointment_roster_rows(
+            appointment,
+            selected_slot_id=selected_slot_id,
+            selected_mode=selected_mode,
+        )
+        appointment.roster_confirmed_count = sum(
+            row["confirmed_count"] for row in appointment.roster_rows
+        )
     return render(
         request,
         "school/interview_roster_print.html",
         {
             "appointments": appointments,
             "selected_appointment_id": appointment_id,
+            "selected_slot_id": selected_slot_id,
+            "selected_mode": selected_mode,
         },
     )
 

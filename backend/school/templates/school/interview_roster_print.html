@@ -64,8 +64,14 @@
             <div><span>กิจกรรม</span><strong>{{ appointment.title }}</strong></div>
             <div><span>สถานที่</span><strong>{{ appointment.location|default:"-" }}</strong></div>
             <div><span>ผู้เข้าร่วมทั้งหมด</span><strong>{{ appointment.participant_count }}</strong></div>
-            <div><span>ยืนยันแล้ว</span><strong>{{ appointment.confirmed_count }}</strong></div>
+            <div><span>รายชื่อในเอกสาร</span><strong>{{ appointment.roster_confirmed_count }}</strong></div>
         </section>
+
+        {% if selected_slot_id or selected_mode %}
+        <section class="summary" aria-label="ตัวกรองเอกสาร">
+            <div style="grid-column:1 / -1;"><span>ตัวกรอง</span><strong>{% if selected_slot_id %}เฉพาะช่วงเวลาที่เลือก{% endif %}{% if selected_slot_id and selected_mode %} · {% endif %}{% if selected_mode == 'online' %}Online เท่านั้น{% elif selected_mode == 'onsite' %}Onsite เท่านั้น{% endif %}</strong></div>
+        </section>
+        {% endif %}
 
         {% if appointment.details %}
         <section class="summary" aria-label="รายละเอียด">
@@ -88,7 +94,8 @@
                         <th style="width:42mm;">ชื่อ</th>
                         <th style="width:28mm;">ชื่อเล่น</th>
                         <th style="width:34mm;">เบอร์โทร</th>
-                        <th style="width:58mm;">LINE</th>
+                        <th style="width:46mm;">LINE</th>
+                        <th style="width:24mm;">รูปแบบ</th>
                         <th>หมายเหตุ</th>
                         <th style="width:38mm;">ลายเซ็น</th>
                     </tr>
@@ -101,11 +108,12 @@
                         <td>{{ participant.person.nickname|default:"-" }}</td>
                         <td>{{ participant.person.phone|default:"-" }}</td>
                         <td>{{ participant.person.line_display_name|default:"-" }}</td>
+                        <td><strong>{{ participant.export_interview_mode_label }}</strong></td>
                         <td></td>
                         <td class="sign-cell"></td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="7" class="center">ยังไม่มีรายชื่อที่ยืนยันใน slot นี้</td></tr>
+                    <tr><td colspan="8" class="center">ยังไม่มีรายชื่อที่ยืนยันตามตัวกรองนี้</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

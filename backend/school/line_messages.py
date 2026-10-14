@@ -4,6 +4,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from .line import line_push_unavailable_reason, send_line_push_message
@@ -124,12 +125,28 @@ def line_message_center(request):
     query_params = request.GET.copy()
     query_params.pop("page", None)
     page_query_prefix = f"?{query_params.urlencode()}&" if query_params else "?"
-    appointments = Appointment.objects.prefetch_related("slots").order_by("-starts_at", "-pk")[:50]
+    appointments = list(
+        Appointment.objects.prefetch_related("slots").order_by("-starts_at", "-pk")[:50]
+    )
+    slot_options_by_event = {
+        str(item.pk): [
+            {
+                "id": slot.pk,
+                "label": (
+                    f"{timezone.localtime(slot.starts_at):%H:%M}–"
+                    f"{timezone.localtime(slot.ends_at):%H:%M}"
+                ),
+            }
+            for slot in item.slots.all()
+        ]
+        for item in appointments
+    }
     slot_options = filters["appointment"].slots.all() if filters["appointment"] else []
     return render(request, "school/line_message_center.html", {
         **filters,
         "appointments": appointments,
         "slot_options": slot_options,
+        "slot_options_by_event": slot_options_by_event,
         "page_obj": page_obj,
         "page_query_prefix": page_query_prefix,
         "total_count": total_count,

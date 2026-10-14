@@ -16,8 +16,37 @@
     const csrfToken = document.querySelector('[name="csrfmiddlewaretoken"]')?.value || '';
     const urlTemplate = document.querySelector('[data-message-url-template]')?.dataset.messageUrlTemplate || '';
     const allIds = JSON.parse(document.querySelector('#all-line-recipient-ids')?.textContent || '[]').map(String);
+    const slotsByEvent = JSON.parse(document.querySelector('#line-message-slots-by-event')?.textContent || '{}');
+    const eventFilter = document.querySelector('[data-event-filter]');
+    const audienceFilter = document.querySelector('[data-audience-filter]');
+    const slotFilter = document.querySelector('[data-slot-filter]');
     let pendingIds = [];
     let sending = false;
+
+    function refreshSlotFilter(keepSelection = false) {
+        if (!eventFilter || !slotFilter) return;
+        const eventId = eventFilter.value;
+        const slots = slotsByEvent[eventId] || [];
+        const selectedSlot = keepSelection ? slotFilter.dataset.selectedSlot : '';
+        const slotIsRelevant = eventId && audienceFilter?.value !== 'unsent';
+        slotFilter.replaceChildren();
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = !eventId
+            ? 'เลือก Event ก่อน'
+            : slots.length
+                ? 'ทุก Slot'
+                : 'Event นี้ไม่มี Slot';
+        slotFilter.append(defaultOption);
+        slots.forEach(slot => {
+            const option = document.createElement('option');
+            option.value = String(slot.id);
+            option.textContent = slot.label;
+            option.selected = String(slot.id) === selectedSlot;
+            slotFilter.append(option);
+        });
+        slotFilter.disabled = !slotIsRelevant || slots.length === 0;
+    }
 
     function sync() {
         const selectable = boxes.filter(box => !box.disabled);
@@ -99,6 +128,8 @@
     }
 
     textarea.addEventListener('input', sync);
+    eventFilter?.addEventListener('change', () => refreshSlotFilter(false));
+    audienceFilter?.addEventListener('change', () => refreshSlotFilter(false));
     boxes.forEach(box => box.addEventListener('change', sync));
     selectPage.addEventListener('change', () => {
         boxes.filter(box => !box.disabled).forEach(box => { box.checked = selectPage.checked; });
@@ -111,5 +142,6 @@
         if (dialog.returnValue === 'confirm') runBatch(pendingIds);
         pendingIds = [];
     });
+    refreshSlotFilter(true);
     sync();
 })();

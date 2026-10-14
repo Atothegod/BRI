@@ -254,6 +254,20 @@ class AppointmentScheduleTests(TestCase):
         self.assertNotContains(response, "ส่งข้อความ LINE แบบข้อความล้วน")
         self.assertNotContains(response, "data-send-line-all")
 
+    def test_message_center_preloads_slots_for_event_filter(self):
+        self.schedule()
+        appointment = Appointment.objects.get()
+        slot = appointment.slots.get()
+
+        response = self.client.get(reverse("school:line_message_center"))
+
+        self.assertEqual(
+            response.context["slot_options_by_event"][str(appointment.pk)],
+            [{"id": slot.pk, "label": "09:30–10:30"}],
+        )
+        self.assertContains(response, "data-event-filter")
+        self.assertContains(response, "data-slot-filter")
+
     @override_settings(PUBLIC_BASE_URL="https://bri.example")
     def test_orientation_message_and_confirmation_flow(self):
         Person.objects.filter(pk=self.people[0].pk).update(status=Person.Status.PASSED)
@@ -957,6 +971,40 @@ class AppointmentScheduleTests(TestCase):
         self.assertContains(response, "padding: 0")
         self.assertNotContains(response, "school/images/ci-bri.png")
         self.assertNotContains(response, "-webkit-mask")
+
+    def test_interview_roster_can_filter_slot_and_show_interview_mode(self):
+        self.schedule(
+            slot_start=["09:30", "13:00"],
+            slot_end=["10:30", "15:00"],
+            slot_capacity=["1", "1"],
+        )
+        appointment = Appointment.objects.get()
+        morning_slot, afternoon_slot = appointment.slots.order_by("starts_at")
+        participants = list(appointment.participants.order_by("person_id"))
+        participants[0].response_status = AppointmentParticipant.ResponseStatus.CONFIRMED
+        participants[0].selected_slot = morning_slot
+        participants[0].invitation_message = {"interview_mode": "onsite"}
+        participants[0].save(update_fields=["response_status", "selected_slot", "invitation_message"])
+        participants[1].response_status = AppointmentParticipant.ResponseStatus.CONFIRMED
+        participants[1].selected_slot = afternoon_slot
+        participants[1].invitation_message = {"interview_mode": "online"}
+        participants[1].save(update_fields=["response_status", "selected_slot", "invitation_message"])
+
+        export_page = self.client.get(reverse("school:admin_exports"))
+        slots = export_page.context["interview_slots_by_appointment"][str(appointment.pk)]
+        self.assertEqual([item["id"] for item in slots], [morning_slot.pk, afternoon_slot.pk])
+        self.assertContains(export_page, "ช่วงเวลาสัมภาษณ์")
+        self.assertContains(export_page, "Online เท่านั้น")
+
+        roster = self.client.get(reverse("school:export_interview_roster"), {
+            "appointment": appointment.pk,
+            "slot": afternoon_slot.pk,
+            "mode": "online",
+        })
+        self.assertContains(roster, "13:00-15:00")
+        self.assertContains(roster, participants[1].person.full_name)
+        self.assertContains(roster, "Online")
+        self.assertNotContains(roster, participants[0].person.full_name)
 
     def test_invalid_changed_and_cancelled_confirmation_links_are_rejected(self):
         path = reverse("school:appointment_confirmation")

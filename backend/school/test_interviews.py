@@ -1040,6 +1040,8 @@ class AppointmentScheduleTests(TestCase):
 
         picker = self.client.get(reverse("school:admin_exports"), filters)
         self.assertEqual(picker.context["applicant_result_count"], 1)
+        self.assertContains(picker, "เลือกทั้งหมดที่แสดง")
+        self.assertContains(picker, "data-select-all-applicants")
         self.assertContains(picker, participants[1].person.full_name)
         self.assertNotContains(picker, participants[0].person.full_name)
 

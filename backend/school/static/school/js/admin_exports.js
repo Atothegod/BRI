@@ -37,4 +37,26 @@
         eventSelect.addEventListener('change', () => refreshSlots(eventSelect, false));
         refreshSlots(eventSelect, true);
     });
+
+    const applicantBoxes = [...document.querySelectorAll('.export-person-picker input[name="people"]')];
+    const selectAllApplicants = document.querySelector('[data-select-all-applicants]');
+    const selectedApplicantCount = document.querySelector('[data-selected-applicant-count]');
+    const openSelected = document.querySelector('[data-open-selected]');
+
+    function syncApplicantSelection() {
+        const selected = applicantBoxes.filter(box => box.checked).length;
+        if (selectedApplicantCount) selectedApplicantCount.textContent = selected.toLocaleString('th-TH');
+        if (openSelected) openSelected.disabled = selected === 0;
+        if (selectAllApplicants) {
+            selectAllApplicants.checked = applicantBoxes.length > 0 && selected === applicantBoxes.length;
+            selectAllApplicants.indeterminate = selected > 0 && selected < applicantBoxes.length;
+        }
+    }
+
+    applicantBoxes.forEach(box => box.addEventListener('change', syncApplicantSelection));
+    selectAllApplicants?.addEventListener('change', () => {
+        applicantBoxes.forEach(box => { box.checked = selectAllApplicants.checked; });
+        syncApplicantSelection();
+    });
+    syncApplicantSelection();
 })();

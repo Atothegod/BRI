@@ -448,6 +448,48 @@
     gap: 10px;
 }
 
+.export-picker-toolbar {
+    display: flex;
+    min-height: 44px;
+    padding: 9px 12px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--school-admin-forest);
+    background: #f4f0e5;
+    border: 1px solid #ded3b8;
+    border-radius: 8px;
+    font-size: .82rem;
+}
+
+.export-picker-toolbar label {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.export-picker-toolbar input {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--school-admin-forest);
+}
+
+.export-picker-toolbar strong {
+    font-size: 1rem;
+}
+
+.export-workflow-actions button:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+    .export-picker-toolbar { align-items: flex-start; flex-direction: column; }
+}
+
 .export-person-picker__list {
     display: grid;
     max-height: 330px;

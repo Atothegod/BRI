@@ -50,6 +50,10 @@
                     <input type="hidden" name="application_event" value="{{ application_event_id|default:'' }}">
                     <input type="hidden" name="application_slot" value="{{ application_slot_id|default:'' }}">
                     <input type="hidden" name="application_mode" value="{{ application_mode }}">
+                    <div class="export-picker-toolbar">
+                        <label><input type="checkbox" data-select-all-applicants{% if not applicant_options %} disabled{% endif %}> เลือกทั้งหมดที่แสดง</label>
+                        <span>เลือกแล้ว <strong data-selected-applicant-count>0</strong> จาก {{ applicant_options|length }} คนที่แสดง</span>
+                    </div>
                     <div class="export-person-picker__list" aria-label="เลือกผู้สมัคร">
                         {% for person in applicant_options %}
                         <label>
@@ -64,7 +68,7 @@
                         {% endfor %}
                     </div>
                     <div class="export-workflow-actions">
-                        <button type="submit">เปิดใบสมัครที่เลือก</button>
+                        <button type="submit" data-open-selected disabled>เปิดใบสมัครที่เลือก</button>
                         <button type="submit" name="all" value="1" class="secondary">เปิดทุกคนในผลลัพธ์</button>
                     </div>
                 </form>
@@ -159,4 +163,4 @@
 </main>
 {{ interview_slots_by_appointment|json_script:"export-interview-slots" }}
 {% endblock %}
-{% block extra_js %}<script src="{% static 'school/js/admin_exports.js' %}?v=20261015-dynamic-filters-2" defer></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'school/js/admin_exports.js' %}?v=20261015-select-all-3" defer></script>{% endblock %}

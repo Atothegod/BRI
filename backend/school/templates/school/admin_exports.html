@@ -4,7 +4,7 @@
 {% block title %}Export ข้อมูล | BRI{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261003-nav-dropdown-1">
+<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261015-export-filters-2">
 {% endblock %}
 
 {% block content %}
@@ -40,7 +40,10 @@
                         <option value="onsite"{% if application_mode == 'onsite' %} selected{% endif %}>Onsite</option>
                         <option value="online"{% if application_mode == 'online' %} selected{% endif %}>Online</option>
                     </select></label>
-                    <button type="submit">ค้นหา</button>
+                    <div class="export-filter-actions">
+                        <button type="submit">ค้นหาตามตัวกรอง</button>
+                        {% if has_application_filters %}<a href="{% url 'school:admin_exports' %}">ล้างตัวกรอง</a>{% endif %}
+                    </div>
                 </form>
                 <form method="get" action="{% url 'school:export_application_single_form' %}" target="_blank" class="export-person-picker">
                     <input type="hidden" name="q" value="{{ applicant_query }}">
@@ -156,4 +159,4 @@
 </main>
 {{ interview_slots_by_appointment|json_script:"export-interview-slots" }}
 {% endblock %}
-{% block extra_js %}<script src="{% static 'school/js/admin_exports.js' %}?v=20261015-slot-mode-1" defer></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'school/js/admin_exports.js' %}?v=20261015-dynamic-filters-2" defer></script>{% endblock %}

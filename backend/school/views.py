@@ -1615,6 +1615,7 @@ def admin_exports(request):
         "application_slot_id": application_slot_id,
         "application_mode": application_mode,
         "application_filter_query": application_filter_query,
+        "has_application_filters": bool(application_filter_query),
         "appointment_options": appointment_options,
         "interview_slots_by_appointment": interview_slots_by_appointment,
     }

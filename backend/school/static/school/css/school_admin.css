@@ -356,13 +356,27 @@
 }
 
 .export-application-search {
-    grid-template-columns: minmax(180px, 1.35fr) repeat(3, minmax(135px, 1fr)) auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: end;
+    padding: 14px;
+    background: linear-gradient(145deg, #f7f9f6, #eef3ee);
+    border: 1px solid #d1ddd3;
+    border-radius: 12px;
 }
 
 .export-application-search label {
     display: grid;
     gap: 5px;
+}
+
+.export-application-search label > span {
+    color: var(--school-admin-forest);
+    font-size: 0.78rem;
+    font-weight: 850;
+}
+
+.export-application-search__query {
+    grid-column: 1 / -1;
 }
 
 .export-application-search select {
@@ -374,20 +388,59 @@
     border: 1px solid var(--school-admin-border);
     border-radius: 6px;
     font: inherit;
+    transition: border-color .15s, box-shadow .15s, background-color .15s;
 }
 
-.export-application-search button {
-    min-height: 44px;
+.export-application-search input:focus,
+.export-application-search select:focus {
+    outline: 0;
+    border-color: var(--school-admin-gold);
+    box-shadow: 0 0 0 3px rgba(194, 162, 86, .2);
 }
 
-@media (max-width: 1100px) {
-    .export-application-search { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .export-application-search__query { grid-column: 1 / -1; }
+.export-application-search select:disabled {
+    color: #7c897f;
+    background: #e8ede8;
+    cursor: not-allowed;
+}
+
+.export-filter-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-column: 1 / -1;
+    gap: 8px;
+}
+
+.export-filter-actions button,
+.export-filter-actions a {
+    display: inline-flex;
+    min-height: 46px;
+    padding: 10px 15px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font: inherit;
+    font-weight: 900;
+    text-decoration: none;
+}
+
+.export-filter-actions button {
+    color: #fff;
+    background: linear-gradient(135deg, var(--school-admin-forest), #294b38);
+    border: 1px solid var(--school-admin-forest);
+    box-shadow: 0 6px 14px rgba(18, 39, 29, .14);
+}
+
+.export-filter-actions a {
+    color: var(--school-admin-forest);
+    background: #fff;
+    border: 1px solid var(--school-admin-border);
 }
 
 @media (max-width: 640px) {
     .export-application-search { grid-template-columns: 1fr; }
     .export-application-search__query { grid-column: auto; }
+    .export-filter-actions { grid-template-columns: 1fr; grid-column: auto; }
 }
 
 .export-person-picker {
@@ -485,12 +538,6 @@
     font-weight: 850;
     text-decoration: none;
     cursor: pointer;
-}
-
-.export-compact-search div {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 8px;
 }
 
 .export-workflow-stat {

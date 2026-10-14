@@ -20,6 +20,7 @@
     const eventFilter = document.querySelector('[data-event-filter]');
     const audienceFilter = document.querySelector('[data-audience-filter]');
     const slotFilter = document.querySelector('[data-slot-filter]');
+    const modeFilter = document.querySelector('[data-mode-filter]');
     let pendingIds = [];
     let sending = false;
 
@@ -29,6 +30,11 @@
         const slots = slotsByEvent[eventId] || [];
         const selectedSlot = keepSelection ? slotFilter.dataset.selectedSlot : '';
         const slotIsRelevant = eventId && audienceFilter?.value !== 'unsent';
+        const modeIsRelevant = slotIsRelevant && eventFilter.selectedOptions[0]?.dataset.eventType === 'interview';
+        if (modeFilter) {
+            modeFilter.disabled = !modeIsRelevant;
+            if (!modeIsRelevant) modeFilter.value = '';
+        }
         slotFilter.replaceChildren();
         const defaultOption = document.createElement('option');
         defaultOption.value = '';

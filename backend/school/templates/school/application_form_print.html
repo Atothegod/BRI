@@ -108,7 +108,7 @@
         </header>
 
         <div class="document-meta">
-            <div class="line-field"><span>รอบสัมภาษณ์</span><span>{% if person.latest_interview_participant %}{{ person.latest_interview_participant.appointment.starts_at|date:"d/m/Y H:i" }}{% endif %}</span></div>
+            <div class="line-field"><span>รอบสัมภาษณ์</span><span>{% if person.latest_interview_participant %}{{ person.latest_interview_participant.appointment.title }} · {{ person.latest_interview_participant.appointment.starts_at|date:"d/m/Y" }}{% if person.latest_interview_participant.selected_slot %} · Slot {{ person.latest_interview_participant.selected_slot.starts_at|date:"H:i" }}-{{ person.latest_interview_participant.selected_slot.ends_at|date:"H:i" }}{% else %} · ยังไม่เลือก Slot{% endif %}{% endif %}</span></div>
             <div class="line-field"><span>รหัสนักศึกษา</span><span>{% if student %}{{ student.student_id }}{% endif %}</span></div>
         </div>
 

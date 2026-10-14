@@ -28,15 +28,25 @@
                         <p>เลือกผู้สมัครจากผลลัพธ์ที่ค้นหา แล้วเปิดเป็นฟอร์ม A4 แยกคนละหน้า หรือ export ทุกคนในผลลัพธ์นี้</p>
                     </div>
                 </div>
-                <form method="get" class="export-compact-search">
-                    <label for="applicant-q">ค้นชื่อเพิ่มเติม</label>
-                    <div>
-                        <input id="applicant-q" name="q" value="{{ applicant_query }}" placeholder="ชื่อ รหัสนักศึกษา เบอร์โทร หรืออีเมล">
-                        <button type="submit">ค้นหา</button>
-                    </div>
+                <form method="get" class="export-compact-search export-application-search">
+                    <label class="export-application-search__query" for="applicant-q"><span>ค้นชื่อเพิ่มเติม</span><input id="applicant-q" name="q" value="{{ applicant_query }}" placeholder="ชื่อ รหัสนักศึกษา เบอร์โทร หรืออีเมล"></label>
+                    <label><span>Event สัมภาษณ์</span><select name="application_event" data-slot-event>
+                        <option value="">ทุก Event</option>
+                        {% for appointment in appointment_options %}<option value="{{ appointment.pk }}"{% if application_event_id == appointment.pk %} selected{% endif %}>{{ appointment.title }} · {{ appointment.starts_at|thai_date }}</option>{% endfor %}
+                    </select></label>
+                    <label><span>ช่วงเวลา</span><select name="application_slot" data-slot-select data-selected-slot="{{ application_slot_id|default:'' }}" disabled><option value="">เลือก Event ก่อน</option></select></label>
+                    <label><span>รูปแบบ</span><select name="application_mode"{% if not application_event_id %} disabled{% endif %} data-mode-select>
+                        <option value="">Online + Onsite</option>
+                        <option value="onsite"{% if application_mode == 'onsite' %} selected{% endif %}>Onsite</option>
+                        <option value="online"{% if application_mode == 'online' %} selected{% endif %}>Online</option>
+                    </select></label>
+                    <button type="submit">ค้นหา</button>
                 </form>
                 <form method="get" action="{% url 'school:export_application_single_form' %}" target="_blank" class="export-person-picker">
                     <input type="hidden" name="q" value="{{ applicant_query }}">
+                    <input type="hidden" name="application_event" value="{{ application_event_id|default:'' }}">
+                    <input type="hidden" name="application_slot" value="{{ application_slot_id|default:'' }}">
+                    <input type="hidden" name="application_mode" value="{{ application_mode }}">
                     <div class="export-person-picker__list" aria-label="เลือกผู้สมัคร">
                         {% for person in applicant_options %}
                         <label>
@@ -70,7 +80,7 @@
                     <strong>{{ applicant_result_count }}</strong>
                 </div>
                 <div class="export-workflow-actions">
-                    <a class="export-main-action" href="{% url 'school:export_application_forms' %}{% if applicant_query %}?q={{ applicant_query|urlencode }}{% endif %}" target="_blank" rel="noopener">เปิดตารางรวม</a>
+                    <a class="export-main-action" href="{% url 'school:export_application_forms' %}{% if application_filter_query %}?{{ application_filter_query }}{% endif %}" target="_blank" rel="noopener">เปิดตารางรวม</a>
                     <a class="export-secondary-action" href="{% url 'school:export_applications_csv' %}">CSV สำหรับ Sheets</a>
                 </div>
             </article>
@@ -85,7 +95,7 @@
                 </div>
                 <form method="get" action="{% url 'school:export_interview_roster' %}" target="_blank" class="export-workflow-form">
                     <label for="interview-event">กิจกรรมสัมภาษณ์</label>
-                    <select id="interview-event" name="appointment" data-export-event>
+                    <select id="interview-event" name="appointment" data-slot-event>
                         <option value="">ทุกกิจกรรมล่าสุด</option>
                         {% for appointment in appointment_options %}
                         <option value="{{ appointment.pk }}">
@@ -94,7 +104,7 @@
                         {% endfor %}
                     </select>
                     <label for="interview-slot">ช่วงเวลาสัมภาษณ์</label>
-                    <select id="interview-slot" name="slot" data-export-slot disabled>
+                    <select id="interview-slot" name="slot" data-slot-select disabled>
                         <option value="">เลือกกิจกรรมก่อน</option>
                     </select>
                     <label for="interview-mode">รูปแบบสัมภาษณ์</label>

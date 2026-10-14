@@ -13,6 +13,22 @@ from .views import is_school_admin
 
 
 LINE_MESSAGE_AUDIENCES = {"all", "confirmed", "waiting", "failed", "unsent"}
+LINE_MESSAGE_MODES = {"online", "onsite"}
+
+
+def _participant_interview_mode(participant):
+    if participant.invitation_interview_mode:
+        return participant.invitation_interview_mode
+    if participant.invitation_meeting_url.strip():
+        return "online"
+    searchable_text = " ".join([
+        participant.invitation_location,
+        participant.invitation_details,
+        participant.appointment.location,
+        participant.appointment.details,
+    ]).lower()
+    online_keywords = ("online", "zoom", "google meet", "meet.google", "teams", "ออนไลน์")
+    return "online" if any(keyword in searchable_text for keyword in online_keywords) else "onsite"
 
 
 def _optional_int(value):
@@ -32,6 +48,9 @@ def _filtered_people(request):
         audience = "all"
     event_id = _optional_int(request.GET.get("event"))
     slot_id = _optional_int(request.GET.get("slot"))
+    mode = request.GET.get("mode", "")
+    if mode not in LINE_MESSAGE_MODES:
+        mode = ""
     appointment = (
         Appointment.objects.filter(pk=event_id).prefetch_related("slots").first()
         if event_id
@@ -41,6 +60,9 @@ def _filtered_people(request):
         event_id = None
         slot_id = None
         audience = "all"
+        mode = ""
+    elif appointment.appointment_type != Appointment.Type.INTERVIEW:
+        mode = ""
 
     people = Person.objects.all().order_by("-created_at", "-pk")
     if query:
@@ -63,6 +85,7 @@ def _filtered_people(request):
         if audience == "unsent":
             people = people.exclude(pk__in=participations.values("person_id"))
             slot_id = None
+            mode = ""
         else:
             if audience == "confirmed":
                 participations = participations.filter(
@@ -76,6 +99,16 @@ def _filtered_people(request):
                 participations = participations.filter(
                     notification_status=AppointmentParticipant.NotificationStatus.FAILED,
                 )
+            if mode:
+                mode_person_ids = [
+                    participant.person_id
+                    for participant in participations.select_related(
+                        "appointment",
+                        "selected_slot",
+                    )
+                    if _participant_interview_mode(participant) == mode
+                ]
+                participations = participations.filter(person_id__in=mode_person_ids)
             people = people.filter(pk__in=participations.values("person_id"))
         if slot_id and audience != "unsent":
             slot = AppointmentSlot.objects.filter(pk=slot_id, appointment=appointment).first()
@@ -94,6 +127,7 @@ def _filtered_people(request):
         "appointment": appointment,
         "event_id": event_id,
         "slot_id": slot_id,
+        "mode": mode,
     }
 
 
@@ -118,6 +152,9 @@ def line_message_center(request):
         if filters["appointment"]:
             participations = participations.filter(appointment=filters["appointment"])
         for participation in participations:
+            participation.message_interview_mode_label = (
+                "Online" if _participant_interview_mode(participation) == "online" else "Onsite"
+            )
             participation_by_person.setdefault(participation.person_id, participation)
     for person in page_obj.object_list:
         person.message_participation = participation_by_person.get(person.pk)

@@ -1407,6 +1407,38 @@ def filter_application_queryset(queryset, query):
     )
 
 
+def filter_applications_by_interview(queryset, event_value="", slot_value="", mode=""):
+    try:
+        event_id = int(event_value)
+    except (TypeError, ValueError):
+        event_id = None
+    try:
+        slot_id = int(slot_value)
+    except (TypeError, ValueError):
+        slot_id = None
+    if mode not in {"online", "onsite"}:
+        mode = ""
+    if not (event_id or slot_id or mode):
+        return queryset, event_id, slot_id, mode
+
+    participants = AppointmentParticipant.objects.filter(
+        appointment__appointment_type=Appointment.Type.INTERVIEW,
+    ).select_related("appointment", "selected_slot")
+    if event_id:
+        participants = participants.filter(appointment_id=event_id)
+    if slot_id:
+        participants = participants.filter(selected_slot_id=slot_id)
+    if mode:
+        person_ids = [
+            participant.person_id
+            for participant in participants
+            if export_participant_interview_mode(participant) == mode
+        ]
+    else:
+        person_ids = participants.values_list("person_id", flat=True)
+    return queryset.filter(pk__in=person_ids), event_id, slot_id, mode
+
+
 def compact_address_parts(*parts):
     cleaned_parts = []
     seen = set()
@@ -1482,11 +1514,29 @@ def application_address_text(extra_data):
 
 
 def enrich_application_people_for_export(people):
+    person_ids = [person.pk for person in people]
+    latest_by_person = {}
+    confirmed_by_person = {}
+    participants = (
+        AppointmentParticipant.objects.filter(
+            person_id__in=person_ids,
+            appointment__appointment_type=Appointment.Type.INTERVIEW,
+        )
+        .select_related("appointment", "selected_slot")
+        .order_by("person_id", "-pk")
+    )
+    for participant in participants:
+        latest_by_person.setdefault(participant.person_id, participant)
+        if participant.response_status == AppointmentParticipant.ResponseStatus.CONFIRMED:
+            confirmed_by_person.setdefault(participant.person_id, participant)
     for person in people:
         extra_data = person.extra_data or {}
         person.export_address = application_address_text(extra_data)
         person.export_postal_code = application_postal_code(extra_data) or "-"
         person.export_country = application_country_label(extra_data)
+        person.latest_interview_participant = (
+            confirmed_by_person.get(person.pk) or latest_by_person.get(person.pk)
+        )
     return people
 
 
@@ -1514,6 +1564,14 @@ def admin_exports(request):
 
     applicant_query = request.GET.get("q", "").strip()
     applicants = filter_application_queryset(application_export_queryset(), applicant_query)
+    applicants, application_event_id, application_slot_id, application_mode = (
+        filter_applications_by_interview(
+            applicants,
+            request.GET.get("application_event", ""),
+            request.GET.get("application_slot", ""),
+            request.GET.get("application_mode", ""),
+        )
+    )
     applicant_result_count = applicants.count()
     applicant_options = list(applicants[:80])
     appointment_options = list(interview_appointment_queryset()[:80])
@@ -1530,6 +1588,16 @@ def admin_exports(request):
         ]
         for appointment in appointment_options
     }
+    application_filter_query = urlencode({
+        key: value
+        for key, value in {
+            "q": applicant_query,
+            "application_event": application_event_id or "",
+            "application_slot": application_slot_id or "",
+            "application_mode": application_mode,
+        }.items()
+        if value
+    })
     context = {
         "application_count": Person.objects.count(),
         "student_count": Student.objects.count(),
@@ -1543,6 +1611,10 @@ def admin_exports(request):
         "applicant_query": applicant_query,
         "applicant_result_count": applicant_result_count,
         "applicant_options": applicant_options,
+        "application_event_id": application_event_id,
+        "application_slot_id": application_slot_id,
+        "application_mode": application_mode,
+        "application_filter_query": application_filter_query,
         "appointment_options": appointment_options,
         "interview_slots_by_appointment": interview_slots_by_appointment,
     }
@@ -1560,6 +1632,12 @@ def export_application_single_form(request):
         people = people.filter(pk__in=selected_ids)
     elif request.GET.get("all") == "1":
         people = filter_application_queryset(people, request.GET.get("q", "").strip())
+        people, _, _, _ = filter_applications_by_interview(
+            people,
+            request.GET.get("application_event", ""),
+            request.GET.get("application_slot", ""),
+            request.GET.get("application_mode", ""),
+        )
     else:
         people = people.none()
     people = enrich_application_people_for_export(list(people))
@@ -1586,6 +1664,12 @@ def export_application_forms(request):
         people = people.filter(pk__in=selected_ids)
     else:
         people = filter_application_queryset(people, query)
+        people, _, _, _ = filter_applications_by_interview(
+            people,
+            request.GET.get("application_event", ""),
+            request.GET.get("application_slot", ""),
+            request.GET.get("application_mode", ""),
+        )
     people = enrich_application_people_for_export(list(people))
     return render(
         request,

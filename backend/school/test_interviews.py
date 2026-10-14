@@ -268,6 +268,27 @@ class AppointmentScheduleTests(TestCase):
         self.assertContains(response, "data-event-filter")
         self.assertContains(response, "data-slot-filter")
 
+    def test_message_center_filters_online_and_onsite_participants(self):
+        self.schedule()
+        appointment = Appointment.objects.get()
+        participants = list(appointment.participants.order_by("person_id"))
+        participants[0].response_status = AppointmentParticipant.ResponseStatus.CONFIRMED
+        participants[0].invitation_message = {"interview_mode": "onsite"}
+        participants[0].save(update_fields=["response_status", "invitation_message"])
+        participants[1].response_status = AppointmentParticipant.ResponseStatus.CONFIRMED
+        participants[1].invitation_message = {"interview_mode": "online"}
+        participants[1].save(update_fields=["response_status", "invitation_message"])
+
+        response = self.client.get(reverse("school:line_message_center"), {
+            "event": appointment.pk,
+            "audience": "confirmed",
+            "mode": "online",
+        })
+
+        self.assertContains(response, participants[1].person.full_name)
+        self.assertContains(response, "ยืนยันแล้ว · Online")
+        self.assertNotContains(response, participants[0].person.full_name)
+
     @override_settings(PUBLIC_BASE_URL="https://bri.example")
     def test_orientation_message_and_confirmation_flow(self):
         Person.objects.filter(pk=self.people[0].pk).update(status=Person.Status.PASSED)
@@ -971,6 +992,67 @@ class AppointmentScheduleTests(TestCase):
         self.assertContains(response, "padding: 0")
         self.assertNotContains(response, "school/images/ci-bri.png")
         self.assertNotContains(response, "-webkit-mask")
+
+    def test_interview_event_label_omits_container_start_time(self):
+        self.schedule()
+        appointment = Appointment.objects.get()
+
+        self.assertIn(self.at.strftime("%d/%m/%Y"), str(appointment))
+        self.assertNotIn("09:30", str(appointment))
+
+    def test_application_print_uses_selected_slot_instead_of_event_start(self):
+        self.schedule(people=[self.people[0].pk])
+        participant = self.latest_participant()
+        participant.response_status = AppointmentParticipant.ResponseStatus.CONFIRMED
+        participant.selected_slot = participant.appointment.slots.get()
+        participant.save(update_fields=["response_status", "selected_slot"])
+
+        response = self.client.get(
+            reverse("school:export_application_single_form"),
+            {"people": participant.person_id},
+        )
+
+        self.assertContains(response, participant.appointment.title)
+        self.assertContains(response, "Slot 09:30-10:30")
+
+    def test_application_picker_filters_by_event_slot_and_mode(self):
+        self.schedule(
+            slot_start=["09:30", "13:00"],
+            slot_end=["10:30", "15:00"],
+            slot_capacity=["1", "1"],
+        )
+        appointment = Appointment.objects.get()
+        morning_slot, afternoon_slot = appointment.slots.order_by("starts_at")
+        participants = list(appointment.participants.order_by("person_id"))
+        participants[0].response_status = AppointmentParticipant.ResponseStatus.CONFIRMED
+        participants[0].selected_slot = morning_slot
+        participants[0].invitation_message = {"interview_mode": "onsite"}
+        participants[0].save(update_fields=["response_status", "selected_slot", "invitation_message"])
+        participants[1].response_status = AppointmentParticipant.ResponseStatus.CONFIRMED
+        participants[1].selected_slot = afternoon_slot
+        participants[1].invitation_message = {"interview_mode": "online"}
+        participants[1].save(update_fields=["response_status", "selected_slot", "invitation_message"])
+        filters = {
+            "application_event": appointment.pk,
+            "application_slot": afternoon_slot.pk,
+            "application_mode": "online",
+        }
+
+        picker = self.client.get(reverse("school:admin_exports"), filters)
+        self.assertEqual(picker.context["applicant_result_count"], 1)
+        self.assertContains(picker, participants[1].person.full_name)
+        self.assertNotContains(picker, participants[0].person.full_name)
+
+        all_forms = self.client.get(
+            reverse("school:export_application_single_form"),
+            {**filters, "all": "1"},
+        )
+        self.assertContains(all_forms, participants[1].person.full_name)
+        self.assertNotContains(all_forms, participants[0].person.full_name)
+
+        table = self.client.get(reverse("school:export_application_forms"), filters)
+        self.assertContains(table, participants[1].person.full_name)
+        self.assertNotContains(table, participants[0].person.full_name)
 
     def test_interview_roster_can_filter_slot_and_show_interview_mode(self):
         self.schedule(

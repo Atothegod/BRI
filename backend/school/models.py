@@ -181,7 +181,10 @@ class Appointment(TimeStampedModel):
         ordering = ("-starts_at", "-pk")
 
     def __str__(self):
-        return f"{self.title} - {timezone.localtime(self.starts_at):%d/%m/%Y %H:%M}"
+        local_start = timezone.localtime(self.starts_at)
+        if self.appointment_type == self.Type.INTERVIEW:
+            return f"{self.title} - {local_start:%d/%m/%Y}"
+        return f"{self.title} - {local_start:%d/%m/%Y %H:%M}"
 
 
 RESCHEDULE_NOTICE_REQUIRED_KEY = "_reschedule_notice_required"

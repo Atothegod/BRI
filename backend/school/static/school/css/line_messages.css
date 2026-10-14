@@ -29,7 +29,7 @@ button:disabled { opacity: .45; cursor: default; }
 .recipient-panel { padding: 22px; }
 .recipient-heading { display: flex; justify-content: space-between; align-items: center; gap: 15px; margin-bottom: 16px; }
 .selection-pill { padding: 8px 12px; color: var(--lm-sage); background: var(--lm-paper); border-radius: 999px; font-size: 13px; }
-.recipient-filters { display: grid; grid-template-columns: 1.4fr repeat(4, 1fr) auto; gap: 9px; align-items: end; padding: 13px; background: #f6f8f5; border: 1px solid var(--lm-line); border-radius: 12px; }
+.recipient-filters { display: grid; grid-template-columns: 1.4fr repeat(5, 1fr) auto; gap: 9px; align-items: end; padding: 13px; background: #f6f8f5; border: 1px solid var(--lm-line); border-radius: 12px; }
 .recipient-filters label { display: grid; gap: 5px; min-width: 0; }
 .recipient-filters input, .recipient-filters select { width: 100%; min-height: 42px; padding: 8px 10px; color: var(--lm-ink); background: #fff; border: 1px solid var(--lm-line); border-radius: 8px; font: inherit; box-sizing: border-box; }
 .recipient-toolbar { display: flex; justify-content: space-between; gap: 12px; padding: 15px 4px 10px; color: var(--lm-muted); font-size: 13px; }

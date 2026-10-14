@@ -355,6 +355,41 @@
     gap: 8px;
 }
 
+.export-application-search {
+    grid-template-columns: minmax(180px, 1.35fr) repeat(3, minmax(135px, 1fr)) auto;
+    align-items: end;
+}
+
+.export-application-search label {
+    display: grid;
+    gap: 5px;
+}
+
+.export-application-search select {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    color: var(--school-admin-forest);
+    background: #ffffff;
+    border: 1px solid var(--school-admin-border);
+    border-radius: 6px;
+    font: inherit;
+}
+
+.export-application-search button {
+    min-height: 44px;
+}
+
+@media (max-width: 1100px) {
+    .export-application-search { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .export-application-search__query { grid-column: 1 / -1; }
+}
+
+@media (max-width: 640px) {
+    .export-application-search { grid-template-columns: 1fr; }
+    .export-application-search__query { grid-column: auto; }
+}
+
 .export-person-picker {
     display: grid;
     gap: 10px;

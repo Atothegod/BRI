@@ -16,7 +16,7 @@ from django.core import signing
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Count, Prefetch, Q
 from django.views.decorators.cache import never_cache
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render, resolve_url
@@ -1215,45 +1215,58 @@ def admin_student_photo_import(request):
         raise PermissionDenied
 
     if request.method == "POST":
-        student = (
-            Student.objects.select_related("person")
-            .filter(pk=request.POST.get("student"))
-            .first()
-        )
+        person = Person.objects.filter(pk=request.POST.get("person")).first()
+        action = request.POST.get("action", "upload")
         uploaded_photo = request.FILES.get("photo")
-        if not student:
-            messages.error(request, "ไม่พบนักศึกษาที่ต้องการอัปโหลดรูป")
+        if not person:
+            messages.error(request, "ไม่พบผู้สมัครที่ต้องการจัดการรูป")
+        elif action == "delete":
+            if person.photo:
+                person.photo.delete(save=False)
+                person.photo = None
+                person.save(update_fields=["photo", "updated_at"])
+                messages.success(request, f"ลบรูปของ {person.full_name} แล้ว")
+            else:
+                messages.info(request, f"{person.full_name} ยังไม่มีรูปให้ลบ")
         elif not uploaded_photo:
-            messages.error(request, "กรุณาเลือกรูปนักศึกษา")
+            messages.error(request, "กรุณาเลือกรูปผู้สมัคร")
         else:
             try:
                 forms.ImageField().clean(uploaded_photo)
             except forms.ValidationError:
                 messages.error(request, "ไฟล์รูปไม่ถูกต้อง กรุณาใช้ JPG, PNG หรือ WEBP")
             else:
-                student.person.photo = uploaded_photo
-                student.person.save(update_fields=["photo", "updated_at"])
-                messages.success(
-                    request,
-                    f"อัปโหลดรูปของ {student.person.full_name} ({student.student_id}) แล้ว",
-                )
+                if person.photo:
+                    person.photo.delete(save=False)
+                person.photo = uploaded_photo
+                person.save(update_fields=["photo", "updated_at"])
+                messages.success(request, f"อัปโหลดรูปของ {person.full_name} แล้ว")
         return redirect(request.POST.get("next") or "school:admin_student_photo_import")
 
     query = request.GET.get("q", "").strip()
-    students = (
-        Student.objects.select_related("person", "group")
-        .filter(is_active=True)
-        .order_by("student_id", "person__first_name", "person__last_name")
+    interview_participations = (
+        AppointmentParticipant.objects.select_related("appointment", "selected_slot")
+        .filter(appointment__appointment_type=Appointment.Type.INTERVIEW)
+        .order_by("-appointment__starts_at", "-pk")
+    )
+    applicants = (
+        Person.objects.prefetch_related(
+            Prefetch("appointment_participations", queryset=interview_participations, to_attr="interview_participations")
+        )
+        .order_by("first_name", "last_name", "pk")
     )
     if query:
-        students = students.filter(
-            Q(student_id__icontains=query)
-            | Q(person__first_name__icontains=query)
-            | Q(person__last_name__icontains=query)
-            | Q(person__nickname__icontains=query)
-            | Q(person__phone__icontains=query)
-        )
-    page = Paginator(students, 60).get_page(request.GET.get("page"))
+        applicants = applicants.filter(
+            Q(first_name__icontains=query)
+            | Q(last_name__icontains=query)
+            | Q(nickname__icontains=query)
+            | Q(phone__icontains=query)
+            | Q(line_display_name__icontains=query)
+            | Q(appointment_participations__appointment__appointment_type=Appointment.Type.INTERVIEW,
+                appointment_participations__appointment__title__icontains=query)
+            | Q(appointment_participations__selected_slot__starts_at__icontains=query)
+        ).distinct()
+    page = Paginator(applicants, 60).get_page(request.GET.get("page"))
     query_params = request.GET.copy()
     query_params.pop("page", None)
     return render(

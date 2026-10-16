@@ -16,7 +16,7 @@
             </a>
             <a href="{% url 'school:admin_student_photo_import' %}"{% if request.resolver_match.url_name == "admin_student_photo_import" %} class="is-active" aria-current="page"{% endif %}>
                 <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#upload-cloud"></use></svg>
-                <span>รูปนักศึกษา</span>
+                <span>รูปผู้สมัคร</span>
             </a>
             {% if request.user.is_superuser %}
             <a href="{% url 'school:admin_overview_dashboard' %}">

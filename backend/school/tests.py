@@ -15,6 +15,8 @@ from accounts.adapters import TeacherGoogleSocialAccountAdapter
 
 from .admin import BRIStudyHistoryFilter, CountryCodeFilter, PersonAdmin
 from .models import (
+    Appointment,
+    AppointmentParticipant,
     AttendanceRecord,
     AttendanceSession,
     HomeworkAssignment,
@@ -23,6 +25,67 @@ from .models import (
     Student,
     TeacherGroup,
 )
+
+
+class ApplicantPhotoOperationTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.operation = User.objects.create_user(
+            username="photo-operation",
+            password="pass",
+            role=User.Role.OPERATION,
+        )
+        self.client.force_login(self.operation)
+
+    def test_page_lists_applicants_without_student_records(self):
+        person = Person.objects.create(
+            first_name="มานี",
+            last_name="สมัครดี",
+            line_display_name="Manee LINE",
+            phone="0812345678",
+        )
+        appointment = Appointment.objects.create(
+            appointment_type=Appointment.Type.INTERVIEW,
+            title="Interview รอบเช้า",
+            starts_at=timezone.now() + timedelta(days=1),
+        )
+        AppointmentParticipant.objects.create(appointment=appointment, person=person)
+
+        response = self.client.get(reverse("school:admin_student_photo_import"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "มานี สมัครดี")
+        self.assertContains(response, "Interview รอบเช้า")
+        self.assertContains(response, "Manee LINE")
+        self.assertContains(response, "0812345678")
+
+    def test_searches_by_line_name_and_interview_event(self):
+        person = Person.objects.create(first_name="สุดา", last_name="ใจดี", line_display_name="Suda Official")
+        appointment = Appointment.objects.create(
+            appointment_type=Appointment.Type.INTERVIEW,
+            title="Special October Slot",
+            starts_at=timezone.now() + timedelta(days=1),
+        )
+        AppointmentParticipant.objects.create(appointment=appointment, person=person)
+
+        line_response = self.client.get(reverse("school:admin_student_photo_import"), {"q": "Official"})
+        event_response = self.client.get(reverse("school:admin_student_photo_import"), {"q": "October"})
+
+        self.assertContains(line_response, "สุดา ใจดี")
+        self.assertContains(event_response, "สุดา ใจดี")
+
+    def test_delete_photo_clears_applicant_photo(self):
+        person = Person.objects.create(first_name="มีรูป", last_name="แล้ว")
+        person.photo.save("profile.gif", SimpleUploadedFile("profile.gif", b"GIF89a\x01\x00\x01\x00\x00\x00\x00\x00\x00!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;", content_type="image/gif"))
+
+        response = self.client.post(
+            reverse("school:admin_student_photo_import"),
+            {"person": person.pk, "action": "delete"},
+        )
+
+        self.assertRedirects(response, reverse("school:admin_student_photo_import"))
+        person.refresh_from_db()
+        self.assertFalse(person.photo)
 
 
 class PersonViewTests(TestCase):

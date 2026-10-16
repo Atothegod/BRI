@@ -1,73 +1,53 @@
 {% extends "base.html" %}
-{% load static %}
-
-{% block title %}อัปโหลดรูปนักศึกษา | BRI{% endblock %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261003-nav-dropdown-1">
-{% endblock %}
-
+{% load static school_dates %}
+{% block title %}รูปผู้สมัคร | BRI{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261016-applicant-photos-1">{% endblock %}
 {% block content %}
 {% include "school/includes/operation_nav.html" %}
-<main class="dashboard-page admin-tool-page">
-    <div class="dashboard-shell">
-        <header class="page-heading">
-            <div>
-                <span class="eyebrow">Student photos</span>
-                <h1>อัปโหลดรูปนักศึกษา</h1>
-                <p>ค้นหาด้วยชื่อหรือรหัสนักศึกษา แล้วอัปโหลดรูปเข้า profile ที่เห็นใน Django Admin</p>
+<main class="dashboard-page admin-tool-page applicant-photo-page">
+<div class="dashboard-shell">
+    <header class="page-heading applicant-photo-heading">
+        <div><span class="eyebrow">Applicant profiles</span><h1>รูปโปรไฟล์ผู้สมัคร</h1><p>เลือกรูปจากโทรศัพท์หรือกล้อง รูปจะแสดงตัวอย่างและอัปโหลดให้ทันที</p></div>
+        <span class="applicant-count">{{ page_obj.paginator.count }} ผู้สมัคร</span>
+    </header>
+    {% for message in messages %}<p class="admin-tool-notice {{ message.tags }}" role="status">{{ message }}</p>{% endfor %}
+    <form class="admin-tool-search applicant-search" method="get" role="search">
+        <label for="photo-search">ค้นหาผู้สมัคร</label>
+        <div><input id="photo-search" name="q" value="{{ query }}" placeholder="ชื่อ · รอบสัมภาษณ์ · ชื่อ LINE · เบอร์โทร" autocomplete="off">{% if query %}<a href="{% url 'school:admin_student_photo_import' %}">ล้าง</a>{% endif %}<button type="submit">ค้นหา</button></div>
+    </form>
+    <section class="admin-card-grid applicant-card-grid" aria-label="รายชื่อผู้สมัคร">
+    {% for person in page_obj %}{% with interview=person.interview_participations.0 %}
+        <article class="admin-record-card applicant-card">
+            <div class="admin-record-media applicant-photo" data-photo-frame>
+                {% if person.photo %}<img src="{{ person.photo.url }}" alt="รูปของ {{ person.full_name }}" data-photo-preview>
+                {% elif person.line_picture_url %}<img src="{{ person.line_picture_url }}" alt="รูป LINE ของ {{ person.full_name }}" data-photo-preview>
+                {% else %}<span data-photo-placeholder>{{ person.full_name|slice:":1" }}</span>{% endif %}
+                <span class="uploading-badge" data-uploading hidden>กำลังอัปโหลด…</span>
             </div>
-        </header>
-
-        {% for message in messages %}<p class="admin-tool-notice {{ message.tags }}" role="status">{{ message }}</p>{% endfor %}
-
-        <form class="admin-tool-search" method="get">
-            <label for="photo-search">ค้นหานักศึกษา</label>
-            <div>
-                <input id="photo-search" name="q" value="{{ query }}" placeholder="ชื่อ รหัสนักศึกษา ชื่อเล่น หรือเบอร์โทร">
-                <button type="submit">ค้นหา</button>
-            </div>
-        </form>
-
-        <section class="admin-card-grid" aria-label="รายชื่อนักศึกษา">
-            {% for student in page_obj %}
-            <article class="admin-record-card">
-                <div class="admin-record-media">
-                    {% if student.person.photo %}
-                    <img src="{{ student.person.photo.url }}" alt="รูปของ {{ student.person.full_name }}">
-                    {% else %}
-                    <span>{{ student.person.full_name|slice:":1" }}</span>
-                    {% endif %}
+            <div class="admin-record-body applicant-card-body">
+                <div class="applicant-card-title">
+                    <div><strong>{{ person.full_name }}</strong>{% if person.nickname %}<span>“{{ person.nickname }}”</span>{% endif %}</div>
+                    {% if person.photo %}<span class="photo-status has-photo">มีรูปแล้ว</span>{% else %}<span class="photo-status">ยังไม่มีรูป</span>{% endif %}
                 </div>
-                <div class="admin-record-body">
-                    <div>
-                        <strong>{{ student.person.full_name }}</strong>
-                        <span>{{ student.student_id }} · {{ student.group.group_name|default:"ยังไม่มีกลุ่ม" }}</span>
-                    </div>
-                    <form method="post" enctype="multipart/form-data" class="admin-inline-upload">
-                        {% csrf_token %}
-                        <input type="hidden" name="student" value="{{ student.pk }}">
-                        <input type="hidden" name="next" value="{{ next_url }}">
-                        <label>
-                            <span>เลือกรูป</span>
-                            <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required>
-                        </label>
-                        <button type="submit">อัปโหลด</button>
+                <dl class="applicant-details">
+                    <div><dt>รอบสัมภาษณ์</dt><dd>{% if interview %}{{ interview.appointment.title }}{% else %}ยังไม่กำหนด{% endif %}</dd></div>
+                    <div><dt>วันและเวลา</dt><dd>{% if interview %}{{ interview.effective_starts_at|thai_date:"j M Y" }} · {{ interview.effective_starts_at|date:"H:i" }} น.{% else %}—{% endif %}</dd></div>
+                    <div><dt>LINE</dt><dd>{{ person.line_display_name|default:"ยังไม่ได้เชื่อม LINE" }}</dd></div>
+                    <div><dt>โทรศัพท์</dt><dd>{% if person.phone %}<a href="tel:{{ person.phone }}">{{ person.phone }}</a>{% else %}—{% endif %}</dd></div>
+                </dl>
+                <div class="applicant-photo-actions">
+                    <form method="post" enctype="multipart/form-data" class="admin-inline-upload" data-photo-form>
+                        {% csrf_token %}<input type="hidden" name="person" value="{{ person.pk }}"><input type="hidden" name="action" value="upload"><input type="hidden" name="next" value="{{ next_url }}">
+                        <label class="photo-picker"><span>{% if person.photo %}เปลี่ยนรูป{% else %}เพิ่มรูป{% endif %}</span><input type="file" name="photo" accept="image/*" required data-photo-input></label>
                     </form>
+                    {% if person.photo %}<form method="post" class="delete-photo-form" data-delete-form data-person-name="{{ person.full_name }}">{% csrf_token %}<input type="hidden" name="person" value="{{ person.pk }}"><input type="hidden" name="action" value="delete"><input type="hidden" name="next" value="{{ next_url }}"><button type="submit">ลบรูป</button></form>{% endif %}
                 </div>
-            </article>
-            {% empty %}
-            <div class="admin-empty-state">ไม่พบนักศึกษาที่ตรงกับเงื่อนไข</div>
-            {% endfor %}
-        </section>
-
-        <footer class="admin-tool-pagination">
-            <span>หน้า {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
-            <nav aria-label="หน้ารายชื่อ">
-                {% if page_obj.has_previous %}<a href="{{ page_query_prefix }}page={{ page_obj.previous_page_number }}">ก่อนหน้า</a>{% endif %}
-                {% if page_obj.has_next %}<a href="{{ page_query_prefix }}page={{ page_obj.next_page_number }}">ถัดไป</a>{% endif %}
-            </nav>
-        </footer>
-    </div>
+            </div>
+        </article>
+    {% endwith %}{% empty %}<div class="admin-empty-state"><strong>ไม่พบผู้สมัคร</strong><span>ลองค้นหาด้วยชื่อ ชื่อ LINE เบอร์โทร หรือชื่อรอบสัมภาษณ์</span></div>{% endfor %}
+    </section>
+    {% if page_obj.paginator.num_pages > 1 %}<footer class="admin-tool-pagination"><span>หน้า {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span><nav aria-label="หน้ารายชื่อ">{% if page_obj.has_previous %}<a href="{{ page_query_prefix }}page={{ page_obj.previous_page_number }}">ก่อนหน้า</a>{% endif %}{% if page_obj.has_next %}<a href="{{ page_query_prefix }}page={{ page_obj.next_page_number }}">ถัดไป</a>{% endif %}</nav></footer>{% endif %}
+</div>
 </main>
 {% endblock %}
+{% block extra_js %}<script src="{% static 'school/js/applicant_photos.js' %}?v=20261016-1" defer></script>{% endblock %}

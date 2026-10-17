@@ -546,6 +546,19 @@ def interview_result_notification_sent(person):
     return bool(key and line_notification_sent(person, key))
 
 
+def interview_announcement_country(person):
+    extra_data = person.extra_data or {}
+    address_en = extra_data.get("address_en") or {}
+    return str(
+        extra_data.get("country_name_th")
+        or extra_data.get("country_name_en")
+        or address_en.get("country_name_en")
+        or address_en.get("country_code")
+        or extra_data.get("country_code")
+        or ""
+    ).strip()
+
+
 def send_interview_result_notification(person):
     if person.status == Person.Status.PASSED:
         student, _ = Student.objects.get_or_create(person=person)
@@ -786,6 +799,7 @@ def interview_announcements(request):
         return redirect(request.POST.get("next") or reverse("school:interview_announcements"))
 
     query = request.GET.get("q", "").strip()
+    country_filter = request.GET.get("country", "").strip()
     audience = request.GET.get("audience") or "ready"
     if audience not in {"ready", "sent", "blocked", "all"}:
         audience = "ready"
@@ -799,6 +813,11 @@ def interview_announcements(request):
             | Q(line_display_name__icontains=query)
         )
     people_list = list(people)
+    for person in people_list:
+        person.announcement_country = interview_announcement_country(person)
+    country_options = sorted({person.announcement_country for person in people_list if person.announcement_country})
+    if country_filter:
+        people_list = [person for person in people_list if person.announcement_country == country_filter]
     for person in people_list:
         person.has_result_line_notification = interview_result_notification_sent(person)
         person.line_issue = "" if person.has_result_line_notification else line_push_unavailable_reason(person)
@@ -818,11 +837,31 @@ def interview_announcements(request):
     page = Paginator(people_list, 100).get_page(request.GET.get("page"))
     query_params = request.GET.copy()
     query_params.pop("page", None)
+    audience_tab_params = query_params.copy()
+    audience_tab_params.pop("audience", None)
+    audience_tabs = []
+    for value, label in (
+        ("ready", "พร้อมยิง"),
+        ("sent", "ส่งแล้ว"),
+        ("blocked", "ติดปัญหา LINE"),
+        ("all", "ทั้งหมด"),
+    ):
+        tab_params = audience_tab_params.copy()
+        tab_params["audience"] = value
+        audience_tabs.append({
+            "value": value,
+            "label": label,
+            "count": counts[value],
+            "url": f"?{tab_params.urlencode()}",
+        })
     return render(request, "school/interview_announcements.html", {
         "page_obj": page,
         "query": query,
         "audience": audience,
         "counts": counts,
+        "audience_tabs": audience_tabs,
+        "country_filter": country_filter,
+        "country_options": country_options,
         "page_query_prefix": f"?{query_params.urlencode()}&" if query_params else "?",
         "next_url": request.get_full_path(),
     })

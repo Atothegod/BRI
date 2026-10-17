@@ -1366,6 +1366,7 @@ class AppointmentScheduleTests(TestCase):
         person.refresh_from_db()
         self.assertEqual(person.status, Person.Status.FAILED)
         self.assertEqual(person.admission_type, "")
+
         self.assertFalse(mock_urlopen.called)
 
         announcement_url = reverse("school:interview_announcements")
@@ -1393,6 +1394,28 @@ class AppointmentScheduleTests(TestCase):
         person.refresh_from_db()
         self.assertEqual(person.status, Person.Status.IN_PROGRESS)
         self.assertEqual(person.admission_type, "")
+
+    @override_settings(LINE_MESSAGING_CHANNEL_ACCESS_TOKEN="line-token")
+    def test_interview_announcements_can_filter_country_and_select_page(self):
+        thailand = self.people[0]
+        thailand.status = Person.Status.PASSED
+        thailand.extra_data = {"country_name_th": "ไทย"}
+        thailand.save(update_fields=["status", "extra_data"])
+        cambodia = self.people[1]
+        cambodia.status = Person.Status.FAILED
+        cambodia.extra_data = {"address_en": {"country_name_en": "Cambodia"}}
+        cambodia.save(update_fields=["status", "extra_data"])
+        url = reverse("school:interview_announcements")
+
+        response = self.client.get(url, {"country": "ไทย", "audience": "ready"})
+
+        self.assertContains(response, thailand.full_name)
+        self.assertNotContains(response, cambodia.full_name)
+        self.assertContains(response, "เลือกทั้งหมดในหน้านี้ตาม filter")
+        self.assertContains(response, f'value="{thailand.pk}"')
+        self.assertContains(response, "country=%E0%B9%84%E0%B8%97%E0%B8%A2")
+        self.assertEqual(response.context["counts"]["ready"], 1)
+        self.assertEqual(response.context["country_options"], ["Cambodia", "ไทย"])
 
 
 class AppointmentSlotConcurrencyTests(TransactionTestCase):

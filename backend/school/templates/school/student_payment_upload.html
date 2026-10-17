@@ -45,6 +45,12 @@
         {% elif payment_state == "missing" or payment_state == "missing_line" %}
         {% include "school/includes/missing_application.html" with missing_title_id="payment-title" %}
         {% elif payment_state == "ready" %}
+        {% if is_preview %}
+        <div class="form-alert" role="status">
+            <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#check-circle"></use></svg>
+            <div><strong>โหมด Preview</strong><span>หน้านี้ใช้ดูตัวอย่างเท่านั้น การส่งสลิปถูกปิดไว้</span></div>
+        </div>
+        {% endif %}
         <span class="eyebrow">แจ้งชำระเงิน</span>
         <h1 id="payment-title">อัปโหลดสลิปการโอนเงิน</h1>
         <p class="success-lead">โอนชำระตามข้อมูลในภาพนี้ แล้วอัปโหลดสลิปเพื่อให้ทีมงานตรวจสอบ</p>
@@ -85,7 +91,7 @@
                 {{ form.payment_slip.errors }}
             </div>
 
-            <button class="button button--primary button--submit" type="submit">
+            <button class="button button--primary button--submit" type="submit"{% if is_preview %} disabled aria-disabled="true"{% endif %}>
                 <span>ส่งสลิปให้ตรวจสอบ</span>
                 <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#check-circle"></use></svg>
             </button>

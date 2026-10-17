@@ -2192,6 +2192,9 @@ def student_payment_upload(request):
     line_profile = get_session_line_profile(request)
     line_user_id = line_profile.get("line_user_id", "").strip()
     payment_state, person, student = get_payment_access_state(line_user_id)
+    is_preview = settings.DEBUG and request.method == "GET" and request.GET.get("preview") == "1"
+    if is_preview:
+        payment_state = "ready"
     should_bind_form = request.method == "POST" and payment_state == "ready"
     form = PaymentSlipUploadForm(
         request.POST if should_bind_form else None,
@@ -2218,6 +2221,7 @@ def student_payment_upload(request):
             "payment_state": payment_state,
             "person": person,
             "student": student,
+            "is_preview": is_preview,
             "line_return_url": settings.LINE_RETURN_URL,
             **get_liff_context(request, reload_on_sync=not bool(line_user_id)),
         },

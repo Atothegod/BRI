@@ -9,6 +9,8 @@
     const title = explorer.querySelector("[data-geo-ranking-title]");
     const kicker = explorer.querySelector("[data-geo-ranking-kicker]");
     let map;
+    let thailandGeoJson;
+    let worldGeoJson;
 
     const points = {
         region: { northern:[18.45,99.05],central:[14.45,100.45],eastern:[13.15,101.45],western:[14.45,98.75],northeastern:[16.1,103.1],southern:[8.15,99.35] },
@@ -31,11 +33,6 @@
         stage.replaceChildren();
         map = L.map(stage,{zoomControl:false,attributionControl:true,scrollWheelZoom:false});
         L.control.zoom({position:"bottomright"}).addTo(map);
-        const tiles = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{
-            subdomains:"abcd",maxZoom:20,
-            attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        }).addTo(map);
-        tiles.on("tileerror",event=>{if(event.tile){event.tile.style.visibility="hidden";}});
         map.setView(mode === "country" ? [20,30] : [13.4,101],mode === "country" ? 2 : 5);
         return true;
     };
@@ -48,6 +45,13 @@
         const config = configs[mode]; title.textContent = config.title; kicker.textContent = config.kicker; ranking(config.items);
         if (!createMap(mode)) return;
         const max = maximum(config.items), markers = new Map(), bounds = [];
+        if (mode === "country" && worldGeoJson) {
+            const counts = new Map(config.items.map(item=>[item.code,item.count]));
+            L.geoJSON(worldGeoJson,{style:feature=>({color:"#fff",weight:.7,fillColor:counts.has(feature.properties.ISO_A2) ? "#a9c5af" : "#e1e9e3",fillOpacity:1})}).addTo(map);
+        } else if (thailandGeoJson) {
+            const counts = new Map((data.provinces || []).map(item=>[item.label,item.count]));
+            L.geoJSON(thailandGeoJson,{style:feature=>({color:"#fff",weight:1.2,fillColor:counts.has(feature.properties.ADM1_TH) ? "#b5d0ba" : "#dde8df",fillOpacity:1})}).addTo(map);
+        }
         config.items.forEach(item => {
             const key = item.value || item.code || item.label, point = points[mode][key];
             if (!point) return;
@@ -61,5 +65,9 @@
         window.setTimeout(()=>map.invalidateSize(),50);
     };
     explorer.querySelectorAll("[data-geo-mode]").forEach(button => button.addEventListener("click",()=>{explorer.querySelectorAll("[data-geo-mode]").forEach(item=>item.classList.toggle("is-active",item===button));render(button.dataset.geoMode);}));
-    render("region");
+    Promise.all([
+        fetch(explorer.dataset.thailandMapUrl).then(response=>response.json()),
+        fetch(explorer.dataset.worldMapUrl).then(response=>response.json()),
+    ]).then(([thailand,world])=>{thailandGeoJson=thailand;worldGeoJson=world;render("region");})
+      .catch(()=>render("region"));
 })();

@@ -1256,6 +1256,7 @@ class AppointmentScheduleTests(TestCase):
         announcement = self.client.post(announcement_url, {
             "people": [person.pk],
             "confirmed_send": "yes",
+            "additional_message": "กรุณาชำระเงินภายในวันจันทร์ที่ 19 ตุลาคม 2569",
             "next": f"{announcement_url}?q=Result",
         })
 
@@ -1263,6 +1264,7 @@ class AppointmentScheduleTests(TestCase):
         self.assertTrue(mock_urlopen.called)
         payload = json.loads(mock_urlopen.call_args.args[0].data.decode("utf-8"))
         self.assertIn("ผ่านสัมภาษณ์ (ออนไลน์)", json.dumps(payload, ensure_ascii=False))
+        self.assertIn("กรุณาชำระเงินภายในวันจันทร์ที่ 19 ตุลาคม 2569", json.dumps(payload, ensure_ascii=False))
         person.refresh_from_db()
         self.assertIn("interview_passed", person.extra_data["line_notifications"])
 

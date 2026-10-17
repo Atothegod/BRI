@@ -559,10 +559,10 @@ def interview_announcement_country(person):
     ).strip()
 
 
-def send_interview_result_notification(person):
+def send_interview_result_notification(person, additional_message=""):
     if person.status == Person.Status.PASSED:
         student, _ = Student.objects.get_or_create(person=person)
-        sent = notify_interview_passed(person, student)
+        sent = notify_interview_passed(person, student, additional_message)
         key = "interview_passed"
     elif person.status == Person.Status.FAILED:
         sent = notify_interview_failed(person)
@@ -767,6 +767,7 @@ def interview_announcements(request):
         raise PermissionDenied
     if request.method == "POST":
         selected_ids = request.POST.getlist("people")
+        additional_message = request.POST.get("additional_message", "").strip()[:1000]
         if request.POST.get("confirmed_send") != "yes":
             messages.error(request, "กรุณายืนยันก่อนส่งประกาศผล")
         elif not selected_ids:
@@ -781,7 +782,7 @@ def interview_announcements(request):
                 if interview_result_notification_sent(person):
                     stats["already_sent"] += 1
                     continue
-                if send_interview_result_notification(person):
+                if send_interview_result_notification(person, additional_message):
                     stats["sent"] += 1
                     continue
                 stats[line_push_unavailable_reason(person) or "failed"] += 1

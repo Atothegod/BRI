@@ -76,6 +76,9 @@ button { min-height: 48px; padding: 11px 16px; color: #fff; background: #425b46;
 .announcement-toolbar label { display: inline-flex; gap: 8px; align-items: center; font-weight: 900; }
 .announcement-toolbar input[type=checkbox] { width: 20px; height: 20px; accent-color: #425b46; }
 .announcement-toolbar button { background: #12271d; border-color: #12271d; }
+.announcement-additional-message { display: grid; gap: 7px; margin-bottom: 14px; padding: 14px; color: #304a36; background: #fff; border: 1px solid #dfe5dc; border-radius: 8px; font-weight: 900; }
+.announcement-additional-message textarea { width: 100%; min-height: 88px; padding: 10px 12px; color: #12271d; background: #fbfcfa; border: 1px solid #b8c6b9; border-radius: 7px; font: inherit; resize: vertical; box-sizing: border-box; }
+.announcement-additional-message small { color: #68766c; font-weight: 700; }
 .announcement-status { display: inline-flex; align-items: center; min-height: 30px; padding: 4px 8px; border-radius: 5px; font-size: 13px; font-weight: 900; }
 .announcement-status.ready { color: #20633d; background: #e8f5ec; }
 .announcement-status.sent { color: #425b46; background: #edf2ed; }

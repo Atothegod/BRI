@@ -48,6 +48,11 @@
         {% csrf_token %}
         <input type="hidden" name="next" value="{{ next_url }}">
         <input type="hidden" name="confirmed_send" value="">
+        <label class="announcement-additional-message">
+            <span>ข้อความเพิ่มเติมสำหรับผู้ที่ผ่านสัมภาษณ์</span>
+            <textarea name="additional_message" maxlength="1000" rows="3" placeholder="เช่น กรุณาชำระเงินและแนบสลิปในช่องทาง LINE OA ภายในวันจันทร์ที่ 19 ตุลาคม 2569"></textarea>
+            <small>ข้อความนี้จะแสดงใน LINE ของผู้ที่ผ่านสัมภาษณ์เท่านั้น</small>
+        </label>
         <div class="announcement-toolbar">
             <label><input type="checkbox" data-select-all-announcements> เลือกทั้งหมดในหน้านี้ตาม filter</label>
             <button type="button" data-send-announcements>ส่งประกาศผลที่เลือก</button>
@@ -114,7 +119,8 @@ document.querySelector("[data-send-announcements]")?.addEventListener("click", (
     if (!count) {
         sendMessage.textContent = "กรุณาเลือกรายชื่ออย่างน้อย 1 คนก่อนส่งประกาศ";
     } else {
-        sendMessage.textContent = `กำลังจะส่ง LINE ประกาศผลให้ ${count} คน`;
+        const hasAdditionalMessage = announcementForm.elements.additional_message.value.trim();
+        sendMessage.textContent = `กำลังจะส่ง LINE ประกาศผลให้ ${count} คน${hasAdditionalMessage ? " พร้อมข้อความเพิ่มเติมสำหรับผู้ที่ผ่านสัมภาษณ์" : ""}`;
     }
     if (typeof sendDialog.showModal === "function") {
         sendDialog.showModal();

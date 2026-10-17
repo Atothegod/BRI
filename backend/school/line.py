@@ -125,7 +125,7 @@ def send_line_push_message(line_user_id, messages):
         return False
 
 
-def build_interview_passed_flex_message(person, student):
+def build_interview_passed_flex_message(person, student, additional_message=""):
     admission_type = (
         "ผ่านสัมภาษณ์ (ออนไลน์)"
         if person.admission_type == person.AdmissionType.ONLINE
@@ -142,6 +142,39 @@ def build_interview_passed_flex_message(person, student):
     ]
     if student.is_paid:
         rows.append(build_flex_row("รหัสนักศึกษา", student.student_id))
+    body_contents = [
+        {
+            "type": "text",
+            "text": person.full_name,
+            "weight": "bold",
+            "size": "md",
+            "color": "#12271D",
+            "wrap": True,
+        },
+        {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "sm",
+            "contents": rows,
+        },
+    ]
+    additional_message = additional_message.strip()
+    if additional_message:
+        body_contents.append({
+            "type": "text",
+            "text": additional_message,
+            "size": "sm",
+            "color": "#A44928",
+            "weight": "bold",
+            "wrap": True,
+        })
+    body_contents.append({
+        "type": "text",
+        "text": "กดดูประกาศผลเพื่ออ่านรายละเอียดและขั้นตอนถัดไป",
+        "size": "sm",
+        "color": "#5F6B63",
+        "wrap": True,
+    })
     result_link = result_url()
     pay_link = payment_url()
     return {
@@ -179,29 +212,7 @@ def build_interview_passed_flex_message(person, student):
                 "layout": "vertical",
                 "backgroundColor": "#F3F0E8",
                 "spacing": "md",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": person.full_name,
-                        "weight": "bold",
-                        "size": "md",
-                        "color": "#12271D",
-                        "wrap": True,
-                    },
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "spacing": "sm",
-                        "contents": rows,
-                    },
-                    {
-                        "type": "text",
-                        "text": "กดดูประกาศผลเพื่ออ่านรายละเอียดและขั้นตอนถัดไป",
-                        "size": "sm",
-                        "color": "#5F6B63",
-                        "wrap": True,
-                    },
-                ],
+                "contents": body_contents,
             },
             "footer": {
                 "type": "box",
@@ -421,10 +432,10 @@ def build_flex_row(label, value, *, color="#12271D"):
     }
 
 
-def notify_interview_passed(person, student):
+def notify_interview_passed(person, student, additional_message=""):
     return send_line_push_message(
         person.line_user_id,
-        [build_interview_passed_flex_message(person, student)],
+        [build_interview_passed_flex_message(person, student, additional_message)],
     )
 
 

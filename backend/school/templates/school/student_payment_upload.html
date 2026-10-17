@@ -4,7 +4,7 @@
 {% block title %}อัปโหลดสลิป | BRI School of Fivefold{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20261010-payment-1">
+<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20261017-payment-fee-1">
 {% endblock %}
 
 {% block content %}
@@ -58,6 +58,14 @@
         <figure class="payment-reference">
             <img src="{% static 'school/images/payment.jpg' %}" alt="ข้อมูลบัญชีสำหรับชำระค่าเทอม BRI 5" width="1200" height="1691">
         </figure>
+
+        <div class="payment-amount-card" aria-label="ค่าธรรมเนียมการศึกษา 3,990 บาท">
+            <div>
+                <span>ค่าธรรมเนียมการศึกษา</span>
+                <small>ยอดที่ต้องชำระ</small>
+            </div>
+            <strong>3,990 <span>บาท</span></strong>
+        </div>
 
         <div class="payment-bank-actions">
             <button class="button button--secondary payment-copy-button" type="button" data-copy-account data-copy-value="1118332497" aria-describedby="payment-copy-status">

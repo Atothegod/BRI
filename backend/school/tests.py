@@ -1232,6 +1232,8 @@ class TeacherFlowTests(TestCase):
         response = self.client.get(reverse("school:student_payment_upload"))
 
         self.assertContains(response, "school/images/payment.jpg")
+        self.assertContains(response, "ค่าธรรมเนียมการศึกษา")
+        self.assertContains(response, "3,990")
         self.assertContains(response, "คัดลอกเลขบัญชี 111-8-33249-7")
         self.assertContains(response, 'data-copy-value="1118332497"')
         self.assertContains(response, "ส่งสลิปให้ตรวจสอบ")

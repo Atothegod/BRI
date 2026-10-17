@@ -6,6 +6,18 @@
         return;
     }
     const initialLiffState = new URL(window.location.href).searchParams.get("liff.state");
+    const lineAlreadyKnown = config.dataset.lineKnown === "true";
+    const submitButton = document.querySelector("[data-registration-form] [data-submit-button]");
+    const syncStatus = document.querySelector("[data-line-sync-status]");
+
+    if (submitButton && !lineAlreadyKnown) {
+        submitButton.disabled = true;
+    }
+
+    const setSyncState = (ready, message) => {
+        if (submitButton) submitButton.disabled = !ready;
+        if (syncStatus) syncStatus.textContent = message;
+    };
 
     const getCookie = (name) => {
         const cookies = document.cookie ? document.cookie.split(";") : [];
@@ -94,6 +106,7 @@
         }
 
         updateLineFields(data.profile || {});
+        setSyncState(true, "เชื่อมบัญชี LINE แล้ว");
 
         if (redirectToLiffState()) {
             return;
@@ -142,5 +155,6 @@
     bindLineUserIdCopyButtons();
     syncLineProfile().catch((error) => {
         console.warn(error);
+        setSyncState(false, "เชื่อมบัญชี LINE ไม่สำเร็จ กรุณารีเฟรชหน้าแล้วลองอีกครั้ง");
     });
 })();

@@ -2,7 +2,7 @@ from urllib.parse import urlencode
 
 from django import forms
 from django.contrib import admin, messages
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Q
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import format_html
@@ -343,6 +343,45 @@ class BRIStudyHistoryFilter(admin.SimpleListFilter):
         return queryset
 
 
+class LineConnectionFilter(admin.SimpleListFilter):
+    title = _("การเชื่อม LINE")
+    parameter_name = "line_connection"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("connected", "เชื่อมต่อแล้ว"),
+            ("missing", "ยังไม่เชื่อม LINE"),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == "connected":
+            return queryset.exclude(line_user_id="")
+        if self.value() == "missing":
+            return queryset.filter(line_user_id="")
+        return queryset
+
+
+class DuplicateNameFilter(admin.SimpleListFilter):
+    title = _("รายชื่อซ้ำ (ชื่อ–นามสกุล)")
+    parameter_name = "duplicate_name"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("yes", "ชื่อซ้ำ"),
+            ("no", "ชื่อไม่ซ้ำ"),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() not in {"yes", "no"}:
+            return queryset
+        matching_person = Person.objects.filter(
+            first_name=OuterRef("first_name"),
+            last_name=OuterRef("last_name"),
+        ).exclude(pk=OuterRef("pk"))
+        queryset = queryset.annotate(_has_duplicate_name=Exists(matching_person))
+        return queryset.filter(_has_duplicate_name=self.value() == "yes")
+
+
 @admin.register(Person)
 class PersonAdmin(UnfoldModelAdmin):
     list_display = (
@@ -360,7 +399,15 @@ class PersonAdmin(UnfoldModelAdmin):
         "interview_comment",
         "created_at",
     )
-    list_filter = ("status", "admission_type", BRIStudyHistoryFilter, CountryCodeFilter, "gender")
+    list_filter = (
+        "status",
+        "admission_type",
+        LineConnectionFilter,
+        DuplicateNameFilter,
+        BRIStudyHistoryFilter,
+        CountryCodeFilter,
+        "gender",
+    )
     ordering = ("-created_at", "-id")
     search_fields = (
         "first_name",

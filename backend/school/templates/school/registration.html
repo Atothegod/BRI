@@ -410,11 +410,14 @@
                             <span data-i18n="next">ถัดไป</span>
                             <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
                         </button>
-                        <button class="button button--primary button--submit" type="submit" data-submit-button>
+                        <button class="button button--primary button--submit" type="submit" data-submit-button{% if line_liff_id and not line_profile.line_user_id %} disabled{% endif %}>
                             <span data-submit-label data-i18n="submit">ส่งใบสมัคร</span>
                             <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#check-circle"></use></svg>
                         </button>
                     </div>
+                    {% if line_liff_id and not line_profile.line_user_id %}
+                    <small role="status" data-line-sync-status>กำลังเชื่อมบัญชี LINE…</small>
+                    {% endif %}
                 </div>
 
             </form>

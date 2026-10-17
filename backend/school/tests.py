@@ -14,7 +14,13 @@ from allauth.socialaccount.models import SocialAccount, SocialLogin
 
 from accounts.adapters import TeacherGoogleSocialAccountAdapter
 
-from .admin import BRIStudyHistoryFilter, CountryCodeFilter, PersonAdmin
+from .admin import (
+    BRIStudyHistoryFilter,
+    CountryCodeFilter,
+    DuplicateNameFilter,
+    LineConnectionFilter,
+    PersonAdmin,
+)
 from .models import (
     Appointment,
     AppointmentParticipant,
@@ -335,10 +341,44 @@ class PersonViewTests(TestCase):
         self.assertEqual(model_admin.vision_calling_display(person), "รับใช้คนรุ่นใหม่")
         self.assertIn(CountryCodeFilter, model_admin.list_filter)
         self.assertIn(BRIStudyHistoryFilter, model_admin.list_filter)
+        self.assertIn(LineConnectionFilter, model_admin.list_filter)
+        self.assertIn(DuplicateNameFilter, model_admin.list_filter)
 
         request = RequestFactory().get("/admin/school/person/", {"studied_bri": "yes"})
         filter_spec = BRIStudyHistoryFilter(request, request.GET.copy(), Person, model_admin)
         self.assertEqual(list(filter_spec.queryset(request, Person.objects.all())), [person])
+
+    def test_person_admin_filters_line_connection_and_duplicate_names(self):
+        duplicate_without_line = Person.objects.create(first_name="ชื่อซ้ำ", last_name="นามสกุล")
+        duplicate_with_line = Person.objects.create(
+            first_name="ชื่อซ้ำ",
+            last_name="นามสกุล",
+            line_user_id="Uduplicate",
+        )
+        unique_person = Person.objects.create(first_name="ชื่อเดียว", last_name="ไม่ซ้ำ")
+        model_admin = PersonAdmin(Person, admin.site)
+
+        missing_request = RequestFactory().get(
+            "/admin/school/person/", {"line_connection": "missing"}
+        )
+        missing_filter = LineConnectionFilter(
+            missing_request, missing_request.GET.copy(), Person, model_admin
+        )
+        self.assertCountEqual(
+            missing_filter.queryset(missing_request, Person.objects.all()),
+            [duplicate_without_line, unique_person],
+        )
+
+        duplicate_request = RequestFactory().get(
+            "/admin/school/person/", {"duplicate_name": "yes"}
+        )
+        duplicate_filter = DuplicateNameFilter(
+            duplicate_request, duplicate_request.GET.copy(), Person, model_admin
+        )
+        self.assertCountEqual(
+            duplicate_filter.queryset(duplicate_request, Person.objects.all()),
+            [duplicate_without_line, duplicate_with_line],
+        )
 
     def test_person_admin_display_prioritizes_nickname(self):
         person = Person.objects.create(
@@ -1570,6 +1610,22 @@ class LiffFlowTests(TestCase):
         person = Person.objects.get(line_user_id="Usession")
         self.assertEqual(person.line_display_name, "Session LINE")
         self.assertFalse(Person.objects.filter(line_user_id="Uspoofed").exists())
+
+    def test_registration_rejects_submission_before_liff_profile_sync(self):
+        data = PersonViewTests.valid_form_data(self)
+        data["line_user_id"] = "Uhidden-field-cannot-bypass-sync"
+
+        response = self.client.post(reverse("school:registration"), data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "ยังเชื่อมบัญชี LINE ไม่สำเร็จ")
+        self.assertFalse(Person.objects.exists())
+
+    def test_registration_disables_submit_until_liff_profile_sync(self):
+        response = self.client.get(reverse("school:registration"))
+
+        self.assertContains(response, "กำลังเชื่อมบัญชี LINE")
+        self.assertContains(response, "data-submit-button disabled")
 
     def test_result_page_uses_liff_session_profile_for_pending_user(self):
         Person.objects.create(

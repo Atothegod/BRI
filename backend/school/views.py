@@ -475,24 +475,32 @@ def registration(request):
     )
 
     if request.method == "POST" and form.is_valid():
-        person = form.save(line_profile=get_session_line_profile(request))
-        if person.line_user_id:
-            store_line_profile(
-                request,
-                {
-                    "line_user_id": person.line_user_id,
-                    "line_display_name": person.line_display_name,
-                    "line_picture_url": person.line_picture_url,
-                },
-                verified=bool(get_session_line_profile(request).get("verified")),
+        line_profile = get_session_line_profile(request)
+        line_is_required = settings.LINE_LIFF_ENABLED and bool(settings.LINE_LIFF_ID)
+        if line_is_required and not line_profile.get("line_user_id", "").strip():
+            form.add_error(
+                None,
+                "ยังเชื่อมบัญชี LINE ไม่สำเร็จ กรุณารีเฟรชหน้าและเข้าสู่ระบบ LINE อีกครั้ง",
             )
-        request.session["person_receipt"] = {
-            "person_id": person.pk,
-            "applicant_name": person.full_name,
-            "status": person.get_status_display(),
-            "line_user_id": person.line_user_id,
-        }
-        return redirect("school:registration_success")
+        else:
+            person = form.save(line_profile=line_profile)
+            if person.line_user_id:
+                store_line_profile(
+                    request,
+                    {
+                        "line_user_id": person.line_user_id,
+                        "line_display_name": person.line_display_name,
+                        "line_picture_url": person.line_picture_url,
+                    },
+                    verified=bool(line_profile.get("verified")),
+                )
+            request.session["person_receipt"] = {
+                "person_id": person.pk,
+                "applicant_name": person.full_name,
+                "status": person.get_status_display(),
+                "line_user_id": person.line_user_id,
+            }
+            return redirect("school:registration_success")
 
     context = {
         "form": form,

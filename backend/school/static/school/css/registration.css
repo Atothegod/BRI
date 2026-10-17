@@ -2534,6 +2534,61 @@ select.form-control {
     margin-top: 28px;
 }
 
+.line-account-help {
+    width: 100%;
+    margin-top: 20px;
+    text-align: left;
+}
+
+.line-account-help summary {
+    color: var(--bri-forest);
+    cursor: pointer;
+    font-weight: 700;
+    text-align: center;
+}
+
+.line-account-help__content {
+    margin-top: 12px;
+    padding: 16px;
+    border: 1px solid rgba(66, 91, 70, 0.2);
+    border-radius: 14px;
+    background: rgba(238, 244, 239, 0.65);
+}
+
+.line-account-help__content p {
+    margin: 0 0 12px;
+}
+
+.line-account-help__row {
+    display: grid;
+    gap: 4px;
+    margin-top: 12px;
+}
+
+.line-account-help__row span,
+.line-account-help__content small {
+    color: var(--color-muted);
+}
+
+.line-account-help__row code {
+    overflow-wrap: anywhere;
+    font-size: 0.85rem;
+    user-select: all;
+}
+
+.line-account-help__copy {
+    width: 100%;
+    margin-top: 14px;
+}
+
+.line-account-help__status {
+    min-height: 1.4em;
+    margin-top: 8px !important;
+    color: var(--bri-forest);
+    font-weight: 600;
+    text-align: center;
+}
+
 .result-card {
     margin-top: 18px;
 }

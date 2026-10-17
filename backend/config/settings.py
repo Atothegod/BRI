@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from urllib.parse import urlparse
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -17,6 +18,14 @@ def env_int(name, default=0):
     if value is None or value == "":
         return default
     return int(value)
+
+
+def liff_id_from_url(url):
+    """Return the LIFF app id from a https://liff.line.me/<id> URL."""
+    parsed = urlparse(url)
+    if parsed.netloc.lower() != "liff.line.me":
+        return ""
+    return parsed.path.strip("/").split("/", 1)[0]
 
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-local-dev-key")
@@ -297,6 +306,12 @@ LINE_PAYMENT_LIFF_URL = os.environ.get(
 LINE_ANNOUNCEMENT_LIFF_URL = os.environ.get(
     "LINE_ANNOUNCEMENT_LIFF_URL", "https://liff.line.me/2011088039-52ryg2t9"
 ).strip() or "https://liff.line.me/2011088039-52ryg2t9"
+LINE_PAYMENT_LIFF_ID = os.environ.get(
+    "LINE_PAYMENT_LIFF_ID", liff_id_from_url(LINE_PAYMENT_LIFF_URL)
+).strip()
+LINE_ANNOUNCEMENT_LIFF_ID = os.environ.get(
+    "LINE_ANNOUNCEMENT_LIFF_ID", liff_id_from_url(LINE_ANNOUNCEMENT_LIFF_URL)
+).strip()
 LINE_LIFF_ENABLED = env_bool("LINE_LIFF_ENABLED", not DEBUG)
 LINE_LOGIN_CHANNEL_ID = os.environ.get("LINE_LOGIN_CHANNEL_ID", "")
 LINE_LIFF_ALLOW_UNVERIFIED_PROFILE = env_bool(

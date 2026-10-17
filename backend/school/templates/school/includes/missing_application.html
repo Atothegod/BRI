@@ -5,6 +5,32 @@
 <span class="eyebrow">สถานะใบสมัคร</span>
 <h1 id="{{ missing_title_id }}">ยังไม่พบใบสมัคร</h1>
 
+<details class="line-account-help">
+    <summary>สมัครแล้ว แต่ระบบไม่พบใบสมัคร?</summary>
+    <div class="line-account-help__content">
+        {% if line_profile.line_user_id %}
+        <p>ส่งข้อมูลนี้ให้เจ้าหน้าที่เพื่อตรวจสอบและเชื่อมกับใบสมัครเดิม</p>
+        {% if line_profile.line_display_name %}
+        <div class="line-account-help__row">
+            <span>ชื่อ LINE ปัจจุบัน</span>
+            <strong>{{ line_profile.line_display_name }}</strong>
+        </div>
+        {% endif %}
+        <div class="line-account-help__row">
+            <span>LINE user ID ปัจจุบัน</span>
+            <code data-current-line-user-id>{{ line_profile.line_user_id }}</code>
+        </div>
+        <button class="button button--secondary line-account-help__copy" type="button" data-copy-line-user-id>
+            คัดลอก LINE user ID
+        </button>
+        <p class="line-account-help__status" data-copy-line-status aria-live="polite"></p>
+        <small>เจ้าหน้าที่ควรยืนยันชื่อและเบอร์โทรก่อนแก้ไขใบสมัครเดิม</small>
+        {% else %}
+        <p>ยังอ่านบัญชี LINE ปัจจุบันไม่ได้ กรุณาปิดหน้านี้แล้วเปิดใหม่จาก Rich Menu ในแอป LINE</p>
+        {% endif %}
+    </div>
+</details>
+
 <div class="result-actions empty-application-actions">
     <a class="button button--primary success-action" href="{% url 'school:registration' %}">
         <span>สมัครเรียน</span>

@@ -2,6 +2,7 @@ import json
 from datetime import timedelta
 from unittest.mock import patch
 
+from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -1455,6 +1456,52 @@ class AnnouncementResultTests(TestCase):
         self.assertNotContains(response, "LINE account")
         self.assertContains(response, "กลับไปยัง LINE")
         self.assertContains(response, "สมัครเรียน")
+        self.assertContains(response, "สมัครแล้ว แต่ระบบไม่พบใบสมัคร?")
+        self.assertNotContains(response, "data-current-line-user-id")
+
+    def test_missing_application_shows_current_synced_line_account_for_support(self):
+        session = self.client.session
+        session["line_profile"] = {
+            "line_user_id": "Ucurrent-support-id",
+            "line_display_name": "Current LINE name",
+            "verified": True,
+        }
+        session.save()
+
+        response = self.client.get(reverse("school:announcement_result"))
+
+        self.assertContains(response, "Current LINE name")
+        self.assertContains(response, "Ucurrent-support-id")
+        self.assertContains(response, "data-copy-line-user-id")
+
+    def test_query_string_line_id_is_not_shown_as_the_current_line_account(self):
+        response = self.client.get(
+            reverse("school:announcement_result"),
+            {"line_user_id": "Uuntrusted-query-id"},
+        )
+
+        self.assertNotContains(response, "data-current-line-user-id")
+
+    def test_verified_session_line_id_takes_priority_over_query_string(self):
+        person = Person.objects.create(
+            first_name="Correct",
+            last_name="Applicant",
+            line_user_id="Ucorrect",
+        )
+        session = self.client.session
+        session["line_profile"] = {
+            "line_user_id": person.line_user_id,
+            "verified": True,
+        }
+        session.save()
+
+        response = self.client.get(
+            reverse("school:announcement_result"),
+            {"line_user_id": "Ustale-or-spoofed"},
+        )
+
+        self.assertEqual(response.context["person"], person)
+        self.assertEqual(response.context["result_state"], "pending")
 
 
 @override_settings(
@@ -1495,14 +1542,21 @@ class LiffFlowTests(TestCase):
 
         self.assertRedirects(
             result_response,
-            "https://liff.line.me/1234567890-AbCdEf/results/",
+            settings.LINE_ANNOUNCEMENT_LIFF_URL,
             fetch_redirect_response=False,
         )
         self.assertRedirects(
             payment_response,
-            "https://liff.line.me/1234567890-AbCdEf/students/payment/",
+            settings.LINE_PAYMENT_LIFF_URL,
             fetch_redirect_response=False,
         )
+
+    @override_settings(LINE_ANNOUNCEMENT_LIFF_ID="1234567890-Result")
+    def test_result_page_initializes_the_announcement_liff_app(self):
+        response = self.client.get(reverse("school:announcement_result"))
+
+        self.assertContains(response, 'data-liff-id="1234567890-Result"')
+        self.assertContains(response, 'data-reload-on-sync="true"')
 
     def test_registration_uses_liff_session_profile_over_hidden_fields(self):
         self.sync_line_profile(user_id="Usession", display_name="Session LINE")

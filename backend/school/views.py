@@ -244,9 +244,11 @@ def get_line_initial(request):
     }
 
 
-def get_liff_context(request, reload_on_sync=False):
+def get_liff_context(request, reload_on_sync=False, liff_id=None):
     return {
-        "line_liff_id": settings.LINE_LIFF_ID if settings.LINE_LIFF_ENABLED else "",
+        "line_liff_id": (liff_id if liff_id is not None else settings.LINE_LIFF_ID)
+        if settings.LINE_LIFF_ENABLED
+        else "",
         "line_profile": get_session_line_profile(request),
         "liff_reload_on_sync": reload_on_sync,
     }
@@ -260,12 +262,16 @@ def redirect_to_liff_path(path):
 
 @require_GET
 def liff_results_launch(request):
-    return redirect_to_liff_path("/results/")
+    if settings.LINE_LIFF_ENABLED and settings.LINE_ANNOUNCEMENT_LIFF_URL:
+        return redirect(settings.LINE_ANNOUNCEMENT_LIFF_URL)
+    return redirect("school:announcement_result")
 
 
 @require_GET
 def liff_payment_launch(request):
-    return redirect_to_liff_path("/students/payment/")
+    if settings.LINE_LIFF_ENABLED and settings.LINE_PAYMENT_LIFF_URL:
+        return redirect(settings.LINE_PAYMENT_LIFF_URL)
+    return redirect("school:student_payment_upload")
 
 
 def store_line_profile(request, profile, verified=False):
@@ -530,10 +536,11 @@ def registration_success(request):
 @never_cache
 @ensure_csrf_cookie
 def announcement_result(request):
+    session_line_user_id = get_session_line_profile(request).get("line_user_id", "").strip()
     line_user_id = (
-        request.GET.get("line_user_id", "")
-        or get_session_line_profile(request).get("line_user_id", "")
+        session_line_user_id
         or request.session.get("person_receipt", {}).get("line_user_id", "")
+        or request.GET.get("line_user_id", "")
     ).strip()
     person = None
     student = None
@@ -562,7 +569,13 @@ def announcement_result(request):
         "student": student,
         "result_state": result_state,
     }
-    context.update(get_liff_context(request, reload_on_sync=not bool(line_user_id)))
+    context.update(
+        get_liff_context(
+            request,
+            reload_on_sync=not bool(session_line_user_id),
+            liff_id=settings.LINE_ANNOUNCEMENT_LIFF_ID,
+        )
+    )
     return render(request, "school/announcement_result.html", context)
 
 

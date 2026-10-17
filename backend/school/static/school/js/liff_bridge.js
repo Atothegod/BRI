@@ -121,7 +121,25 @@
         });
     };
 
+    const bindLineUserIdCopyButtons = () => {
+        document.querySelectorAll("[data-copy-line-user-id]").forEach((button) => {
+            button.addEventListener("click", async () => {
+                const value = document.querySelector("[data-current-line-user-id]")?.textContent?.trim();
+                const status = document.querySelector("[data-copy-line-status]");
+                if (!value) return;
+
+                try {
+                    await navigator.clipboard.writeText(value);
+                    if (status) status.textContent = "คัดลอก LINE user ID แล้ว";
+                } catch (error) {
+                    if (status) status.textContent = "คัดลอกไม่สำเร็จ กรุณากดค้างที่รหัสเพื่อคัดลอก";
+                }
+            });
+        });
+    };
+
     bindCloseButtons();
+    bindLineUserIdCopyButtons();
     syncLineProfile().catch((error) => {
         console.warn(error);
     });

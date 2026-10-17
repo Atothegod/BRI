@@ -31,7 +31,11 @@
         stage.replaceChildren();
         map = L.map(stage,{zoomControl:false,attributionControl:true,scrollWheelZoom:false});
         L.control.zoom({position:"bottomright"}).addTo(map);
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(map);
+        const tiles = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{
+            subdomains:"abcd",maxZoom:20,
+            attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        }).addTo(map);
+        tiles.on("tileerror",event=>{if(event.tile){event.tile.style.visibility="hidden";}});
         map.setView(mode === "country" ? [20,30] : [13.4,101],mode === "country" ? 2 : 5);
         return true;
     };

@@ -1548,8 +1548,8 @@
 .geo-toolbar button:hover { background: rgba(255,255,255,.7); }
 .geo-toolbar button.is-active { color: #fff; background: var(--school-admin-forest); box-shadow: 0 4px 10px rgba(18,39,29,.18); }
 .geo-map-layout { display: grid; min-height: 520px; overflow: hidden; background: linear-gradient(145deg, #f1f6f2, #e8f0ea); border: 1px solid #cbd9cd; border-radius: 14px; grid-template-columns: minmax(0, 1.55fr) minmax(280px, .7fr); }
-.geo-map-stage { position: relative; display: flex; min-height: 520px; padding: 24px; align-items: center; justify-content: center; overflow: hidden; }
-.geo-map-stage::before { position: absolute; width: 360px; height: 360px; background: rgba(255,255,255,.58); border-radius: 50%; content: ""; filter: blur(2px); }
+.geo-map-stage { position: relative; min-height: 520px; padding: 0; overflow: hidden; background: #dfe9e1; }
+.geo-map-stage::before { display: none; }
 .thai-map { position: relative; z-index: 1; width: min(100%, 410px); height: 440px; overflow: visible; filter: drop-shadow(0 14px 18px rgba(27,66,43,.18)); }
 .thai-region { stroke: #fff; stroke-width: 3; stroke-linejoin: round; transition: opacity 150ms ease; }
 .geo-hit { fill: transparent; stroke: transparent; cursor: pointer; }
@@ -1564,14 +1564,29 @@
 .geo-ranking-heading { margin-bottom: 18px; }
 .geo-ranking-heading span { color: #6d7f72; font-size: .78rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
 .geo-ranking-heading h3 { margin: 3px 0 0; font-size: 1.15rem; }
-.geo-rank-row { display: grid; margin-bottom: 13px; grid-template-columns: 28px minmax(0,1fr); gap: 9px; align-items: center; }
+.geo-rank-row { display: grid; width: 100%; margin: 0 0 7px; padding: 8px; color: inherit; background: transparent; border: 0; border-radius: 8px; grid-template-columns: 28px minmax(0,1fr); gap: 9px; align-items: center; cursor: pointer; font: inherit; text-align: left; }
+.geo-rank-row:hover, .geo-rank-row:focus-visible { background: #eef4ef; outline: none; }
 .geo-rank-number { color: #92a097; font-size: .76rem; font-weight: 900; }
-.geo-rank-row > div > div { display: flex; margin-bottom: 5px; justify-content: space-between; gap: 10px; font-size: .88rem; font-weight: 800; }
+.geo-rank-content > span { display: flex; margin-bottom: 5px; justify-content: space-between; gap: 10px; font-size: .88rem; font-weight: 800; }
+.geo-rank-content b { font-weight: 800; }
 .geo-rank-row i { display: block; width: 100%; height: 5px; overflow: hidden; background: #e3eae4; border-radius: 10px; }
 .geo-rank-row i::after { display: block; width: var(--geo-value); height: 100%; background: linear-gradient(90deg, #55765d, #c2a256); border-radius: inherit; content: ""; }
 .geo-map-tooltip { position: absolute; z-index: 8; min-width: 130px; padding: 9px 11px; color: #fff; background: rgba(9,26,18,.94); border-radius: 7px; box-shadow: 0 8px 20px rgba(0,0,0,.2); pointer-events: none; }
 .geo-map-tooltip strong, .geo-map-tooltip span { display: block; }
 .geo-map-tooltip span { margin-top: 2px; color: #e7cf8f; font-size: .82rem; font-weight: 800; }
+.geo-map-unavailable { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 4px; color: #526157; }
+.geo-map-unavailable strong { color: var(--school-admin-forest); }
+.geo-leaflet-marker { filter: drop-shadow(0 5px 6px rgba(18,39,29,.28)); transition: fill-opacity 150ms ease; }
+.geo-leaflet-marker:hover { fill-opacity: 1; }
+.geo-leaflet-tooltip { padding: 0 !important; overflow: hidden; color: #fff !important; background: rgba(9,26,18,.96) !important; border: 0 !important; border-radius: 9px !important; box-shadow: 0 10px 28px rgba(0,0,0,.25) !important; }
+.geo-leaflet-tooltip::before { border-top-color: rgba(9,26,18,.96) !important; }
+.geo-popup { min-width: 130px; padding: 10px 12px; }
+.geo-popup small, .geo-popup strong, .geo-popup span { display: block; }
+.geo-popup small { margin-bottom: 2px; color: #c7d5ca; font-size: .68rem; font-weight: 800; text-transform: uppercase; }
+.geo-popup strong { color: #fff; font-size: .95rem; }
+.geo-popup span { margin-top: 3px; color: #e7cf8f; font-size: .82rem; font-weight: 850; }
+.geo-map-stage .leaflet-control-attribution { color: #647269; background: rgba(255,255,255,.82); font-size: 9px; }
+.geo-map-stage .leaflet-control-zoom a { color: var(--school-admin-forest); border-color: #d5dfd6; }
 
 .geo-grid > section {
     min-width: 0;

@@ -5,7 +5,8 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20260915-admin-tabs-1">
-<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261017-visual-dashboard-1">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQ3ynHTRxpN5tFV9xLR9jMZrDaHc+4M=" crossorigin="">
+<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261017-map-dashboard-2">
 {% endblock %}
 
 {% block content %}
@@ -264,5 +265,6 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'school/js/admin_dashboard.js' %}?v=20261017-visual-dashboard-1" defer></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
+<script src="{% static 'school/js/admin_dashboard.js' %}?v=20261017-map-dashboard-2" defer></script>
 {% endblock %}

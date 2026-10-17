@@ -1,121 +1,61 @@
 (() => {
     "use strict";
-
     const explorer = document.querySelector("[data-geo-explorer]");
-    const dataNode = document.getElementById("geo-map-data");
-    if (!explorer || !dataNode) return;
-
-    const data = JSON.parse(dataNode.textContent);
+    const source = document.getElementById("geo-map-data");
+    if (!explorer || !source) return;
+    const data = JSON.parse(source.textContent);
     const stage = explorer.querySelector("[data-geo-stage]");
     const list = explorer.querySelector("[data-geo-ranking-list]");
     const title = explorer.querySelector("[data-geo-ranking-title]");
     const kicker = explorer.querySelector("[data-geo-ranking-kicker]");
-    const tooltip = explorer.querySelector("[data-geo-tooltip]");
-    const maxCount = (items) => Math.max(1, ...items.map((item) => item.count));
-    const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) => ({
-        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;",
-    })[character]);
+    let map;
 
-    const regionShapes = {
-        northern: "M183 25 C145 43 128 80 143 116 L178 143 217 117 226 66 207 31Z",
-        northeastern: "M219 93 L261 77 306 98 321 139 293 169 233 157 199 132Z",
-        central: "M173 136 L225 128 258 164 239 208 207 233 174 203 155 163Z",
-        eastern: "M239 185 L286 173 308 201 280 231 244 225 218 207Z",
-        western: "M142 121 L174 139 174 204 198 237 176 263 145 223 126 173Z",
-        southern: "M193 229 L221 227 224 278 242 318 230 385 205 413 190 371 207 322 186 279Z",
+    const points = {
+        region: { northern:[18.45,99.05],central:[14.45,100.45],eastern:[13.15,101.45],western:[14.45,98.75],northeastern:[16.1,103.1],southern:[8.15,99.35] },
+        province: { "กรุงเทพมหานคร":[13.7563,100.5018],"สมุทรปราการ":[13.5991,100.5998],"นนทบุรี":[13.8621,100.5144],"ปทุมธานี":[14.0208,100.525],"นครปฐม":[13.8199,100.0622],"สมุทรสาคร":[13.5475,100.2744],"เชียงใหม่":[18.7883,98.9853],"เชียงราย":[19.9105,99.8406],"ลำปาง":[18.2888,99.4909],"พิษณุโลก":[16.8211,100.2659],"นครสวรรค์":[15.7047,100.1372],"พระนครศรีอยุธยา":[14.3532,100.5689],"กาญจนบุรี":[14.0228,99.5328],"ชลบุรี":[13.3611,100.9847],"ระยอง":[12.6814,101.2816],"จันทบุรี":[12.6113,102.1038],"ปราจีนบุรี":[14.0509,101.3723],"นครราชสีมา":[14.9799,102.0978],"ขอนแก่น":[16.4419,102.835],"อุดรธานี":[17.4138,102.787],"อุบลราชธานี":[15.2448,104.8473],"สุราษฎร์ธานี":[9.1382,99.3215],"นครศรีธรรมราช":[8.4304,99.9631],"สงขลา":[7.1898,100.5954],"ภูเก็ต":[7.8804,98.3923],"เพชรบุรี":[13.1119,99.939],"ราชบุรี":[13.5283,99.8134],"สุพรรณบุรี":[14.4745,100.1177],"ลพบุรี":[14.7995,100.6534],"สระบุรี":[14.5289,100.9101] },
+        country: { TH:[15.87,100.99],LA:[19.86,102.49],US:[39.83,-98.58],AU:[-25.27,133.78],NO:[60.47,8.47],GB:[55.38,-3.44],FR:[46.23,2.21],DE:[51.17,10.45],CN:[35.86,104.2],JP:[36.2,138.25],KR:[35.91,127.77],SG:[1.35,103.82],MY:[4.21,101.98],MM:[21.92,95.96],KH:[12.57,104.99],VN:[14.06,108.28],IN:[20.59,78.96],CA:[56.13,-106.35],NZ:[-40.9,174.89],PH:[12.88,121.77] },
     };
-    const provincePoints = {
-        "กรุงเทพมหานคร": [218, 215], "สมุทรปราการ": [226, 224], "นนทบุรี": [212, 207],
-        "ปทุมธานี": [216, 196], "นครปฐม": [195, 211], "สมุทรสาคร": [202, 224],
-        "เชียงใหม่": [172, 67], "เชียงราย": [196, 42], "ลำปาง": [201, 88], "พิษณุโลก": [210, 133],
-        "นครสวรรค์": [194, 158], "พระนครศรีอยุธยา": [211, 184], "กาญจนบุรี": [159, 190],
-        "ชลบุรี": [252, 224], "ระยอง": [270, 232], "จันทบุรี": [286, 246], "ปราจีนบุรี": [251, 195],
-        "นครราชสีมา": [260, 168], "ขอนแก่น": [267, 130], "อุดรธานี": [270, 96], "อุบลราชธานี": [307, 151],
-        "สุราษฎร์ธานี": [212, 302], "นครศรีธรรมราช": [223, 336], "สงขลา": [218, 383], "ภูเก็ต": [190, 327],
-    };
-    const countryPoints = {
-        TH: [710, 270], LA: [704, 245], US: [170, 190], AU: [800, 385], NO: [495, 95],
-        GB: [452, 150], FR: [465, 175], DE: [490, 158], CN: [690, 190], JP: [805, 190],
-        KR: [775, 185], SG: [715, 315], MY: [705, 305], MM: [675, 250], KH: [720, 270],
-        VN: [735, 250], IN: [625, 240], CA: [160, 115], NZ: [890, 410], PH: [775, 275],
-    };
+    const escapeHtml = (value) => String(value).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"})[c]);
+    const maximum = items => Math.max(1, ...items.map(item => item.count));
 
-    const showTooltip = (event, label, count) => {
-        tooltip.innerHTML = `<strong>${escapeHtml(label)}</strong><span>${count.toLocaleString("th-TH")} คน</span>`;
-        tooltip.hidden = false;
-        const bounds = explorer.getBoundingClientRect();
-        const targetBounds = event.currentTarget.getBoundingClientRect();
-        const clientX = event.clientX || targetBounds.left + targetBounds.width / 2;
-        const clientY = event.clientY || targetBounds.top + targetBounds.height / 2;
-        tooltip.style.left = `${clientX - bounds.left + 12}px`;
-        tooltip.style.top = `${clientY - bounds.top + 12}px`;
+    const ranking = (items) => {
+        const max = maximum(items);
+        list.innerHTML = items.slice(0,10).map((item,index) => `<button type="button" class="geo-rank-row" data-rank-key="${escapeHtml(item.value || item.code || item.label)}"><span class="geo-rank-number">${String(index+1).padStart(2,"0")}</span><span class="geo-rank-content"><span><b>${escapeHtml(item.label)}</b><strong>${item.count.toLocaleString("th-TH")}</strong></span><i style="--geo-value:${item.count/max*100}%"></i></span></button>`).join("") || '<p class="geo-empty">ยังไม่มีข้อมูล</p>';
     };
-    const hideTooltip = () => { tooltip.hidden = true; };
-    const bindMapItems = () => {
-        stage.querySelectorAll("[data-map-label]").forEach((item) => {
-            item.addEventListener("pointermove", (event) => showTooltip(
-                event, item.dataset.mapLabel, Number(item.dataset.mapCount || 0),
-            ));
-            item.addEventListener("pointerleave", hideTooltip);
-            item.addEventListener("focus", (event) => showTooltip(event, item.dataset.mapLabel, Number(item.dataset.mapCount || 0)));
-            item.addEventListener("blur", hideTooltip);
+    const createMap = mode => {
+        if (!window.L) {
+            stage.innerHTML = '<div class="geo-map-unavailable"><strong>โหลดแผนที่ไม่สำเร็จ</strong><span>ตรวจสอบอินเทอร์เน็ตแล้วรีเฟรชหน้าอีกครั้ง</span></div>';
+            return false;
+        }
+        if (map) map.remove();
+        stage.replaceChildren();
+        map = L.map(stage,{zoomControl:false,attributionControl:true,scrollWheelZoom:false});
+        L.control.zoom({position:"bottomright"}).addTo(map);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(map);
+        map.setView(mode === "country" ? [20,30] : [13.4,101],mode === "country" ? 2 : 5);
+        return true;
+    };
+    const render = mode => {
+        const configs = {
+            region:{items:data.regions || [],title:"ผู้สมัครแยกตามภูมิภาค",kicker:"ประเทศไทย"},
+            province:{items:data.provinces || [],title:"จังหวัดที่พบมาก",kicker:"แผนที่ประเทศไทย"},
+            country:{items:data.countries || [],title:"ประเทศของผู้สมัคร",kicker:"ภาพรวมทั่วโลก"},
+        };
+        const config = configs[mode]; title.textContent = config.title; kicker.textContent = config.kicker; ranking(config.items);
+        if (!createMap(mode)) return;
+        const max = maximum(config.items), markers = new Map(), bounds = [];
+        config.items.forEach(item => {
+            const key = item.value || item.code || item.label, point = points[mode][key];
+            if (!point) return;
+            const radius = 9 + Math.sqrt(item.count/max) * (mode === "region" ? 29 : 21);
+            const marker = L.circleMarker(point,{radius,color:"#fff",weight:3,fillColor:mode === "country" ? "#ad4e30" : "#28513a",fillOpacity:.9,className:"geo-leaflet-marker"}).addTo(map);
+            marker.bindTooltip(`<div class="geo-popup"><small>${mode === "country" ? "ประเทศ" : mode === "province" ? "จังหวัด" : "ภูมิภาค"}</small><strong>${escapeHtml(item.label)}</strong><span>${item.count.toLocaleString("th-TH")} คน</span></div>`,{direction:"top",offset:[0,-radius/2],opacity:1,className:"geo-leaflet-tooltip"});
+            marker.on("click",()=>marker.openTooltip()); markers.set(key,marker); bounds.push(point);
         });
+        if (mode !== "country" && bounds.length) map.fitBounds(bounds,{padding:[55,55],maxZoom:6});
+        list.querySelectorAll("[data-rank-key]").forEach(row => row.addEventListener("click",()=>{const marker=markers.get(row.dataset.rankKey);if(marker){map.flyTo(marker.getLatLng(),mode === "country" ? 4 : 8,{duration:.7});marker.openTooltip();}}));
+        window.setTimeout(()=>map.invalidateSize(),50);
     };
-    const renderRanking = (items) => {
-        const maximum = maxCount(items);
-        list.innerHTML = items.slice(0, 10).map((item, index) => `
-            <div class="geo-rank-row">
-                <span class="geo-rank-number">${String(index + 1).padStart(2, "0")}</span>
-                <div><div><span>${escapeHtml(item.label)}</span><strong>${item.count.toLocaleString("th-TH")}</strong></div>
-                <i style="--geo-value:${(item.count / maximum) * 100}%"></i></div>
-            </div>`).join("") || '<p class="geo-empty">ยังไม่มีข้อมูล</p>';
-    };
-    const thailandBase = (fills = {}) => Object.entries(regionShapes).map(([key, path]) => (
-        `<path class="thai-region" d="${path}" fill="${fills[key] || "#dbe7dc"}" data-region="${key}"/>`
-    )).join("");
-
-    const renderRegion = () => {
-        const items = data.regions || [];
-        const maximum = maxCount(items);
-        const palette = ["#e8efe7", "#cbdcc9", "#a8c2aa", "#7fa084", "#55765d", "#264b38"];
-        const fills = Object.fromEntries(items.map((item) => [item.value, palette[Math.min(5, Math.ceil(item.count / maximum * 5))]]));
-        stage.innerHTML = `<svg class="thai-map" viewBox="90 10 250 420" role="img" aria-label="แผนที่ผู้สมัครแยกตามภูมิภาค">${thailandBase(fills)}${items.map((item) => {
-            const path = regionShapes[item.value];
-            return path ? `<path class="geo-hit" tabindex="0" d="${path}" data-map-label="${escapeHtml(item.label)}" data-map-count="${item.count}"/>` : "";
-        }).join("")}</svg><div class="geo-map-caption">สีเข้มหมายถึงมีผู้สมัครมากกว่า · แตะพื้นที่เพื่อดูจำนวน</div>`;
-        title.textContent = "ผู้สมัครแยกตามภูมิภาค"; kicker.textContent = "ประเทศไทย";
-        renderRanking(items); bindMapItems();
-    };
-    const renderProvince = () => {
-        const items = data.provinces || [];
-        const maximum = maxCount(items);
-        const markers = items.map((item, index) => {
-            const point = provincePoints[item.label];
-            if (!point) return "";
-            const radius = 5 + Math.sqrt(item.count / maximum) * 13;
-            return `<g class="province-marker" tabindex="0" data-map-label="${escapeHtml(item.label)}" data-map-count="${item.count}"><circle cx="${point[0]}" cy="${point[1]}" r="${radius}"/><text x="${point[0]}" y="${point[1] + 3}">${index + 1}</text></g>`;
-        }).join("");
-        stage.innerHTML = `<svg class="thai-map" viewBox="90 10 250 420" role="img" aria-label="แผนที่จังหวัดของผู้สมัคร">${thailandBase()}${markers}</svg><div class="geo-map-caption">ขนาดวงกลมแสดงจำนวนผู้สมัคร · หมายเลขตรงกับอันดับด้านขวา</div>`;
-        title.textContent = "จังหวัดที่พบมาก"; kicker.textContent = `${items.length.toLocaleString("th-TH")} จังหวัดที่มีข้อมูล`;
-        renderRanking(items); bindMapItems();
-    };
-    const renderCountry = () => {
-        const items = data.countries || [];
-        const maximum = maxCount(items);
-        const markers = items.map((item) => {
-            const point = countryPoints[item.code];
-            if (!point) return "";
-            const radius = 5 + Math.sqrt(item.count / maximum) * 15;
-            return `<g class="country-marker" tabindex="0" data-map-label="${escapeHtml(item.label)}" data-map-count="${item.count}"><circle cx="${point[0]}" cy="${point[1]}" r="${radius}"/></g>`;
-        }).join("");
-        stage.innerHTML = `<svg class="world-map" viewBox="0 0 1000 500" role="img" aria-label="แผนที่ประเทศของผู้สมัคร"><g class="world-land"><path d="M55 105L170 55 280 90 300 155 240 190 205 275 145 255 115 180 55 160Z"/><path d="M250 280L310 300 335 390 300 475 270 400Z"/><path d="M420 105L535 75 620 115 600 180 535 188 520 260 470 245 445 180Z"/><path d="M535 205L615 205 650 320 595 420 535 345 505 265Z"/><path d="M610 100L825 75 935 140 900 250 820 285 745 245 670 280 625 205Z"/><path d="M765 340L875 330 930 405 855 450 770 415Z"/></g>${markers}</svg><div class="geo-map-caption">ขนาดวงกลมแสดงจำนวนผู้สมัครจากแต่ละประเทศ</div>`;
-        title.textContent = "ประเทศของผู้สมัคร"; kicker.textContent = `${items.length.toLocaleString("th-TH")} ประเทศ`;
-        renderRanking(items); bindMapItems();
-    };
-    const renderers = { region: renderRegion, province: renderProvince, country: renderCountry };
-    explorer.querySelectorAll("[data-geo-mode]").forEach((button) => button.addEventListener("click", () => {
-        explorer.querySelectorAll("[data-geo-mode]").forEach((candidate) => candidate.classList.toggle("is-active", candidate === button));
-        renderers[button.dataset.geoMode]();
-    }));
-    renderRegion();
+    explorer.querySelectorAll("[data-geo-mode]").forEach(button => button.addEventListener("click",()=>{explorer.querySelectorAll("[data-geo-mode]").forEach(item=>item.classList.toggle("is-active",item===button));render(button.dataset.geoMode);}));
+    render("region");
 })();

@@ -801,10 +801,15 @@ def interview_announcements(request):
 
     query = request.GET.get("q", "").strip()
     country_filter = request.GET.get("country", "").strip()
+    result_filter = request.GET.get("result", "").strip()
+    if result_filter not in {Person.Status.PASSED, Person.Status.FAILED}:
+        result_filter = ""
     audience = request.GET.get("audience") or "ready"
     if audience not in {"ready", "sent", "blocked", "all"}:
         audience = "ready"
     people = Person.objects.filter(status__in=[Person.Status.PASSED, Person.Status.FAILED]).order_by("-updated_at", "-pk")
+    if result_filter:
+        people = people.filter(status=result_filter)
     if query:
         people = people.filter(
             Q(first_name__icontains=query)
@@ -863,6 +868,7 @@ def interview_announcements(request):
         "audience_tabs": audience_tabs,
         "country_filter": country_filter,
         "country_options": country_options,
+        "result_filter": result_filter,
         "page_query_prefix": f"?{query_params.urlencode()}&" if query_params else "?",
         "next_url": request.get_full_path(),
     })

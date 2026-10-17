@@ -1419,6 +1419,14 @@ class AppointmentScheduleTests(TestCase):
         self.assertEqual(response.context["counts"]["ready"], 1)
         self.assertEqual(response.context["country_options"], ["Cambodia", "ไทย"])
 
+        failed = self.client.get(url, {"result": "failed", "audience": "ready"})
+
+        self.assertContains(failed, cambodia.full_name)
+        self.assertNotContains(failed, thailand.full_name)
+        self.assertContains(failed, 'option value="failed" selected')
+        self.assertContains(failed, "result=failed")
+        self.assertEqual(failed.context["counts"]["ready"], 1)
+
 
 class AppointmentSlotConcurrencyTests(TransactionTestCase):
     reset_sequences = True

@@ -5,7 +5,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20260915-admin-tabs-1">
-<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261003-nav-dropdown-1">
+<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261017-visual-dashboard-1">
 {% endblock %}
 
 {% block content %}
@@ -85,15 +85,20 @@
                                     <h2 id="payments-title">การชำระเงิน</h2>
                                 </div>
                             </div>
-                            <div class="metric-list metric-list--two">
-                                <div>
-                                    <span>ชำระแล้ว</span>
+                            <div class="payment-overview">
+                                <div class="payment-metric payment-metric--paid">
+                                    <span>ชำระแล้ว (ยืนยัน)</span>
                                     <strong>{{ stats.students_paid }}</strong>
                                 </div>
-                                <div>
+                                <div class="payment-metric payment-metric--unpaid">
                                     <span>ยังไม่ชำระ</span>
                                     <strong>{{ stats.students_unpaid }}</strong>
                                 </div>
+                                <a class="payment-metric payment-metric--pending" href="{% url 'school:admin_payment_slip_review' %}?status=pending">
+                                    <span>ชำระแล้ว (รอตรวจสอบ)</span>
+                                    <strong>{{ stats.students_payment_pending }}</strong>
+                                    <small>เปิดคิวตรวจสลิป →</small>
+                                </a>
                             </div>
                         </section>
                     </div>
@@ -225,31 +230,29 @@
                             <div><span>ไม่ระบุ</span><strong>{{ geo_stats.unspecified }}</strong></div>
                         </div>
 
-                        <div class="geo-grid">
-                            <section aria-labelledby="regions-title">
-                                <h3 id="regions-title">ภูมิภาค</h3>
-                                <div class="geo-list">
-                                    {% for item in region_summaries %}
-                                    <div class="geo-row"><span>{{ item.label }}</span><strong>{{ item.count }}</strong></div>
-                                    {% endfor %}
+                        <div class="geo-explorer" data-geo-explorer>
+                            <div class="geo-toolbar" role="tablist" aria-label="เลือกระดับแผนที่">
+                                <button type="button" class="is-active" data-geo-mode="region">ภูมิภาค</button>
+                                <button type="button" data-geo-mode="province">จังหวัด</button>
+                                <button type="button" data-geo-mode="country">ประเทศ</button>
+                            </div>
+                            <div class="geo-map-layout">
+                                <div class="geo-map-stage" data-geo-stage aria-live="polite"></div>
+                                <aside class="geo-ranking" aria-label="อันดับพื้นที่">
+                                    <div class="geo-ranking-heading">
+                                        <span data-geo-ranking-kicker>ประเทศไทย</span>
+                                        <h3 data-geo-ranking-title>ผู้สมัครแยกตามภูมิภาค</h3>
+                                    </div>
+                                    <div data-geo-ranking-list></div>
+                                </aside>
+                            </div>
+                            <div class="geo-map-tooltip" data-geo-tooltip hidden></div>
+                            <noscript>
+                                <div class="geo-grid geo-grid--fallback">
+                                    <section><h3>จังหวัดที่พบมาก</h3><div class="geo-list">{% for item in province_summaries %}<div class="geo-row"><span>{{ item.label }}</span><strong>{{ item.count }}</strong></div>{% endfor %}</div></section>
+                                    <section><h3>ประเทศ</h3><div class="geo-list">{% for item in country_summaries %}<div class="geo-row"><span>{{ item.label }}</span><strong>{{ item.count }}</strong></div>{% endfor %}</div></section>
                                 </div>
-                            </section>
-                            <section aria-labelledby="provinces-title">
-                                <h3 id="provinces-title">จังหวัดที่พบมาก</h3>
-                                <div class="geo-list">
-                                    {% for item in province_summaries %}
-                                    <div class="geo-row"><span>{{ item.label }}</span><strong>{{ item.count }}</strong></div>
-                                    {% empty %}<p class="geo-empty">ยังไม่มีข้อมูลจังหวัด</p>{% endfor %}
-                                </div>
-                            </section>
-                            <section aria-labelledby="countries-title">
-                                <h3 id="countries-title">ประเทศ</h3>
-                                <div class="geo-list">
-                                    {% for item in country_summaries %}
-                                    <div class="geo-row"><span>{{ item.label }}</span><strong>{{ item.count }}</strong></div>
-                                    {% empty %}<p class="geo-empty">ยังไม่มีข้อมูลประเทศ</p>{% endfor %}
-                                </div>
-                            </section>
+                            </noscript>
                         </div>
                     </section>
                 </div>
@@ -257,4 +260,9 @@
         </section>
     </div>
 </main>
+{{ geo_map_data|json_script:"geo-map-data" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'school/js/admin_dashboard.js' %}?v=20261017-visual-dashboard-1" defer></script>
 {% endblock %}

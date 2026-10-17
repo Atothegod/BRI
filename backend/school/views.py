@@ -1147,6 +1147,8 @@ def admin_overview_dashboard(request):
     region_counts = Counter()
     province_counts = Counter()
     country_counts = Counter()
+    country_code_counts = Counter()
+    country_labels = {}
     thai_count = 0
     international_count = 0
     unspecified_count = 0
@@ -1164,6 +1166,8 @@ def admin_overview_dashboard(request):
         if country_code == "TH":
             thai_count += 1
             country_counts["ประเทศไทย"] += 1
+            country_code_counts["TH"] += 1
+            country_labels["TH"] = "ประเทศไทย"
             region_counts[region or "unspecified"] += 1
             if province:
                 province_counts[province] += 1
@@ -1175,6 +1179,8 @@ def admin_overview_dashboard(request):
                 or country_code
             )
             country_counts[str(country_name).strip()] += 1
+            country_code_counts[country_code] += 1
+            country_labels[country_code] = str(country_name).strip()
         else:
             unspecified_count += 1
             country_counts["ไม่ระบุประเทศ"] += 1
@@ -1203,7 +1209,14 @@ def admin_overview_dashboard(request):
             "applicants_passed": Person.objects.filter(status=Person.Status.PASSED).count(),
             "students_total": Student.objects.count(),
             "students_paid": Student.objects.filter(is_paid=True).count(),
-            "students_unpaid": Student.objects.filter(is_paid=False).count(),
+            "students_payment_pending": Student.objects.filter(is_paid=False)
+            .exclude(payment_slip="")
+            .exclude(payment_slip__isnull=True)
+            .exclude(admin_validation_status=Student.AdminValidationStatus.NEEDS_FIX)
+            .count(),
+            "students_unpaid": Student.objects.filter(is_paid=False)
+            .filter(Q(payment_slip="") | Q(payment_slip__isnull=True))
+            .count(),
             "teachers_total": teacher_queryset.count(),
             "groups_total": TeacherGroup.objects.count(),
         },
@@ -1224,6 +1237,21 @@ def admin_overview_dashboard(request):
             {"label": label, "count": count}
             for label, count in country_counts.most_common(10)
         ],
+        "geo_map_data": {
+            "regions": region_summaries,
+            "provinces": [
+                {"label": label, "count": count}
+                for label, count in province_counts.most_common()
+            ],
+            "countries": [
+                {
+                    "code": code,
+                    "label": country_labels.get(code, code),
+                    "count": count,
+                }
+                for code, count in country_code_counts.most_common()
+            ],
+        },
     }
     return render(request, "school/admin_overview_dashboard.html", context)
 

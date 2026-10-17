@@ -1189,11 +1189,15 @@ class TeacherFlowTests(TestCase):
         self.assertContains(response, "Recent Student")
         self.assertContains(response, "พื้นที่และภูมิภาค")
         self.assertContains(response, "กรุงเทพมหานคร")
+        self.assertContains(response, "data-geo-explorer")
+        self.assertContains(response, "ชำระแล้ว (รอตรวจสอบ)")
         self.assertNotContains(response, "ผู้สอนรออนุมัติ")
         self.assertEqual(response.context["stats"]["students_paid"], 1)
         self.assertEqual(response.context["stats"]["students_unpaid"], 0)
+        self.assertEqual(response.context["stats"]["students_payment_pending"], 0)
         self.assertEqual(response.context["stats"]["groups_total"], 1)
         self.assertEqual(response.context["geo_stats"]["thai"], 1)
+        self.assertEqual(response.context["geo_map_data"]["provinces"][0]["label"], "กรุงเทพมหานคร")
 
     def test_legacy_admin_role_without_superuser_cannot_access_admin_overview(self):
         User = get_user_model()

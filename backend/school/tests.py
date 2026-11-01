@@ -431,8 +431,8 @@ class PersonViewTests(TestCase):
         first_student = Student.objects.create(person=first_person)
         second_student = Student.objects.create(person=second_person)
 
-        self.assertEqual(first_student.student_id, "bri-0001")
-        self.assertEqual(second_student.student_id, "bri-0002")
+        self.assertEqual(first_student.student_id, "BRI 5001")
+        self.assertEqual(second_student.student_id, "BRI 5002")
 
     def test_passed_person_creates_student_with_payment_fields(self):
         person = Person.objects.create(first_name="สมชาย", last_name="ใจดี")
@@ -441,7 +441,7 @@ class PersonViewTests(TestCase):
         person.save(update_fields=["status"])
 
         student = Student.objects.get(person=person)
-        self.assertEqual(student.student_id, "bri-0001")
+        self.assertEqual(student.student_id, "BRI 5001")
         self.assertFalse(student.is_paid)
         self.assertFalse(student.payment_slip)
         self.assertEqual(person.admission_type, Person.AdmissionType.INTERVIEW)

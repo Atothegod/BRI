@@ -572,15 +572,15 @@ class Student(TimeStampedModel):
 
     @classmethod
     def next_student_id(cls):
-        max_number = 0
-        for value in cls.objects.filter(student_id__startswith="bri-").values_list(
+        max_number = 5000
+        for value in cls.objects.filter(student_id__startswith="BRI ").values_list(
             "student_id",
             flat=True,
         ):
-            suffix = value.removeprefix("bri-")
+            suffix = value.removeprefix("BRI ")
             if suffix.isdigit():
                 max_number = max(max_number, int(suffix))
-        return f"bri-{max_number + 1:04d}"
+        return f"BRI {max_number + 1}"
 
     def save(self, *args, **kwargs):
         if not self.student_id:

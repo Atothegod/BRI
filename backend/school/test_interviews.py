@@ -667,6 +667,83 @@ class AppointmentScheduleTests(TestCase):
         self.assertNotContains(provincial, self.people[0].full_name)
         self.assertNotContains(provincial, unknown.full_name)
 
+    def test_people_can_be_filtered_into_onsite_and_online_groups(self):
+        self.people[0].extra_data = {"address_th": {"province": "ชลบุรี"}}
+        self.people[0].save(update_fields=["extra_data"])
+        self.people[1].extra_data = {"address_th": {"province": "เชียงใหม่"}}
+        self.people[1].save(update_fields=["extra_data"])
+        overseas = Person.objects.create(
+            first_name="Overseas",
+            last_name="Applicant",
+            line_user_id="Uoverseas",
+            extra_data={"address_en": {"state_province": "Phnom Penh"}},
+        )
+
+        onsite = self.client.get(self.url, {
+            "type": "interview", "event": "new", "province": "onsite",
+        })
+        self.assertContains(onsite, self.people[0].full_name)
+        self.assertNotContains(onsite, self.people[1].full_name)
+        self.assertNotContains(onsite, overseas.full_name)
+        self.assertEqual(onsite.context["form"].fields["interview_mode"].initial, "onsite")
+
+        online = self.client.get(self.url, {
+            "type": "interview", "event": "new", "province": "online",
+        })
+        self.assertNotContains(online, self.people[0].full_name)
+        self.assertContains(online, self.people[1].full_name)
+        self.assertContains(online, overseas.full_name)
+        self.assertEqual(online.context["form"].fields["interview_mode"].initial, "online")
+
+    @override_settings(PUBLIC_BASE_URL="https://bri.example")
+    def test_interviewees_only_see_and_can_confirm_slots_for_invited_mode(self):
+        response = self.schedule(
+            slot_start=["09:30", "10:30"],
+            slot_end=["10:30", "11:30"],
+            slot_capacity=["2", "2"],
+            slot_mode=["onsite", "online"],
+        )
+        self.assertEqual(response.status_code, 302)
+        appointment = Appointment.objects.get()
+        onsite_slot = appointment.slots.get(interview_mode="onsite")
+        online_slot = appointment.slots.get(interview_mode="online")
+        onsite_participant, online_participant = appointment.participants.order_by("pk")
+        online_participant.invitation_message = {
+            **online_participant.invitation_message,
+            "interview_mode": "online",
+        }
+        online_participant.save(update_fields=["invitation_message"])
+
+        onsite_page = self.client.get(self.confirmation_url(onsite_participant))
+        self.assertContains(onsite_page, "09:30-10:30")
+        self.assertNotContains(onsite_page, "10:30-11:30")
+
+        online_page = self.client.get(self.confirmation_url(online_participant))
+        self.assertNotContains(online_page, "09:30-10:30")
+        self.assertContains(online_page, "10:30-11:30")
+
+        rejected = self.client.post(
+            reverse("school:appointment_confirmation"),
+            {
+                "token": parse_qs(urlsplit(self.confirmation_url(online_participant)).query)["token"][0],
+                "slot": onsite_slot.pk,
+            },
+        )
+        self.assertEqual(rejected.status_code, 409)
+        online_participant.refresh_from_db()
+        self.assertEqual(online_participant.response_status, AppointmentParticipant.ResponseStatus.WAITING)
+
+        confirmed = self.client.post(
+            reverse("school:appointment_confirmation"),
+            {
+                "token": parse_qs(urlsplit(self.confirmation_url(online_participant)).query)["token"][0],
+                "slot": online_slot.pk,
+            },
+        )
+        self.assertEqual(confirmed.status_code, 200)
+        online_participant.refresh_from_db()
+        self.assertEqual(online_participant.selected_slot, online_slot)
+
     @override_settings(PUBLIC_BASE_URL="https://bri.example")
     @patch("school.interviews.send_line_push_message", return_value=True)
     def test_one_event_supports_per_batch_messages_and_explicit_resend(self, send):
@@ -1346,6 +1423,46 @@ class AppointmentScheduleTests(TestCase):
         online = self.client.get(url, {"event": appointment.pk, "mode": "online"})
         self.assertContains(online, self.people[1].full_name)
         self.assertNotContains(online, self.people[0].full_name)
+
+    def test_interview_results_page_can_save_and_filter_grade(self):
+        graded_person = self.people[0]
+        other_person = self.people[1]
+        url = reverse("school:interview_results")
+
+        response = self.client.post(url, {
+            "person": graded_person.pk,
+            "action": "grade",
+            "interview_grade": "A",
+            "interview_comment": "เหมาะกับการเป็นผู้นำ",
+            "next": f"{url}?status=all&grade=A",
+        })
+
+        self.assertRedirects(response, f"{url}?status=all&grade=A", fetch_redirect_response=False)
+        graded_person.refresh_from_db()
+        self.assertEqual(graded_person.interview_grade, Person.InterviewGrade.A)
+        self.assertEqual(graded_person.interview_comment, "เหมาะกับการเป็นผู้นำ")
+        self.assertEqual(graded_person.status, Person.Status.IN_PROGRESS)
+
+        filtered = self.client.get(url, {"status": "all", "grade": "A"})
+        self.assertContains(filtered, graded_person.full_name)
+        self.assertNotContains(filtered, other_person.full_name)
+        self.assertContains(filtered, "เกรดปัจจุบัน A")
+        self.assertContains(filtered, 'aria-pressed="true"')
+
+    def test_interview_results_page_rejects_invalid_grade(self):
+        person = self.people[0]
+        url = reverse("school:interview_results")
+
+        response = self.client.post(url, {
+            "person": person.pk,
+            "action": "grade",
+            "interview_grade": "S",
+            "next": url,
+        })
+
+        self.assertRedirects(response, url, fetch_redirect_response=False)
+        person.refresh_from_db()
+        self.assertEqual(person.interview_grade, "")
 
     @override_settings(LINE_MESSAGING_CHANNEL_ACCESS_TOKEN="line-token")
     @patch("school.line.request.urlopen")

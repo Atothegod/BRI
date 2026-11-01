@@ -2,7 +2,7 @@
 {% load static tz school_dates %}
 {% block title %}จัดการนัดหมาย | BRI{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20261013-message-center-1">
+<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20261101-slot-mode-1">
 <link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261003-nav-dropdown-1">
 {% endblock %}
 {% block content %}
@@ -45,14 +45,14 @@
                     <div class="event-slots" aria-label="จำนวนที่นั่งคงเหลือราย slot">
                         {% for slot in selected_slot_options %}
                             <div class="event-slot{% if slot.is_full %} full{% endif %}" data-slot-status="{{ slot.id }}" data-capacity="{{ slot.capacity }}">
-                                <span><strong>{{ slot.label }}</strong><b data-slot-count>{{ slot.confirmed_count }}/{{ slot.capacity }}</b></span>
+                                <span><strong>{{ slot.interview_mode_label }} · {{ slot.label }}</strong><b data-slot-count>{{ slot.confirmed_count }}/{{ slot.capacity }}</b></span>
                                 <progress value="{{ slot.confirmed_count }}" max="{{ slot.capacity }}" data-slot-progress aria-label="{{ slot.label }} ยืนยันแล้ว {{ slot.confirmed_count }} จาก {{ slot.capacity }}"></progress>
                                 <small data-slot-remaining>{% if slot.is_full %}เต็มแล้ว{% else %}เหลือ {{ slot.remaining }} ที่นั่ง{% endif %}</small>
                             </div>
                         {% endfor %}
                     </div>
                 {% else %}
-                    <div class="event-slots">{% timezone "Asia/Bangkok" %}{% for slot in selected_appointment.slots.all %}<span>{{ slot.starts_at|date:"H:i" }}-{{ slot.ends_at|date:"H:i" }} · {{ slot.capacity }} คน</span>{% endfor %}{% endtimezone %}</div>
+                    <div class="event-slots">{% timezone "Asia/Bangkok" %}{% for slot in selected_appointment.slots.all %}<span>{{ slot.get_interview_mode_display }} · {{ slot.starts_at|date:"H:i" }}-{{ slot.ends_at|date:"H:i" }} · {{ slot.capacity }} คน</span>{% endfor %}{% endtimezone %}</div>
                 {% endif %}
             </div>
             <div class="event-metrics">
@@ -84,11 +84,17 @@
         <div class="section-heading">
             <div><span>ขั้นตอนที่ 2</span><h2 id="candidate-title">{% if selected_appointment %}{% if audience == 'unsent' %}เลือกผู้สมัครที่พร้อมส่งนัด{% elif audience == 'waiting' %}ผู้สมัครที่รอยืนยัน{% elif audience == 'confirmed' %}ผู้สมัครที่ยืนยันแล้ว{% elif audience == 'confirmed_other' %}ผู้สมัครที่ยืนยันรอบอื่นแล้ว{% elif audience == 'next_round' %}ผู้สมัครที่รอนัดรอบถัดไป{% elif audience == 'failed' %}รายการที่ส่งไม่สำเร็จ{% else %}ผู้สมัครใน Event นี้{% endif %}{% elif source_appointment %}สร้าง Event ใหม่ให้ผู้สมัครที่รอนัดรอบถัดไป{% else %}สร้าง Event และเลือกผู้สมัคร{% endif %}</h2></div>
         </div>
+        {% if appointment_type == 'interview' %}
+        <nav class="interview-mode-tabs" aria-label="กรองผู้สมัครตามรูปแบบสัมภาษณ์">
+            <a href="?type={{ appointment_type }}&event={% if selected_appointment %}{{ selected_appointment.pk }}{% else %}new{% endif %}&audience={{ audience }}&province=onsite{% if source_appointment %}&source_event={{ source_appointment.pk }}{% endif %}" class="{% if filters.province == 'onsite' %}active{% endif %}">Onsite · 23 จังหวัด</a>
+            <a href="?type={{ appointment_type }}&event={% if selected_appointment %}{{ selected_appointment.pk }}{% else %}new{% endif %}&audience={{ audience }}&province=online{% if source_appointment %}&source_event={{ source_appointment.pk }}{% endif %}" class="{% if filters.province == 'online' %}active{% endif %}">Online · จังหวัดอื่น/ต่างประเทศ</a>
+        </nav>
+        {% endif %}
         <form method="get" class="filter-panel compact-filter">
             <input type="hidden" name="type" value="{{ appointment_type }}"><input type="hidden" name="event" value="{% if selected_appointment %}{{ selected_appointment.pk }}{% else %}new{% endif %}"><input type="hidden" name="audience" value="{{ audience }}">
             {% if source_appointment %}<input type="hidden" name="source_event" value="{{ source_appointment.pk }}">{% endif %}
             <div class="filter-search"><label for="search">ค้นหาผู้สมัคร</label><input id="search" name="q" value="{{ query }}" placeholder="ชื่อ เบอร์โทร หรือชื่อ LINE"></div>
-            <div><label for="province-filter">พื้นที่</label><select id="province-filter" name="province"><option value="">ทุกจังหวัด</option><option value="metro"{% if filters.province == "metro" %} selected{% endif %}>กรุงเทพฯ และปริมณฑล</option><option value="provincial"{% if filters.province == "provincial" %} selected{% endif %}>ต่างจังหวัด</option></select></div>
+            <div><label for="province-filter">กลุ่มสัมภาษณ์</label><select id="province-filter" name="province"><option value="">ทั้งหมด</option><option value="onsite"{% if filters.province == "onsite" %} selected{% endif %}>Onsite · 23 จังหวัด</option><option value="online"{% if filters.province == "online" %} selected{% endif %}>Online · จังหวัดอื่น/ต่างประเทศ</option></select></div>
             <div><label for="line-filter">LINE</label><select id="line-filter" name="line"><option value="">ทั้งหมด</option><option value="connected"{% if filters.line == "connected" %} selected{% endif %}>เชื่อมแล้ว</option><option value="missing"{% if filters.line == "missing" %} selected{% endif %}>ยังไม่เชื่อม</option></select></div>
             {% if selected_appointment and place_options %}<div><label for="place-filter">สถานที่</label><select id="place-filter" name="place"><option value="">ทั้งหมด</option>{% for option in place_options %}<option value="{{ option.key }}"{% if filters.place == option.key %} selected{% endif %}>{{ option.label }} · {{ option.confirmed }}/{{ option.count }} ยืนยัน</option>{% endfor %}</select></div>{% endif %}
             {% if selected_appointment and audience != 'unsent' %}<div><label for="confirmation-filter">การตอบรับ</label><select id="confirmation-filter" name="confirmation"><option value="">ทั้งหมด</option><option value="waiting"{% if filters.confirmation == "waiting" %} selected{% endif %}>รอยืนยัน</option><option value="confirmed"{% if filters.confirmation == "confirmed" %} selected{% endif %}>ยืนยันแล้ว</option></select></div>{% endif %}
@@ -105,7 +111,7 @@
                     {% if appointment_type == "interview" %}
                         {{ form.time }}<div class="capacity-summary" aria-live="polite"><span>จำนวนรับรวม</span><strong data-slot-capacity-value>0</strong><small>คำนวณจาก quota slot</small></div>
                         <div class="slot-editor" data-slot-editor><div class="slot-editor-heading"><div><strong>ช่วงเวลาสัมภาษณ์</strong><small>ผู้สมัครจะเลือก slot ตอนกดยืนยันใน LINE</small></div><button type="button" data-add-slot>เพิ่ม slot</button></div>
-                            <div class="slot-rows" data-slot-rows>{% for slot in slot_rows %}<div class="slot-row"><span class="slot-index">{{ forloop.counter }}</span><label><span>เริ่มต้น</span><input type="time" name="slot_start" value="{{ slot.start }}"></label><label><span>สิ้นสุด</span><input type="time" name="slot_end" value="{{ slot.end }}"></label><label><span>รับได้</span><input type="number" min="1" name="slot_capacity" value="{{ slot.capacity }}"></label><button type="button" class="slot-remove" data-remove-slot aria-label="ลบ slot">ลบ</button></div>{% endfor %}</div>
+                            <div class="slot-rows" data-slot-rows>{% for slot in slot_rows %}<div class="slot-row"><span class="slot-index">{{ forloop.counter }}</span><label><span>ประเภท</span><select name="slot_mode"><option value="onsite"{% if slot.mode == "onsite" %} selected{% endif %}>Onsite</option><option value="online"{% if slot.mode == "online" %} selected{% endif %}>Online</option></select></label><label><span>เริ่มต้น</span><input type="time" name="slot_start" value="{{ slot.start }}"></label><label><span>สิ้นสุด</span><input type="time" name="slot_end" value="{{ slot.end }}"></label><label><span>รับได้</span><input type="number" min="1" name="slot_capacity" value="{{ slot.capacity }}"></label><button type="button" class="slot-remove" data-remove-slot aria-label="ลบ slot">ลบ</button></div>{% endfor %}</div>
                             <p class="slot-total" data-slot-total>รับรวม 0 คน จาก 0 slot</p>
                         </div>
                     {% else %}<div>{{ form.time.label_tag }}{{ form.time }}</div>{% endif %}
@@ -144,4 +150,4 @@
 </main>
 {{ send_queue|json_script:"interview-queue" }}<div hidden data-confirmation-status-url="{% url 'school:appointment_confirmation_status' %}"{% if selected_appointment %} data-event-id="{{ selected_appointment.pk }}"{% endif %}></div>
 {% endblock %}
-{% block extra_js %}<script src="{% static 'school/js/interviews.js' %}?v=20261013-resend-full-1" defer></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'school/js/interviews.js' %}?v=20261101-slot-mode-1" defer></script>{% endblock %}

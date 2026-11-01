@@ -50,16 +50,33 @@ ADMIN_APPOINTMENT_TYPES = (
     Appointment.Type.ORIENTATION,
 )
 APPOINTMENT_AUDIENCES = ("unsent", "waiting", "confirmed", "failed", "confirmed_other", "next_round")
-METRO_PROVINCES = (
+ONSITE_PROVINCES = (
     "กรุงเทพมหานคร",
     "กรุงเทพ",
     "กรุงเทพฯ",
     "กทม",
-    "นครปฐม",
     "นนทบุรี",
     "ปทุมธานี",
     "สมุทรปราการ",
+    "นครปฐม",
+    "พระนครศรีอยุธยา",
     "สมุทรสาคร",
+    "ฉะเชิงเทรา",
+    "ชลบุรี",
+    "สระบุรี",
+    "ราชบุรี",
+    "สุพรรณบุรี",
+    "เพชรบุรี",
+    "กาญจนบุรี",
+    "ระยอง",
+    "ปราจีนบุรี",
+    "จันทบุรี",
+    "นครสวรรค์",
+    "ลพบุรี",
+    "ชัยนาท",
+    "สิงห์บุรี",
+    "อ่างทอง",
+    "อุทัยธานี",
 )
 INTERVIEW_ONLINE_KEYWORDS = (
     "online",
@@ -99,7 +116,7 @@ def invitation_message(data):
 
 
 def filter_people_by_province(people, province):
-    if province not in {"metro", "provincial"}:
+    if province not in {"onsite", "online", "metro", "provincial"}:
         return people
     people = people.annotate(
         filtered_province=Coalesce(
@@ -108,15 +125,21 @@ def filter_people_by_province(people, province):
                 "province",
                 KeyTransform("address_th", "extra_data"),
             ),
+            KeyTextTransform(
+                "state_province",
+                KeyTransform("address_en", "extra_data"),
+            ),
             Value(""),
             output_field=CharField(),
         )
     )
-    if province == "metro":
-        return people.filter(filtered_province__in=METRO_PROVINCES)
-    return people.exclude(filtered_province="").exclude(
-        filtered_province__in=METRO_PROVINCES
-    )
+    if province in {"onsite", "metro"}:
+        return people.filter(filtered_province__in=ONSITE_PROVINCES)
+    if province == "provincial":
+        return people.exclude(filtered_province="").exclude(
+            filtered_province__in=ONSITE_PROVINCES
+        )
+    return people.exclude(filtered_province__in=ONSITE_PROVINCES)
 
 
 def participant_place_key(participant):
@@ -208,20 +231,22 @@ class AppointmentScheduleForm(forms.Form):
             starts = self.data.getlist("slot_start")
             ends = self.data.getlist("slot_end")
             capacities = self.data.getlist("slot_capacity")
-            row_count = max(len(starts), len(ends), len(capacities), 1)
+            modes = self.data.getlist("slot_mode")
+            row_count = max(len(starts), len(ends), len(capacities), len(modes), 1)
             return [
                 {
                     "start": starts[index] if index < len(starts) else "",
                     "end": ends[index] if index < len(ends) else "",
                     "capacity": capacities[index] if index < len(capacities) else "",
+                    "mode": modes[index] if index < len(modes) else INTERVIEW_MODE_ONSITE,
                 }
                 for index in range(row_count)
             ]
         return [
-            {"start": "13:00", "end": "15:00", "capacity": "35"},
-            {"start": "15:00", "end": "17:00", "capacity": "35"},
-            {"start": "17:00", "end": "19:00", "capacity": "35"},
-            {"start": "19:00", "end": "20:00", "capacity": "35"},
+            {"start": "13:00", "end": "15:00", "capacity": "35", "mode": INTERVIEW_MODE_ONSITE},
+            {"start": "15:00", "end": "17:00", "capacity": "35", "mode": INTERVIEW_MODE_ONSITE},
+            {"start": "17:00", "end": "19:00", "capacity": "35", "mode": "online"},
+            {"start": "19:00", "end": "20:00", "capacity": "35", "mode": "online"},
         ]
 
     def clean(self):
@@ -250,14 +275,16 @@ class AppointmentScheduleForm(forms.Form):
         starts = self.data.getlist("slot_start")
         ends = self.data.getlist("slot_end")
         capacities = self.data.getlist("slot_capacity")
-        row_count = max(len(starts), len(ends), len(capacities))
+        modes = self.data.getlist("slot_mode")
+        row_count = max(len(starts), len(ends), len(capacities), len(modes))
         for index in range(row_count):
             raw_start = starts[index].strip() if index < len(starts) else ""
             raw_end = ends[index].strip() if index < len(ends) else ""
             raw_capacity = capacities[index].strip() if index < len(capacities) else ""
+            raw_mode = modes[index].strip() if index < len(modes) else INTERVIEW_MODE_ONSITE
             if not any([raw_start, raw_end, raw_capacity]):
                 continue
-            if not all([raw_start, raw_end, raw_capacity]):
+            if not all([raw_start, raw_end, raw_capacity, raw_mode]):
                 self.add_error("date", f"กรุณากรอกข้อมูล slot แถวที่ {index + 1} ให้ครบ")
                 continue
             try:
@@ -270,6 +297,9 @@ class AppointmentScheduleForm(forms.Form):
             if capacity <= 0:
                 self.add_error("date", f"quota slot แถวที่ {index + 1} ต้องมากกว่า 0")
                 continue
+            if raw_mode not in INTERVIEW_MODE_LABELS:
+                self.add_error("date", f"รูปแบบ slot แถวที่ {index + 1} ไม่ถูกต้อง")
+                continue
             if end_time <= start_time:
                 self.add_error("date", f"เวลาสิ้นสุด slot แถวที่ {index + 1} ต้องมากกว่าเวลาเริ่ม")
                 continue
@@ -277,6 +307,7 @@ class AppointmentScheduleForm(forms.Form):
                 "starts_at": timezone.make_aware(datetime.combine(data["date"], start_time), THAI_TIMEZONE),
                 "ends_at": timezone.make_aware(datetime.combine(data["date"], end_time), THAI_TIMEZONE),
                 "capacity": capacity,
+                "interview_mode": raw_mode,
             })
         if not slot_defs:
             self.add_error("date", "กรุณาเพิ่ม slot เวลาอย่างน้อย 1 slot")
@@ -584,6 +615,18 @@ def interview_results(request):
         person = Person.objects.filter(pk=request.POST.get("person")).first()
         action = request.POST.get("action", "result")
         comment = request.POST.get("interview_comment", "").strip()
+        if person and action == "grade":
+            grade = request.POST.get("interview_grade", "").upper()
+            valid_grades = {value for value, _label in Person.InterviewGrade.choices}
+            if grade not in valid_grades:
+                messages.error(request, "เกรดสัมภาษณ์ไม่ถูกต้อง")
+            else:
+                person.interview_grade = grade
+                person.interview_comment = comment
+                person.save(update_fields=["interview_grade", "interview_comment"])
+                messages.success(request, f"บันทึกเกรด {grade} ของ {person.full_name} แล้ว")
+            redirect_to = request.POST.get("next") or reverse("school:interview_results")
+            return redirect(redirect_to)
         if person and action == "comment":
             person.interview_comment = comment
             person.save(update_fields=["interview_comment"])
@@ -614,6 +657,10 @@ def interview_results(request):
     selected_slot_id = parse_optional_int(request.GET.get("slot", ""))
     province_filter = request.GET.get("province", "").strip()
     country_filter = request.GET.get("country", "").strip()
+    grade_filter = request.GET.get("grade", "").upper()
+    valid_grades = {value for value, _label in Person.InterviewGrade.choices}
+    if grade_filter not in valid_grades:
+        grade_filter = ""
     appointment_options = interview_appointment_options(selected_event_id)
     if selected_event_id and not any(appointment.pk == selected_event_id for appointment in appointment_options):
         selected_event_id = None
@@ -639,6 +686,8 @@ def interview_results(request):
             | Q(phone__icontains=query)
             | Q(line_display_name__icontains=query)
         )
+    if grade_filter:
+        people = people.filter(interview_grade=grade_filter)
 
     filtered_people_base = Person.objects.all().order_by("first_name", "last_name", "pk")
     if query:
@@ -649,6 +698,8 @@ def interview_results(request):
             | Q(phone__icontains=query)
             | Q(line_display_name__icontains=query)
         )
+    if grade_filter:
+        filtered_people_base = filtered_people_base.filter(interview_grade=grade_filter)
 
     interview_filters_active = bool(
         selected_event_id
@@ -751,6 +802,8 @@ def interview_results(request):
         "selected_slot_id": selected_slot_id,
         "province_filter": province_filter,
         "country_filter": country_filter,
+        "grade_filter": grade_filter,
+        "grade_options": Person.InterviewGrade.choices,
         "province_options": province_options,
         "country_options": country_options,
         "interview_filters_active": interview_filters_active,
@@ -943,6 +996,11 @@ def interview_schedule(request):
         request.POST if is_resend else None,
         appointment=selected_appointment,
     )
+    requested_province_group = request.GET.get("province", "")
+    if request.method != "POST" and appointment_type == Appointment.Type.INTERVIEW:
+        if requested_province_group in INTERVIEW_MODE_LABELS:
+            form.fields["interview_mode"].initial = requested_province_group
+            resend_form.fields["interview_mode"].initial = requested_province_group
     invalid_requested_event = bool(requested_event and requested_event != "new" and selected_appointment is None)
     if request.method == "POST" and invalid_requested_event and not is_resend:
         form.is_valid()
@@ -1010,7 +1068,7 @@ def interview_schedule(request):
                     "audience": request.POST.get("audience", "waiting"),
                 }
                 province = request.POST.get("province", "")
-                if province in {"metro", "provincial"}:
+                if province in {"onsite", "online", "metro", "provincial"}:
                     redirect_params["province"] = province
                 place = request.POST.get("place", "")
                 if place:
@@ -1411,13 +1469,15 @@ def appointment_is_confirmable(appointment):
     return appointment.starts_at > timezone.now()
 
 
-def interview_slot_options(appointment, selected_slot_id=None):
+def interview_slot_options(appointment, selected_slot_id=None, interview_mode=None):
     slots = appointment.slots.annotate(
         confirmed_count=Count(
             "participants",
             filter=Q(participants__response_status=AppointmentParticipant.ResponseStatus.CONFIRMED),
         )
     ).order_by("starts_at", "pk")
+    if interview_mode in INTERVIEW_MODE_LABELS:
+        slots = slots.filter(interview_mode=interview_mode)
     options = []
     has_default = False
     for slot in slots:
@@ -1430,6 +1490,8 @@ def interview_slot_options(appointment, selected_slot_id=None):
         options.append({
             "id": slot.pk,
             "label": f"{local_start:%H:%M}-{local_end:%H:%M}",
+            "interview_mode": slot.interview_mode,
+            "interview_mode_label": slot.get_interview_mode_display(),
             "capacity": slot.capacity,
             "confirmed_count": slot.confirmed_count,
             "remaining": remaining,
@@ -1489,6 +1551,11 @@ def interview_confirmation(request):
             )
         slot_error = ""
         has_slots = participant.appointment.slots.exists()
+        allowed_interview_mode = (
+            participant_interview_mode(participant)
+            if participant.appointment.appointment_type == Appointment.Type.INTERVIEW
+            else None
+        )
         if request.method == "POST" and participant.response_status != AppointmentParticipant.ResponseStatus.CONFIRMED:
             selected_slot = None
             if has_slots:
@@ -1501,6 +1568,12 @@ def interview_confirmation(request):
                     appointment=participant.appointment,
                     ends_at__gt=timezone.now(),
                 ).first()
+                if (
+                    selected_slot is not None
+                    and allowed_interview_mode
+                    and selected_slot.interview_mode != allowed_interview_mode
+                ):
+                    selected_slot = None
                 if selected_slot is None:
                     slot_error = "กรุณาเลือกช่วงเวลาที่ยังเปิดให้ยืนยัน"
                 elif AppointmentParticipant.objects.filter(
@@ -1518,7 +1591,11 @@ def interview_confirmation(request):
                     Person.objects.filter(pk=participant.person_id).update(interview_confirmed_at=participant.confirmed_at)
     is_orientation = participant.appointment.appointment_type == Appointment.Type.ORIENTATION
     is_class = participant.appointment.appointment_type == Appointment.Type.CLASS
-    slot_options = interview_slot_options(participant.appointment, participant.selected_slot_id)
+    slot_options = interview_slot_options(
+        participant.appointment,
+        participant.selected_slot_id,
+        allowed_interview_mode,
+    )
     slots_are_full = bool(slot_options) and all(slot["is_full"] for slot in slot_options)
     confirmation_state = "confirmed" if participant.response_status == AppointmentParticipant.ResponseStatus.CONFIRMED else "ready"
     if confirmation_state == "ready" and slots_are_full:

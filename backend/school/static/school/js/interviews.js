@@ -57,11 +57,13 @@
         const lastRow = slotRows?.querySelector('.slot-row:last-child');
         const lastEnd = lastRow?.querySelector('[name="slot_end"]')?.value || '';
         const lastCapacity = lastRow?.querySelector('[name="slot_capacity"]')?.value || '';
+        const lastMode = lastRow?.querySelector('[name="slot_mode"]')?.value || 'onsite';
         const nextEnd = addMinutes(lastEnd, 120);
         const row = document.createElement('div');
         row.className = 'slot-row';
         row.innerHTML = [
             '<span class="slot-index"></span>',
+            `<label><span>ประเภท</span><select name="slot_mode"><option value="onsite"${lastMode === 'onsite' ? ' selected' : ''}>Onsite</option><option value="online"${lastMode === 'online' ? ' selected' : ''}>Online</option></select></label>`,
             `<label><span>เริ่มต้น</span><input type="time" name="slot_start" value="${lastEnd}"></label>`,
             `<label><span>สิ้นสุด</span><input type="time" name="slot_end" value="${nextEnd}"></label>`,
             `<label><span>รับได้</span><input type="number" min="1" name="slot_capacity" value="${lastCapacity}"></label>`,

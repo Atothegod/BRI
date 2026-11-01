@@ -50,6 +50,15 @@
                     </select>
                 </label>
                 <label>
+                    <span>เกรด</span>
+                    <select name="grade">
+                        <option value="">ทุกเกรด</option>
+                        {% for value, label in grade_options %}
+                        <option value="{{ value }}"{% if grade_filter == value %} selected{% endif %}>เกรด {{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>
                     <span>จังหวัด</span>
                     <select name="province">
                         <option value="">ทุกจังหวัด</option>
@@ -144,8 +153,18 @@
                     <input type="hidden" name="person" value="{{ person.pk }}">
                     <input type="hidden" name="action" value="result">
                     <input type="hidden" name="result" value="">
+                    <input type="hidden" name="interview_grade" value="">
                     <input type="hidden" name="next" value="{{ next_url }}">
                     <input type="hidden" name="confirmed_result" value="">
+                    <fieldset class="result-grade">
+                        <legend>เกรดสัมภาษณ์</legend>
+                        <div>
+                            {% for value, label in grade_options %}
+                            <button type="submit" name="action" value="grade" class="grade grade--{{ value|lower }}{% if person.interview_grade == value %} active{% endif %}" aria-pressed="{% if person.interview_grade == value %}true{% else %}false{% endif %}" onclick="this.form.elements.interview_grade.value='{{ value }}'">{{ label }}</button>
+                            {% endfor %}
+                        </div>
+                        <small>{% if person.interview_grade %}เกรดปัจจุบัน {{ person.interview_grade }}{% else %}ยังไม่ได้ให้เกรด{% endif %}</small>
+                    </fieldset>
                     <label class="result-comment">
                         <span>comment</span>
                         <textarea name="interview_comment" rows="3" placeholder="บันทึกข้อสังเกต จุดเด่น หรือสิ่งที่ต้องติดตาม">{{ person.interview_comment }}</textarea>

@@ -24,6 +24,12 @@ class Person(TimeStampedModel):
         INTERVIEW = "interview", "ผ่านสัมภาษณ์"
         ONLINE = "online", "ผ่านแบบออนไลน์"
 
+    class InterviewGrade(models.TextChoices):
+        A = "A", "A"
+        B = "B", "B"
+        C = "C", "C"
+        D = "D", "D"
+
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -64,6 +70,11 @@ class Person(TimeStampedModel):
         choices=[("pending", "รอส่ง"), ("sent", "LINE รับข้อความแล้ว"), ("failed", "ส่งไม่สำเร็จ")],
     )
     interview_comment = models.TextField(blank=True)
+    interview_grade = models.CharField(
+        max_length=1,
+        choices=InterviewGrade.choices,
+        blank=True,
+    )
 
     class Meta:
         constraints = [
@@ -214,6 +225,11 @@ class AppointmentSlot(TimeStampedModel):
     starts_at = models.DateTimeField()
     ends_at = models.DateTimeField()
     capacity = models.PositiveIntegerField(default=0)
+    interview_mode = models.CharField(
+        max_length=20,
+        choices=INTERVIEW_MODE_CHOICES,
+        default=INTERVIEW_MODE_ONSITE,
+    )
 
     class Meta:
         ordering = ("starts_at", "pk")
@@ -246,7 +262,7 @@ class AppointmentSlot(TimeStampedModel):
     def __str__(self):
         local_start = timezone.localtime(self.starts_at)
         local_end = timezone.localtime(self.ends_at)
-        return f"{local_start:%d/%m/%Y %H:%M}-{local_end:%H:%M} ({self.capacity})"
+        return f"{local_start:%d/%m/%Y %H:%M}-{local_end:%H:%M} {self.get_interview_mode_display()} ({self.capacity})"
 
 
 class AppointmentParticipant(TimeStampedModel):

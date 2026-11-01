@@ -1244,6 +1244,8 @@ class AppointmentScheduleTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "slots-0-capacity")
+        self.assertContains(response, "slots-0-interview_mode")
+        self.assertContains(response, '<option value="onsite" selected>Onsite</option>', html=True)
         self.assertContains(response, "เปิดหน้า Appointment participants")
         self.assertNotContains(response, "participants-0-person")
 

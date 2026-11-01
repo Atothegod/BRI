@@ -71,6 +71,7 @@ class AppointmentSlotInline(admin.TabularInline):
     fields = (
         "starts_at",
         "ends_at",
+        "interview_mode",
         "capacity",
         "confirmed_count_display",
         "remaining_count_display",
@@ -162,11 +163,12 @@ class AppointmentSlotAdmin(UnfoldModelAdmin):
         "appointment",
         "starts_at",
         "ends_at",
+        "interview_mode",
         "capacity",
         "confirmed_count_display",
         "remaining_count_display",
     )
-    list_filter = ("appointment__appointment_type", "starts_at")
+    list_filter = ("appointment__appointment_type", "interview_mode", "starts_at")
     search_fields = ("appointment__title", "appointment__location")
     autocomplete_fields = ("appointment",)
 

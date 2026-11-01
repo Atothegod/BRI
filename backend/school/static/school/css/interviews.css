@@ -75,7 +75,18 @@ h1 { font-size: 38px; margin: 24px 0; font-weight: 800; }
 .audience-tabs a { display: flex; justify-content: space-between; align-items: center; min-height: 52px; padding: 10px 14px; color: #425b46; text-decoration: none; background: #f5f7f4; border: 1px solid transparent; border-radius: 6px; font-weight: 700; }
 .audience-tabs a.active { color: #fff; background: var(--bri-forest); }
 .audience-tabs b { display: grid; min-width: 30px; height: 30px; padding-inline: 7px; place-items: center; color: var(--bri-forest); background: #fff; border: 1px solid #dce3dc; border-radius: 4px; }
-.candidate-section { padding-top: 4px; }
+.candidate-section { display: flex; flex-direction: column; padding-top: 4px; }
+.candidate-section > .next-round-source { order: 0; }
+.candidate-section > .section-heading { order: 1; }
+.candidate-section > #schedule-form { display: contents; }
+.candidate-section .errors { order: 2; }
+.candidate-section .schedule-fields,
+.candidate-section .message-fields { order: 3; }
+.candidate-section > .interview-mode-tabs { order: 4; }
+.candidate-section > .compact-filter { order: 5; }
+.candidate-section .selection-bar { order: 6; }
+.candidate-section .table-scroll { order: 7; }
+.candidate-section .schedule-footer { order: 8; }
 .next-round-source { display: flex; justify-content: space-between; gap: 16px; align-items: center; margin-bottom: 18px; padding: 14px 16px; color: var(--bri-forest); background: #f8f4e8; border: 1px solid #e8d8ad; border-left: 3px solid var(--bri-gold); border-radius: 6px; }
 .next-round-source span, .next-round-source small { display: block; color: #6f5c27; }
 .next-round-source strong { display: block; font-size: 18px; }
@@ -107,7 +118,7 @@ button:disabled { opacity: .5; cursor: default; }
 .slot-editor-heading button { min-height: 38px; padding: 7px 12px; color: var(--bri-forest); background: #f7f8f6; border-color: var(--bri-border); }
 .slot-rows { display: grid; gap: 10px; }
 .slot-row { display: grid; grid-template-columns: 34px minmax(110px, .8fr) minmax(120px, 1fr) minmax(120px, 1fr) minmax(90px, .65fr) auto; gap: 10px; align-items: end; padding: 10px; background: #fbfcfa; border: 1px solid #edf0eb; border-radius: 6px; }
-.interview-mode-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+.interview-mode-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 18px 0 12px; }
 .interview-mode-tabs a { min-height: 48px; padding: 11px 14px; color: #304a36; text-align: center; text-decoration: none; background: #f5f7f4; border: 1px solid #ccd7cd; border-radius: 7px; font-weight: 850; }
 .interview-mode-tabs a.active { color: #fff; background: var(--bri-forest); border-color: var(--bri-forest); }
 .slot-index { display: grid; width: 34px; height: 44px; place-items: center; color: #fff; background: var(--bri-sage); border-radius: 4px; font-weight: 800; }

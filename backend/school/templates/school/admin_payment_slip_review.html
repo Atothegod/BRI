@@ -4,7 +4,7 @@
 {% block title %}ตรวจสลิปการโอนเงิน | BRI{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261110-payment-installments-1">
+<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261110-slip-dialog-2">
 {% endblock %}
 
 {% block content %}
@@ -41,7 +41,7 @@
             {% for student in page_obj %}
             <article class="payment-review-card">
                 <div class="payment-review-images payment-review-images--{{ student.prefetched_payment_slips|length }}">
-                    {% for slip in student.prefetched_payment_slips %}<a class="payment-review-image" href="{{ slip.image.url }}" target="_blank" rel="noopener"><img src="{{ slip.image.url }}" alt="สลิปใบที่ {{ forloop.counter }} ของ {{ student.person.full_name }}"><span>สลิปใบที่ {{ forloop.counter }}{% if slip.status == 'needs_fix' %} · ต้องแก้ไข{% endif %}</span></a>{% endfor %}
+                    {% for slip in student.prefetched_payment_slips %}<button class="payment-review-image" type="button" data-slip-preview data-slip-url="{{ slip.image.url }}" data-slip-title="สลิปใบที่ {{ forloop.counter }} ของ {{ student.person.full_name }}"><img src="{{ slip.image.url }}" alt="สลิปใบที่ {{ forloop.counter }} ของ {{ student.person.full_name }}"><span>สลิปใบที่ {{ forloop.counter }}{% if slip.status == 'needs_fix' %} · ต้องแก้ไข{% endif %}</span></button>{% endfor %}
                 </div>
                 <form method="post" class="payment-review-body">
                     {% csrf_token %}
@@ -85,4 +85,18 @@
         </footer>
     </div>
 </main>
+
+<dialog class="payment-slip-dialog" data-slip-dialog aria-labelledby="payment-slip-dialog-title">
+    <div class="payment-slip-dialog__header">
+        <strong id="payment-slip-dialog-title" data-slip-dialog-title>ดูสลิป</strong>
+        <button type="button" data-slip-dialog-close aria-label="ปิดรูปสลิป">ปิด</button>
+    </div>
+    <div class="payment-slip-dialog__image"><img src="" alt="" data-slip-dialog-image></div>
+    <div class="payment-slip-dialog__actions">
+        <a href="" target="_blank" rel="noopener" data-slip-dialog-original>เปิดรูปต้นฉบับ</a>
+        <button type="button" data-slip-dialog-close>ปิด</button>
+    </div>
+</dialog>
 {% endblock %}
+
+{% block extra_js %}<script src="{% static 'school/js/admin_payment_slips.js' %}?v=20261110-slip-dialog-1" defer></script>{% endblock %}

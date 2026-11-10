@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}สมัครบัญชีผู้สอนผ่าน LINE | BRI{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'school/css/teacher_auth.css' %}?v=20261111-line-register-1">{% endblock %}
+{% block content %}
+<main class="teacher-auth-page"><section class="teacher-auth-shell" aria-labelledby="teacher-line-title">
+    <a class="teacher-auth-brand" href="{% url 'school:registration' %}">{% include "school/includes/brand_logo.html" with variant="success" %}</a>
+    {% if state == "registered" %}
+    <div class="success-mark status-mark--success" aria-hidden="true"><svg class="icon"><use href="{% static 'school/images/icons.svg' %}#check"></use></svg></div>
+    <header class="teacher-auth-heading"><span>ส่งคำขอเรียบร้อยแล้ว</span><h1 id="teacher-line-title">สมัครบัญชีผู้สอนสำเร็จ</h1><p>{{ teacher.teacher_display_name }} กรุณารอ School Admin อนุมัติ จากนั้นกลับมากด Dashboard ใน Rich Menu อีกครั้ง</p></header>
+    <a class="teacher-auth-submit" href="{% url 'school:teacher_dashboard' %}">ดูสถานะการอนุมัติ</a>
+    {% elif state == "syncing" %}
+    <header class="teacher-auth-heading"><span>TEACHER REGISTRATION</span><h1 id="teacher-line-title">กำลังยืนยันบัญชี LINE</h1><p>กรุณารอสักครู่ ระบบกำลังเตรียมหน้าสมัครผู้สอน</p></header>
+    {% elif state == "already_used" %}
+    <header class="teacher-auth-heading"><span>LINE ALREADY USED</span><h1 id="teacher-line-title">LINE นี้ผูกกับบัญชีประเภทอื่นแล้ว</h1><p>กรุณาติดต่อ School Admin เพื่อตรวจสอบบัญชี</p></header>
+    {% elif state == "unverified" %}
+    <header class="teacher-auth-heading"><span>VERIFY LINE</span><h1 id="teacher-line-title">ยืนยัน LINE ไม่สำเร็จ</h1><p>กรุณาเปิดลิงก์สมัครจากแอป LINE แล้วลองอีกครั้ง</p></header>
+    {% else %}
+    <header class="teacher-auth-heading"><span>TEACHER REGISTRATION</span><h1 id="teacher-line-title">สมัครบัญชีผู้สอน</h1><p>เชื่อมอยู่ในชื่อ LINE “{{ line_display_name }}” และบัญชีจะรอ School Admin อนุมัติก่อนเข้า Dashboard</p></header>
+    {% if error %}<div class="form-alert" role="alert"><strong>{{ error }}</strong></div>{% endif %}
+    <form class="teacher-auth-form" method="post">
+        {% csrf_token %}
+        <div class="field-group"><label class="field-label" for="teacher-nickname">ชื่อที่ให้เรียก</label><input id="teacher-nickname" class="form-control" type="text" name="nickname" value="{{ nickname }}" maxlength="100" placeholder="เช่น เอก" required autofocus><small>ไม่ต้องพิมพ์คำว่า “อาจารย์” ระบบจะเติมให้อัตโนมัติ</small></div>
+        <button class="teacher-auth-submit" type="submit">ส่งคำขอเป็นผู้สอน</button>
+    </form>
+    {% endif %}
+</section></main>
+{% endblock %}
+{% block extra_js %}{% include "school/includes/liff_bridge.html" %}{% endblock %}

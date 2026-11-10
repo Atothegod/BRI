@@ -47,6 +47,8 @@ urlpatterns = [
     path("line/results/", views.liff_results_launch, name="liff_results_launch"),
     path("line/payment/", views.liff_payment_launch, name="liff_payment_launch"),
     path("line/students/", views.liff_student_dashboard_launch, name="liff_student_dashboard_launch"),
+    path("line/dashboard/", views.line_dashboard_router, name="line_dashboard_router"),
+    path("line/teachers/register/", views.teacher_line_register, name="teacher_line_register"),
     path(
         "agent/notifications/<str:user_key>/",
         views.agent_notifications,

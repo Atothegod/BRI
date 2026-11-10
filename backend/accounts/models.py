@@ -18,6 +18,10 @@ class User(AbstractUser):
     nickname = models.CharField(max_length=100, blank=True)
     google_email = models.EmailField(blank=True)
     google_connected_at = models.DateTimeField(null=True, blank=True)
+    line_user_id = models.CharField(max_length=80, unique=True, null=True, blank=True)
+    line_display_name = models.CharField(max_length=255, blank=True)
+    line_picture_url = models.URLField(blank=True)
+    line_connected_at = models.DateTimeField(null=True, blank=True)
     is_teacher_approved = models.BooleanField(
         default=False,
         help_text="Allows teacher users to access the school teacher dashboard after admin review.",

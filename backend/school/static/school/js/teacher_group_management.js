@@ -151,6 +151,10 @@
         selectedCard = null;
     }));
     document.querySelectorAll("[data-open-create-group]").forEach((button) => button.addEventListener("click", () => createDialog.showModal()));
+    document.querySelector("[data-copy-teacher-register]")?.addEventListener("click", async (event) => {
+        await navigator.clipboard.writeText(event.currentTarget.dataset.url);
+        setStatus("คัดลอกลิงก์สมัคร Teacher แล้ว ส่งลิงก์นี้ให้อาจารย์เปิดผ่าน LINE ได้เลย", "success");
+    });
     document.querySelector("[data-close-create-group]")?.addEventListener("click", () => createDialog.close());
     document.querySelector("[data-close-move-dialog]")?.addEventListener("click", () => moveDialog.close());
     [createDialog, moveDialog].forEach((dialog) => dialog?.addEventListener("click", (event) => { if (event.target === dialog) dialog.close(); }));

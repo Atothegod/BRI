@@ -15,7 +15,7 @@
             <h1>กลุ่มผู้สอน</h1>
             <p>สร้างกลุ่มและย้ายอาจารย์ระหว่างกลุ่มได้ทันที หนึ่งกลุ่มมีผู้สอนได้หลายคน</p>
         </div>
-        <button type="button" class="teacher-group-create-trigger" data-open-create-group>+ สร้างกลุ่มใหม่</button>
+        <div class="teacher-group-hero-actions"><button type="button" class="teacher-line-register-copy" data-copy-teacher-register data-url="{{ teacher_line_registration_url }}">คัดลอกลิงก์สมัคร Teacher</button><button type="button" class="teacher-group-create-trigger" data-open-create-group>+ สร้างกลุ่มใหม่</button></div>
     </header>
 
     <section class="teacher-group-stats" aria-label="สรุปกลุ่มผู้สอน">
@@ -98,4 +98,4 @@
     </dialog>
 </main>
 {% endblock %}
-{% block extra_js %}<script src="{% static 'school/js/teacher_group_management.js' %}?v=20261111-2" defer></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'school/js/teacher_group_management.js' %}?v=20261111-4" defer></script>{% endblock %}

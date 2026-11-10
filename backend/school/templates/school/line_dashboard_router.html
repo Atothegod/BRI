@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}กำลังเปิด Dashboard | BRI{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20260914-journey-1">{% endblock %}
+{% block content %}
+<main class="success-page auth-page"><section class="success-shell journey-shell auth-shell">
+    {% include "school/includes/brand_logo.html" with variant="success" %}
+    <div class="success-mark status-mark--pending" aria-hidden="true"><svg class="icon"><use href="{% static 'school/images/icons.svg' %}#clock"></use></svg></div>
+    <span class="eyebrow">BRI DASHBOARD</span><h1>กำลังตรวจสอบบัญชี LINE</h1><p class="success-lead">ระบบกำลังพาคุณไปยังพื้นที่ที่ถูกต้อง</p>
+</section></main>
+{% endblock %}
+{% block extra_js %}{% include "school/includes/liff_bridge.html" %}{% endblock %}

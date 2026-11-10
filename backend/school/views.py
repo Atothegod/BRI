@@ -1,4 +1,5 @@
 import csv
+import hashlib
 import json
 from calendar import Calendar
 from collections import Counter
@@ -2399,6 +2400,114 @@ def attendance_check_in(request, token):
 @require_GET
 def liff_student_dashboard_launch(request):
     return redirect_to_liff_path("/students/dashboard/")
+
+
+@never_cache
+def line_dashboard_router(request):
+    line_profile = get_session_line_profile(request)
+    line_user_id = line_profile.get("line_user_id", "").strip()
+    if not line_user_id:
+        return render(request, "school/line_dashboard_router.html", {
+            "state": "syncing",
+            **get_liff_context(
+                request,
+                reload_on_sync=True,
+                liff_id=settings.LINE_DASHBOARD_LIFF_ID,
+            ),
+        })
+
+    User = get_user_model()
+    teacher = User.objects.filter(
+        line_user_id=line_user_id,
+        role=User.Role.TEACHER,
+        is_active=True,
+    ).first()
+    if teacher:
+        login(request, teacher, backend="django.contrib.auth.backends.ModelBackend")
+        return redirect("school:teacher_dashboard")
+
+    person, student = get_student_for_line(line_user_id)
+    if student:
+        return redirect("school:student_dashboard")
+    return redirect("school:registration")
+
+
+@never_cache
+@ensure_csrf_cookie
+@require_http_methods(["GET", "POST"])
+def teacher_line_register(request):
+    User = get_user_model()
+    line_profile = get_session_line_profile(request)
+    line_user_id = line_profile.get("line_user_id", "").strip()
+    if not line_user_id:
+        return render(request, "school/teacher_line_register.html", {
+            "state": "syncing",
+            **get_liff_context(
+                request,
+                reload_on_sync=True,
+                liff_id=settings.LINE_DASHBOARD_LIFF_ID,
+            ),
+        })
+    if not line_profile.get("verified") and not settings.LINE_LIFF_ALLOW_UNVERIFIED_PROFILE:
+        return render(request, "school/teacher_line_register.html", {
+            "state": "unverified",
+            **get_liff_context(request, liff_id=settings.LINE_DASHBOARD_LIFF_ID),
+        }, status=400)
+
+    existing_user = User.objects.filter(line_user_id=line_user_id).first()
+    if existing_user:
+        if existing_user.role == User.Role.TEACHER and existing_user.is_active:
+            login(request, existing_user, backend="django.contrib.auth.backends.ModelBackend")
+            return redirect("school:teacher_dashboard")
+        return render(request, "school/teacher_line_register.html", {
+            "state": "already_used",
+            **get_liff_context(request, liff_id=settings.LINE_DASHBOARD_LIFF_ID),
+        }, status=409)
+
+    if Person.objects.filter(line_user_id=line_user_id).exists():
+        return render(request, "school/teacher_line_register.html", {
+            "state": "already_used",
+            **get_liff_context(request, liff_id=settings.LINE_DASHBOARD_LIFF_ID),
+        }, status=409)
+
+    nickname = ""
+    error = ""
+    if request.method == "POST":
+        nickname = request.POST.get("nickname", "").strip()
+        if nickname.startswith("อาจารย์"):
+            nickname = nickname.removeprefix("อาจารย์").strip()
+        elif nickname.startswith("อ."):
+            nickname = nickname.removeprefix("อ.").strip()
+        if not nickname:
+            error = "กรุณาระบุชื่อที่ต้องการให้แสดงหลังคำว่าอาจารย์"
+        elif len(nickname) > 100:
+            error = "ชื่อที่แสดงยาวเกิน 100 ตัวอักษร"
+        else:
+            username = f"line-teacher-{hashlib.sha256(line_user_id.encode()).hexdigest()[:24]}"
+            teacher = User.objects.create_user(
+                username=username,
+                role=User.Role.TEACHER,
+                nickname=nickname,
+                line_user_id=line_user_id,
+                line_display_name=line_profile.get("line_display_name", ""),
+                line_picture_url=line_profile.get("line_picture_url", ""),
+                line_connected_at=timezone.now(),
+                is_teacher_approved=False,
+            )
+            login(request, teacher, backend="django.contrib.auth.backends.ModelBackend")
+            return render(request, "school/teacher_line_register.html", {
+                "state": "registered",
+                "teacher": teacher,
+                **get_liff_context(request, liff_id=settings.LINE_DASHBOARD_LIFF_ID),
+            })
+
+    return render(request, "school/teacher_line_register.html", {
+        "state": "form",
+        "nickname": nickname,
+        "error": error,
+        "line_display_name": line_profile.get("line_display_name", ""),
+        **get_liff_context(request, liff_id=settings.LINE_DASHBOARD_LIFF_ID),
+    })
 
 
 @never_cache

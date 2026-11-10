@@ -300,6 +300,7 @@ LINE_RETURN_URL = os.environ.get(
     "https://line.me/R/oaMessage/%40522lxoja",
 )
 LINE_LIFF_ID = os.environ.get("LINE_LIFF_ID", "")
+LINE_DASHBOARD_LIFF_ID = os.environ.get("LINE_DASHBOARD_LIFF_ID", LINE_LIFF_ID).strip()
 LINE_PAYMENT_LIFF_URL = os.environ.get(
     "LINE_PAYMENT_LIFF_URL", "https://liff.line.me/2011088039-wZDRAbFk"
 ).strip() or "https://liff.line.me/2011088039-wZDRAbFk"

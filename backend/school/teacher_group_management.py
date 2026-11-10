@@ -1,4 +1,5 @@
 from django import forms
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
@@ -7,6 +8,7 @@ from django.db import transaction
 from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.views.decorators.cache import never_cache
 
 from .models import Student, TeacherGroup
@@ -167,7 +169,14 @@ def teacher_group_management(request):
     for group in groups:
         group.managed_teachers = teachers_by_group[group.pk]
 
+    teacher_register_path = reverse("school:teacher_line_register")
+    teacher_line_registration_url = (
+        f"https://liff.line.me/{settings.LINE_DASHBOARD_LIFF_ID}{teacher_register_path}"
+        if settings.LINE_DASHBOARD_LIFF_ID
+        else request.build_absolute_uri(teacher_register_path)
+    )
     return render(request, "school/teacher_group_management.html", {
         "form": form, "groups": groups, "unassigned_teachers": unassigned_teachers,
         "stats": {"teachers": len(teachers), "assigned": len(teachers) - len(unassigned_teachers), "unassigned": len(unassigned_teachers), "groups": len(groups)},
+        "teacher_line_registration_url": teacher_line_registration_url,
     })

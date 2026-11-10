@@ -23,6 +23,7 @@ class UserAdmin(DjangoUserAdmin, UnfoldModelAdmin):
         ("Profile", {"fields": ("nickname",)}),
         ("Teacher approval", {"fields": ("is_teacher_approved", "teacher_approved_at")}),
         ("Google", {"fields": ("google_email", "google_connected_at")}),
+        ("LINE", {"fields": ("line_user_id", "line_display_name", "line_connected_at")}),
     )
     add_fieldsets = DjangoUserAdmin.add_fieldsets + (
         (
@@ -44,7 +45,7 @@ class UserAdmin(DjangoUserAdmin, UnfoldModelAdmin):
     )
     list_filter = DjangoUserAdmin.list_filter + ("role", "is_teacher_approved")
     search_fields = DjangoUserAdmin.search_fields + ("nickname", "google_email")
-    readonly_fields = ("google_connected_at", "teacher_approved_at")
+    readonly_fields = ("google_connected_at", "teacher_approved_at", "line_connected_at")
     actions = ("approve_selected_teachers", "revoke_selected_teacher_approval")
 
     @admin.display(description="app role")
@@ -88,6 +89,7 @@ class TeacherAdmin(DjangoUserAdmin, UnfoldModelAdmin):
         ("Personal info", {"fields": ("email", "first_name", "last_name", "nickname")}),
         ("Teacher approval", {"fields": ("is_teacher_approved", "teacher_approved_at")}),
         ("Google", {"fields": ("google_email", "google_connected_at")}),
+        ("LINE", {"fields": ("line_user_id", "line_display_name", "line_connected_at")}),
         ("Status", {"fields": ("is_active",)}),
         ("Important dates", {"fields": ("last_login", "date_joined")}),
     )
@@ -121,7 +123,7 @@ class TeacherAdmin(DjangoUserAdmin, UnfoldModelAdmin):
     list_filter = ("is_teacher_approved", "is_active")
     search_fields = ("username", "email", "google_email", "first_name", "last_name", "nickname")
     ordering = ("username",)
-    readonly_fields = ("google_connected_at", "teacher_approved_at", "last_login", "date_joined")
+    readonly_fields = ("google_connected_at", "teacher_approved_at", "line_connected_at", "last_login", "date_joined")
     actions = ("approve_selected_teachers", "revoke_selected_teacher_approval")
 
     def save_model(self, request, obj, form, change):

@@ -101,6 +101,16 @@ class TeacherGroupManagementTests(TestCase):
         self.assertIsNone(student.group_id)
         self.assertTrue(TeacherGroup.objects.filter(pk=self.first_group.pk).exists())
 
+    def test_delete_group_works_without_javascript(self):
+        response = self.client.post(
+            self.url,
+            {"action": "delete_group", "group": self.second_group.pk},
+        )
+
+        self.assertRedirects(response, self.url)
+        self.second_group.refresh_from_db()
+        self.assertFalse(self.second_group.is_active)
+
     def test_pending_teacher_cannot_be_moved(self):
         User = get_user_model()
         pending = User.objects.create_user(

@@ -133,6 +133,7 @@
     board.addEventListener("click", (event) => {
         const deleteButton = event.target.closest("[data-delete-group]");
         if (deleteButton) {
+            event.preventDefault();
             deleteGroup(deleteButton);
             return;
         }

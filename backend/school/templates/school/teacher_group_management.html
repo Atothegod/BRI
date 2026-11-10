@@ -53,7 +53,15 @@
                     </header>
                     <div class="teacher-group-node__meta">
                         <span>{{ group.active_student_count }} นักศึกษา</span>
-                        <div><a href="{% url 'school:student_group_assignment' %}">จัดนักศึกษา →</a><button type="button" data-delete-group data-group-id="{{ group.pk }}" data-group-name="{{ group.group_name }}" data-student-count="{{ group.active_student_count }}">ลบกลุ่ม</button></div>
+                        <div>
+                            <a href="{% url 'school:student_group_assignment' %}">จัดนักศึกษา →</a>
+                            <form method="post" data-delete-group-form>
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="delete_group">
+                                <input type="hidden" name="group" value="{{ group.pk }}">
+                                <button type="submit" data-delete-group data-group-id="{{ group.pk }}" data-group-name="{{ group.group_name }}" data-student-count="{{ group.active_student_count }}">ลบกลุ่ม</button>
+                            </form>
+                        </div>
                     </div>
                     <div class="teacher-group-node__teachers" data-lane-list>
                         {% for teacher in group.managed_teachers %}{% include "school/includes/teacher_group_card.html" with teacher=teacher %}{% endfor %}
@@ -90,4 +98,4 @@
     </dialog>
 </main>
 {% endblock %}
-{% block extra_js %}<script src="{% static 'school/js/teacher_group_management.js' %}?v=20261111-1" defer></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'school/js/teacher_group_management.js' %}?v=20261111-2" defer></script>{% endblock %}

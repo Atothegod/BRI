@@ -84,9 +84,13 @@ def move_teacher(request):
 
 
 def delete_teacher_group(request):
+    wants_json = request.headers.get("x-requested-with") == "XMLHttpRequest"
     group_id = request.POST.get("group", "").strip()
     if not group_id.isdigit():
-        return JsonResponse({"ok": False, "message": "ข้อมูลกลุ่มไม่ถูกต้อง"}, status=400)
+        if wants_json:
+            return JsonResponse({"ok": False, "message": "ข้อมูลกลุ่มไม่ถูกต้อง"}, status=400)
+        messages.error(request, "ข้อมูลกลุ่มไม่ถูกต้อง")
+        return redirect("school:teacher_group_management")
 
     with transaction.atomic():
         group = (
@@ -96,7 +100,10 @@ def delete_teacher_group(request):
             .first()
         )
         if group is None:
-            return JsonResponse({"ok": False, "message": "ไม่พบกลุ่มที่ต้องการลบ"}, status=404)
+            if wants_json:
+                return JsonResponse({"ok": False, "message": "ไม่พบกลุ่มที่ต้องการลบ"}, status=404)
+            messages.error(request, "ไม่พบกลุ่มที่ต้องการลบ หรือกลุ่มถูกลบไปแล้ว")
+            return redirect("school:teacher_group_management")
         teacher_ids = list(group.teachers.values_list("pk", flat=True))
         if group.teacher_id and group.teacher_id not in teacher_ids:
             teacher_ids.append(group.teacher_id)
@@ -106,13 +113,17 @@ def delete_teacher_group(request):
         group.is_active = False
         group.save(update_fields=["teacher", "is_active", "updated_at"])
 
-    return JsonResponse({
+    result = {
         "ok": True,
         "group_id": group.pk,
         "teacher_ids": teacher_ids,
         "student_count": student_count,
         "message": f"ลบกลุ่ม {group.group_name} แล้ว อาจารย์กลับไปรอจัดกลุ่มและนักศึกษา {student_count} คนถูกนำออกจากกลุ่ม",
-    })
+    }
+    if wants_json:
+        return JsonResponse(result)
+    messages.success(request, result["message"])
+    return redirect("school:teacher_group_management")
 
 
 @login_required(login_url="admin:login")
@@ -120,9 +131,9 @@ def delete_teacher_group(request):
 def teacher_group_management(request):
     if not is_school_admin(request.user):
         raise PermissionDenied
+    if request.method == "POST" and request.POST.get("action") == "delete_group":
+        return delete_teacher_group(request)
     if request.method == "POST" and request.headers.get("x-requested-with") == "XMLHttpRequest":
-        if request.POST.get("action") == "delete_group":
-            return delete_teacher_group(request)
         return move_teacher(request)
 
     form = TeacherGroupCreateForm(request.POST or None)

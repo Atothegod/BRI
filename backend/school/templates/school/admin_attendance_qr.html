@@ -15,7 +15,7 @@
             <div>
                 <span class="eyebrow">Attendance QR</span>
                 <h1>QR code เช็คชื่อเข้าเรียน</h1>
-                <p>เลือกกลุ่มและวันที่เรียนเพื่อสร้างลิงก์ให้นักศึกษาสแกนเช็คชื่อ ระบบจะสะสมประวัติเข้าเรียนอัตโนมัติ</p>
+                <p>สร้างคาบเรียนและ QR ส่วนกลางหนึ่งใบสำหรับนักศึกษาทั้งโรงเรียน ระบบจะตัดมาสายเมื่อเกินเวลาเริ่ม 1 ชั่วโมง</p>
             </div>
         </header>
 
@@ -25,19 +25,25 @@
             <form method="post" class="attendance-generator">
                 {% csrf_token %}
                 <label>
-                    <span>กลุ่มเรียน</span>
-                    <select name="group" required>
-                        <option value="">เลือกกลุ่มเรียน</option>
-                        {% for group in groups %}
-                        <option value="{{ group.pk }}"{% if selected_group and selected_group.pk == group.pk %} selected{% endif %}>
-                            {{ group.group_name }} · {{ group.teacher_names }} · {{ group.active_student_count }} คน
-                        </option>
-                        {% endfor %}
-                    </select>
+                    <span>ชื่อคลาส</span>
+                    <input type="text" name="title" value="{{ session.title|default:'' }}" placeholder="เช่น BRI 5 ครั้งที่ 1" required>
+                </label>
+                <label>
+                    <span>หัวข้อการสอน</span>
+                    <input type="text" name="topic" value="{{ session.topic|default:'' }}" placeholder="เช่น ตัวตนที่แท้จริง">
                 </label>
                 <label>
                     <span>วันที่เรียน</span>
                     <input type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}" required>
+                </label>
+                <label>
+                    <span>เวลาเริ่มคลาส</span>
+                    <input type="time" name="start_time" value="{% if session.starts_at %}{{ session.starts_at|date:'H:i' }}{% endif %}" required>
+                    <small>หลังเวลานี้เกิน 1 ชั่วโมง ระบบจะบันทึกเป็นมาสาย</small>
+                </label>
+                <label>
+                    <span>เวลาเลิกคลาส (ถ้ามี)</span>
+                    <input type="time" name="end_time" value="{% if session.ends_at %}{{ session.ends_at|date:'H:i' }}{% endif %}">
                 </label>
                 <button type="submit">สร้าง QR</button>
             </form>
@@ -45,12 +51,13 @@
             <section class="attendance-qr-preview" aria-labelledby="qr-preview-title">
                 <div>
                     <span>QR สำหรับเช็คชื่อ</span>
-                    <h2 id="qr-preview-title">{% if session %}{{ session.group.group_name }}{% else %}เลือกกลุ่มเพื่อสร้าง QR{% endif %}</h2>
-                    {% if session %}<p>{{ session.date|date:"d/m/Y" }}</p>{% endif %}
+                    <h2 id="qr-preview-title">{% if session %}{{ session.title }}{% else %}กรอกข้อมูลคาบเพื่อสร้าง QR{% endif %}</h2>
+                    {% if session %}<p>{{ session.date|date:"d/m/Y" }}{% if session.starts_at %} · {{ session.starts_at|date:"H:i" }} น.{% endif %}</p>{% if session.topic %}<small>{{ session.topic }}</small>{% endif %}{% endif %}
                 </div>
                 {% if qr_image_url %}
                 <img src="{{ qr_image_url }}" alt="QR code เช็คชื่อ {{ session.group.group_name }}">
                 <a href="{{ check_in_url }}" target="_blank" rel="noopener">{{ check_in_url }}</a>
+                <a class="admin-action-link" href="{% url 'school:attendance_session_detail' session.pk %}">เปิดรายชื่อเช็กอินสด</a>
                 {% else %}
                 <div class="qr-placeholder">QR จะแสดงที่นี่หลังจากสร้าง</div>
                 {% endif %}
@@ -69,8 +76,8 @@
                 <article class="attendance-session-card">
                     <div class="attendance-session-main">
                         <time datetime="{{ item.date|date:'Y-m-d' }}">{{ item.date|date:"d/m/Y" }}</time>
-                        <strong>{{ item.group.group_name }}</strong>
-                        <span>{{ item.group.teacher_names }}</span>
+                        <strong>{{ item.title }}</strong>
+                        <span>{% if item.topic %}{{ item.topic }} · {% endif %}{% if item.starts_at %}{{ item.starts_at|date:"H:i" }} น.{% else %}คาบเดิม{% endif %}</span>
                     </div>
                     <div class="attendance-session-stats">
                         <div>
@@ -78,14 +85,15 @@
                             <strong>{{ item.present_count|add:item.late_count }}</strong>
                         </div>
                         <div>
-                            <span>บันทึกทั้งหมด</span>
-                            <strong>{{ item.record_count }}</strong>
+                            <span>ขาด / ลา</span>
+                            <strong>{{ item.absent_count }} / {{ item.leave_count }}</strong>
                         </div>
                         <div>
                             <span>นักศึกษา active</span>
                             <strong>{{ item.target_student_count }}</strong>
                         </div>
                     </div>
+                    <div class="attendance-session-actions"><a href="{% url 'school:admin_attendance_qr' %}?session={{ item.pk }}">เปิด QR</a><a href="{% url 'school:attendance_session_detail' item.pk %}">ดูรายชื่อ</a></div>
                 </article>
                 {% empty %}
                 <div class="admin-empty-state">ยังไม่มีประวัติเช็คชื่อ</div>

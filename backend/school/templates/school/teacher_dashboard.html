@@ -238,7 +238,7 @@
                 <section class="teacher-section" aria-labelledby="attendance-title">
                     <div class="teacher-section-heading"><div><span class="teacher-eyebrow">ATTENDANCE</span><h2 id="attendance-title">การเช็กชื่อล่าสุด</h2></div><span>{{ recent_attendance_sessions|length }} ครั้ง</span></div>
                     <div class="learning-list">
-                        {% for session in recent_attendance_sessions %}<article><span class="learning-date learning-date--attendance">{{ session.date|date:"d M" }}</span><div><strong>{{ session.group.group_name }}</strong><small>มา {{ session.present_count }} · สาย {{ session.late_count }} · ขาด {{ session.absent_count }}</small></div></article>{% empty %}<div class="learning-empty">ยังไม่มีประวัติการเช็กชื่อ</div>{% endfor %}
+                        {% for session in recent_attendance_sessions %}<article><span class="learning-date learning-date--attendance">{{ session.date|date:"d M" }}</span><div><strong>{{ session.title }}</strong><small>มา {{ session.present_count }} · สาย {{ session.late_count }} · ขาด {{ session.absent_count }} · ลา {{ session.leave_count }}</small></div><a class="learning-row-action" href="{% url 'school:attendance_session_detail' session.pk %}">ดูรายชื่อ</a></article>{% empty %}<div class="learning-empty">ยังไม่มีประวัติการเช็กชื่อ</div>{% endfor %}
                     </div>
                 </section>
             </div>

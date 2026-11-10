@@ -637,14 +637,14 @@ class TeacherGroupAdmin(UnfoldModelAdmin):
 
 @admin.register(AttendanceSession)
 class AttendanceSessionAdmin(UnfoldModelAdmin):
-    list_display = ("group", "date")
-    list_filter = ("group", "date")
-    search_fields = ("group__group_name",)
+    list_display = ("title", "date", "starts_at", "is_active", "created_by")
+    list_filter = ("date", "is_active")
+    search_fields = ("title", "topic", "group__group_name")
 
 
 @admin.register(AttendanceRecord)
 class AttendanceRecordAdmin(UnfoldModelAdmin):
-    list_display = ("attendance_session", "student", "status")
+    list_display = ("attendance_session", "student", "status", "checked_in_at", "marked_by")
     list_filter = ("status", "attendance_session__group")
     search_fields = (
         "student__student_id",

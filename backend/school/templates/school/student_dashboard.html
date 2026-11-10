@@ -52,7 +52,7 @@
         <div class="student-attendance-title"><h2 id="attendance-summary-title">ATTENDANCE</h2><span>สรุปการเข้าเรียนของฉัน</span></div>
         <div class="student-attendance-metrics">
             <article><span>เช็กอินแล้ว</span><strong>{{ attendance_summary.present }}</strong><small>คลาส</small></article>
-            <article><span>ขาดเรียน</span><strong>{{ attendance_summary.absent }}</strong><small>คลาส</small></article>
+            <article><span>ขาด / ลา</span><strong>{{ attendance_summary.absent }} / {{ attendance_summary.leave }}</strong><small>คลาส</small></article>
             <article><span>มาสาย</span><strong>{{ attendance_summary.late }}</strong><small>คลาส</small></article>
             <article><span>คลาสทั้งหมด</span><strong>{{ attendance_summary.total }}</strong><small>คลาส</small></article>
         </div>
@@ -117,7 +117,7 @@
                 {% for record in recent_attendance %}
                 <article>
                     <time datetime="{{ record.attendance_session.date|date:'Y-m-d' }}">{{ record.attendance_session.date|date:"d M" }}</time>
-                    <strong>{{ record.get_status_display }}</strong>
+                    <div><strong>{{ record.attendance_session.title }}</strong><small>{{ record.get_status_display }}</small></div>
                 </article>
                 {% empty %}
                 <div class="student-empty">ยังไม่มีข้อมูลเช็กชื่อ</div>

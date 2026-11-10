@@ -22,7 +22,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render, resolve_url
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.dateparse import parse_date
+from django.utils.dateparse import parse_date, parse_time
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
@@ -343,10 +343,13 @@ def calculate_student_learning(student):
             "homework_percent": None,
         }
 
-    attendance_total = AttendanceSession.objects.filter(group=student.group).count()
+    attendance_session_scope = Q(group__isnull=True) | Q(group=student.group)
+    attendance_total = AttendanceSession.objects.filter(attendance_session_scope).count()
     attendance_attended = AttendanceRecord.objects.filter(
         student=student,
-        attendance_session__group=student.group,
+    ).filter(
+        Q(attendance_session__group__isnull=True)
+        | Q(attendance_session__group=student.group),
         status__in=(AttendanceRecord.Status.PRESENT, AttendanceRecord.Status.LATE),
     ).count()
     homework_total = HomeworkAssignment.objects.filter(group=student.group).count()
@@ -724,10 +727,33 @@ def teacher_dashboard(request):
         .order_by("group__group_name", "student_id")
     )
 
+    global_attendance_total = AttendanceSession.objects.filter(group__isnull=True).count()
+    legacy_attendance_totals = dict(
+        AttendanceSession.objects.filter(group__in=scope_groups)
+        .values("group_id")
+        .annotate(total=Count("pk"))
+        .values_list("group_id", "total")
+    )
+    attended_by_student = dict(
+        AttendanceRecord.objects.filter(
+            student__in=students,
+            status__in=(AttendanceRecord.Status.PRESENT, AttendanceRecord.Status.LATE),
+        )
+        .filter(
+            Q(attendance_session__group__isnull=True)
+            | Q(attendance_session__group__in=scope_groups)
+        )
+        .values("student_id")
+        .annotate(total=Count("pk"))
+        .values_list("student_id", "total")
+    )
+
     attendance_percentages = []
     homework_percentages = []
     needs_attention_count = 0
     for student in students:
+        student.attendance_total = global_attendance_total + legacy_attendance_totals.get(student.group_id, 0)
+        student.attendance_attended = attended_by_student.get(student.pk, 0)
         student.attendance_percent = None
         student.homework_percent = None
         student.needs_attention = False
@@ -862,22 +888,38 @@ def teacher_dashboard(request):
     )
     recent_attendance_sessions = (
         AttendanceSession.objects.select_related("group")
-        .filter(group__in=scope_groups)
+        .filter(Q(group__isnull=True) | Q(group__in=scope_groups))
         .annotate(
             present_count=Count(
                 "attendance_records",
-                filter=Q(attendance_records__status=AttendanceRecord.Status.PRESENT),
+                filter=Q(
+                    attendance_records__status=AttendanceRecord.Status.PRESENT,
+                    attendance_records__student__group__in=scope_groups,
+                ),
             ),
             late_count=Count(
                 "attendance_records",
-                filter=Q(attendance_records__status=AttendanceRecord.Status.LATE),
+                filter=Q(
+                    attendance_records__status=AttendanceRecord.Status.LATE,
+                    attendance_records__student__group__in=scope_groups,
+                ),
             ),
             absent_count=Count(
                 "attendance_records",
-                filter=Q(attendance_records__status=AttendanceRecord.Status.ABSENT),
+                filter=Q(
+                    attendance_records__status=AttendanceRecord.Status.ABSENT,
+                    attendance_records__student__group__in=scope_groups,
+                ),
+            ),
+            leave_count=Count(
+                "attendance_records",
+                filter=Q(
+                    attendance_records__status=AttendanceRecord.Status.LEAVE,
+                    attendance_records__student__group__in=scope_groups,
+                ),
             ),
         )
-        .order_by("-date", "group__group_name")[:5]
+        .order_by("-date", "-starts_at")[:5]
     )
     context = {
         "groups": groups,
@@ -2071,6 +2113,17 @@ def export_interview_slots_csv(request):
 ATTENDANCE_SIGNING_SALT = "school.attendance.check-in"
 
 
+def attendance_check_in_links(request, session):
+    token = signing.dumps({"session_id": session.pk}, salt=ATTENDANCE_SIGNING_SALT)
+    check_in_url = request.build_absolute_uri(
+        reverse("school:attendance_check_in", kwargs={"token": token})
+    )
+    qr_image_url = "https://api.qrserver.com/v1/create-qr-code/?" + urlencode(
+        {"size": "320x320", "margin": 10, "data": check_in_url}
+    )
+    return check_in_url, qr_image_url
+
+
 @login_required(login_url="admin:login")
 @never_cache
 @require_http_methods(["GET", "POST"])
@@ -2078,42 +2131,52 @@ def admin_attendance_qr(request):
     if not is_school_admin(request.user):
         raise PermissionDenied
 
-    groups = list(
-        TeacherGroup.objects.filter(is_active=True)
-        .prefetch_related("teachers")
-        .annotate(active_student_count=Count("students", filter=Q(students__is_active=True)))
-        .order_by("group_name")
-    )
-    selected_group = None
     selected_date = timezone.localdate()
     session = None
     check_in_url = ""
     qr_image_url = ""
 
     if request.method == "POST":
-        group_id = request.POST.get("group", "")
+        title = request.POST.get("title", "").strip()
+        topic = request.POST.get("topic", "").strip()
         date_value = parse_date(request.POST.get("date", ""))
-        selected_group = next((group for group in groups if str(group.pk) == group_id), None)
+        start_value = parse_time(request.POST.get("start_time", ""))
+        end_value = parse_time(request.POST.get("end_time", ""))
         selected_date = date_value or selected_date
-        if selected_group is None:
-            messages.error(request, "กรุณาเลือกกลุ่มเรียน")
+        if not title:
+            messages.error(request, "กรุณาระบุชื่อคลาส")
         elif not date_value:
             messages.error(request, "กรุณาเลือกวันที่เรียน")
+        elif not start_value:
+            messages.error(request, "กรุณาระบุเวลาเริ่มคลาส")
         else:
-            session, _ = AttendanceSession.objects.get_or_create(
-                group=selected_group,
-                date=selected_date,
-            )
-            token = signing.dumps({"session_id": session.pk}, salt=ATTENDANCE_SIGNING_SALT)
-            check_in_url = request.build_absolute_uri(
-                reverse("school:attendance_check_in", kwargs={"token": token})
-            )
-            qr_image_url = "https://api.qrserver.com/v1/create-qr-code/?" + urlencode(
-                {"size": "320x320", "margin": 10, "data": check_in_url}
-            )
-            messages.success(request, f"สร้าง QR เช็คชื่อของ {selected_group.group_name} แล้ว")
+            starts_at = timezone.make_aware(datetime.combine(date_value, start_value))
+            ends_at = timezone.make_aware(datetime.combine(date_value, end_value)) if end_value else None
+            if ends_at and ends_at <= starts_at:
+                messages.error(request, "เวลาเลิกคลาสต้องอยู่หลังเวลาเริ่มคลาส")
+            else:
+                session = AttendanceSession.objects.create(
+                    title=title,
+                    topic=topic,
+                    date=selected_date,
+                    starts_at=starts_at,
+                    ends_at=ends_at,
+                    is_active=True,
+                    created_by=request.user,
+                )
+                check_in_url, qr_image_url = attendance_check_in_links(request, session)
+                messages.success(request, f"สร้างคาบ {session.title} และ QR สำหรับทั้งโรงเรียนแล้ว")
 
-    recent_sessions = (
+    if request.method == "GET":
+        session_id = request.GET.get("session", "").strip()
+        if session_id.isdigit():
+            session = AttendanceSession.objects.filter(pk=int(session_id)).first()
+            if session:
+                selected_date = session.date
+                check_in_url, qr_image_url = attendance_check_in_links(request, session)
+
+    active_student_total = Student.objects.filter(is_active=True).count()
+    recent_sessions = list(
         AttendanceSession.objects.select_related("group")
         .prefetch_related("group__teachers")
         .annotate(
@@ -2127,28 +2190,139 @@ def admin_attendance_qr(request):
                 filter=Q(attendance_records__status=AttendanceRecord.Status.LATE),
                 distinct=True,
             ),
-            record_count=Count("attendance_records", distinct=True),
-            target_student_count=Count(
-                "group__students",
-                filter=Q(group__students__is_active=True),
+            absent_count=Count(
+                "attendance_records",
+                filter=Q(attendance_records__status=AttendanceRecord.Status.ABSENT),
                 distinct=True,
             ),
+            leave_count=Count(
+                "attendance_records",
+                filter=Q(attendance_records__status=AttendanceRecord.Status.LEAVE),
+                distinct=True,
+            ),
+            record_count=Count("attendance_records", distinct=True),
         )
-        .order_by("-date", "-updated_at")[:10]
+        .order_by("-date", "-starts_at", "-updated_at")[:10]
     )
+    for item in recent_sessions:
+        item.target_student_count = (
+            item.group.students.filter(is_active=True).count()
+            if item.group_id else active_student_total
+        )
     return render(
         request,
         "school/admin_attendance_qr.html",
         {
-            "groups": groups,
-            "selected_group": selected_group,
             "selected_date": selected_date,
             "session": session,
             "check_in_url": check_in_url,
             "qr_image_url": qr_image_url,
             "recent_sessions": recent_sessions,
+            "active_student_total": active_student_total,
         },
     )
+
+
+def attendance_roster_students(user, session):
+    students = Student.objects.filter(is_active=True).select_related("person", "group")
+    if is_school_admin(user):
+        return students.order_by("group__group_name", "student_id")
+    if not can_view_teacher_dashboard(user):
+        raise PermissionDenied
+    groups = teacher_accessible_groups(user)
+    if session.group_id and not groups.filter(pk=session.group_id).exists():
+        raise PermissionDenied
+    return students.filter(group__in=groups).order_by("group__group_name", "student_id")
+
+
+@login_required
+@never_cache
+@require_http_methods(["GET", "POST"])
+def attendance_session_detail(request, pk):
+    session = get_object_or_404(AttendanceSession, pk=pk)
+    students = list(attendance_roster_students(request.user, session))
+    student_ids = {student.pk for student in students}
+
+    if request.method == "POST":
+        student_id = request.POST.get("student", "").strip()
+        status = request.POST.get("status", "").strip()
+        if not student_id.isdigit() or int(student_id) not in student_ids:
+            return JsonResponse({"ok": False, "message": "ไม่พบนักศึกษาในขอบเขตที่ดูแล"}, status=400)
+        allowed_statuses = (
+            {"not_checked_in", *AttendanceRecord.Status.values}
+            if is_school_admin(request.user)
+            else {"not_checked_in", AttendanceRecord.Status.ABSENT, AttendanceRecord.Status.LEAVE}
+        )
+        if status not in allowed_statuses:
+            return JsonResponse({"ok": False, "message": "สถานะไม่ถูกต้อง"}, status=400)
+
+        record = AttendanceRecord.objects.filter(
+            attendance_session=session,
+            student_id=int(student_id),
+        ).first()
+        if record and record.checked_in_at and not is_school_admin(request.user):
+            return JsonResponse(
+                {"ok": False, "message": "นักศึกษาเช็กอินแล้ว จึงไม่สามารถเปลี่ยนสถานะจากหน้านี้"},
+                status=400,
+            )
+        if status == "not_checked_in":
+            if record and not record.checked_in_at:
+                record.delete()
+            result_status = "not_checked_in"
+        else:
+            record, _ = AttendanceRecord.objects.update_or_create(
+                attendance_session=session,
+                student_id=int(student_id),
+                defaults={"status": status, "marked_by": request.user},
+            )
+            result_status = record.status
+        return JsonResponse({
+            "ok": True,
+            "status": result_status,
+            "message": "อัปเดตสถานะเรียบร้อยแล้ว",
+        })
+
+    records = {
+        record.student_id: record
+        for record in AttendanceRecord.objects.filter(
+            attendance_session=session,
+            student_id__in=student_ids,
+        ).select_related("marked_by")
+    }
+    roster = []
+    counts = {"present": 0, "late": 0, "absent": 0, "leave": 0, "not_checked_in": 0}
+    for student in students:
+        record = records.get(student.pk)
+        status = record.status if record else "not_checked_in"
+        counts[status] += 1
+        roster.append({"student": student, "record": record, "status": status})
+    if request.GET.get("poll") == "1":
+        return JsonResponse({
+            "ok": True,
+            "rows": [
+                {
+                    "student_id": item["student"].pk,
+                    "status": item["status"],
+                    "status_label": item["record"].get_status_display() if item["record"] else "ยังไม่เช็กอิน",
+                    "checked_in_time": (
+                        timezone.localtime(item["record"].checked_in_at).strftime("%H:%M")
+                        if item["record"] and item["record"].checked_in_at else ""
+                    ),
+                    "locked": bool(
+                        item["record"] and item["record"].checked_in_at
+                        and not is_school_admin(request.user)
+                    ),
+                }
+                for item in roster
+            ],
+        })
+    return render(request, "school/attendance_session_detail.html", {
+        "attendance_session": session,
+        "roster": roster,
+        "counts": counts,
+        "is_school_admin_view": is_school_admin(request.user),
+        "active_teacher_page": "attendance",
+    })
 
 
 @never_cache
@@ -2162,26 +2336,50 @@ def attendance_check_in(request, token):
 
     try:
         payload = signing.loads(token, salt=ATTENDANCE_SIGNING_SALT, max_age=60 * 60 * 24 * 30)
-        session = AttendanceSession.objects.select_related("group").get(pk=payload.get("session_id"))
-        state = "missing_line"
+        session = AttendanceSession.objects.select_related("group").get(
+            pk=payload.get("session_id"),
+            is_active=True,
+        )
+        if session.date != timezone.localdate():
+            state = "not_today"
+        elif session.ends_at and timezone.now() > session.ends_at:
+            state = "closed"
+        else:
+            state = "missing_line"
     except (signing.BadSignature, AttendanceSession.DoesNotExist):
         payload = None
 
     line_profile = get_session_line_profile(request)
     line_user_id = line_profile.get("line_user_id", "").strip()
-    if session and line_user_id:
+    if session and state == "missing_line" and line_user_id:
         person, student = get_student_for_line(line_user_id)
         if not student:
             state = "not_student"
-        elif student.group_id != session.group_id:
+        elif session.group_id and student.group_id != session.group_id:
             state = "wrong_group"
         else:
-            record, created = AttendanceRecord.objects.update_or_create(
+            existing_record = AttendanceRecord.objects.filter(
                 attendance_session=session,
                 student=student,
-                defaults={"status": AttendanceRecord.Status.PRESENT},
-            )
-            state = "checked_in" if created else "already_checked_in"
+            ).first()
+            if existing_record:
+                record = existing_record
+                state = "already_checked_in" if record.checked_in_at else "attendance_locked"
+            else:
+                checked_in_at = timezone.now()
+                late_after = session.starts_at + timedelta(hours=1) if session.starts_at else None
+                status = (
+                    AttendanceRecord.Status.LATE
+                    if late_after and checked_in_at > late_after
+                    else AttendanceRecord.Status.PRESENT
+                )
+                record = AttendanceRecord.objects.create(
+                    attendance_session=session,
+                    student=student,
+                    status=status,
+                    checked_in_at=checked_in_at,
+                )
+                state = "checked_in"
 
     return render(
         request,
@@ -2256,30 +2454,51 @@ def student_dashboard(request):
 
         attendance_records = (
             AttendanceRecord.objects.select_related("attendance_session")
-            .filter(student=student, attendance_session__group=student.group)
+            .filter(student=student)
+            .filter(
+                Q(attendance_session__group__isnull=True)
+                | Q(attendance_session__group=student.group)
+            )
             .order_by("-attendance_session__date")[:6]
         )
         recent_attendance = attendance_records
         attendance_summary = {
             "present": AttendanceRecord.objects.filter(
                 student=student,
-                attendance_session__group=student.group,
                 status=AttendanceRecord.Status.PRESENT,
+            ).filter(
+                Q(attendance_session__group__isnull=True)
+                | Q(attendance_session__group=student.group)
             ).count(),
             "absent": AttendanceRecord.objects.filter(
                 student=student,
-                attendance_session__group=student.group,
                 status=AttendanceRecord.Status.ABSENT,
+            ).filter(
+                Q(attendance_session__group__isnull=True)
+                | Q(attendance_session__group=student.group)
             ).count(),
             "late": AttendanceRecord.objects.filter(
                 student=student,
-                attendance_session__group=student.group,
                 status=AttendanceRecord.Status.LATE,
+            ).filter(
+                Q(attendance_session__group__isnull=True)
+                | Q(attendance_session__group=student.group)
             ).count(),
-            "total": AttendanceSession.objects.filter(group=student.group).count(),
+            "leave": AttendanceRecord.objects.filter(
+                student=student,
+                status=AttendanceRecord.Status.LEAVE,
+            ).filter(
+                Q(attendance_session__group__isnull=True)
+                | Q(attendance_session__group=student.group)
+            ).count(),
+            "total": AttendanceSession.objects.filter(
+                Q(group__isnull=True) | Q(group=student.group)
+            ).count(),
         }
         group_student_count = Student.objects.filter(group=student.group, is_active=True).count()
-        group_lesson_count = AttendanceSession.objects.filter(group=student.group).count()
+        group_lesson_count = AttendanceSession.objects.filter(
+            Q(group__isnull=True) | Q(group=student.group)
+        ).count()
         appointment_rows = (
             AppointmentParticipant.objects.select_related("appointment")
             .filter(

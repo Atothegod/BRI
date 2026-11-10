@@ -788,6 +788,9 @@
     padding: 16px;
 }
 
+.attendance-generator label { display: grid; gap: 5px; }
+.attendance-generator label small { color: var(--school-admin-muted); font-size: .7rem; }
+
 .attendance-qr-preview {
     display: grid;
     gap: 12px;
@@ -827,7 +830,7 @@
 
 .attendance-session-card {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(300px, 0.9fr);
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 0.9fr) auto;
     gap: 14px;
     align-items: center;
     padding: 14px;
@@ -837,6 +840,9 @@
     border-radius: 8px;
     box-shadow: 0 8px 18px rgba(18, 39, 29, 0.05);
 }
+
+.attendance-session-actions { display: grid; gap: 6px; }
+.attendance-session-actions a { padding: 7px 9px; color: var(--school-admin-forest); background: #eef3ef; border: 1px solid var(--school-admin-border); border-radius: 5px; font-size: .7rem; font-weight: 850; text-align: center; }
 
 .attendance-session-main {
     display: grid;

@@ -19,12 +19,13 @@
             <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#check"></use></svg>
         </div>
         <span class="eyebrow">Attendance recorded</span>
-        <h1 id="attendance-title">{% if state == "checked_in" %}เช็คชื่อเรียบร้อย{% else %}เช็คชื่อไว้แล้ว{% endif %}</h1>
+        <h1 id="attendance-title">{% if state == "checked_in" %}{% if record.status == "late" %}เช็กอินแล้ว — มาสาย{% else %}เช็กชื่อเรียบร้อย{% endif %}{% else %}เช็กชื่อไว้แล้ว{% endif %}</h1>
         <p class="success-lead">{{ student.person.full_name }} · {{ student.student_id }}</p>
         <div class="receipt-block result-card">
             <span>ชั้นเรียน</span>
-            <strong>{{ session.group.group_name }}</strong>
-            <small>{{ session.date|date:"d/m/Y" }}</small>
+            <strong>{{ session.title }}</strong>
+            <small>{{ session.date|date:"d/m/Y" }}{% if session.starts_at %} · {{ session.starts_at|date:"H:i" }} น.{% endif %}</small>
+            {% if session.topic %}<small>{{ session.topic }}</small>{% endif %}
         </div>
         <a class="button button--primary success-action" href="{% url 'school:student_dashboard' %}">
             <span>ไปหน้าแดชบอร์ดนักศึกษา</span>
@@ -37,13 +38,23 @@
         <span class="eyebrow">เปิดผ่าน LINE</span>
         <h1 id="attendance-title">ต้องเชื่อม LINE ก่อนเช็คชื่อ</h1>
         <p class="success-lead">กรุณาเปิดลิงก์นี้ผ่าน LIFF/LINE เพื่อให้ระบบระบุตัวนักศึกษาได้</p>
-        {% elif state == "wrong_group" %}
+        {% elif state == "attendance_locked" %}
         <div class="success-mark status-mark--pending" aria-hidden="true">
             <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#info"></use></svg>
         </div>
-        <span class="eyebrow">ตรวจสอบกลุ่มเรียน</span>
+        <span class="eyebrow">มีการบันทึกสถานะแล้ว</span>
+        <h1 id="attendance-title">ไม่เปลี่ยนสถานะจากการสแกนซ้ำ</h1>
+        <p class="success-lead">ผู้ดูแลบันทึกสถานะ {{ record.get_status_display }} ไว้แล้ว กรุณาติดต่ออาจารย์หากต้องการแก้ไข</p>
+        {% elif state == "wrong_group" %}
+        <div class="success-mark status-mark--pending" aria-hidden="true"><svg class="icon"><use href="{% static 'school/images/icons.svg' %}#info"></use></svg></div>
+        <span class="eyebrow">QR คาบเดิม</span>
         <h1 id="attendance-title">คุณไม่ได้อยู่ในกลุ่มนี้</h1>
-        <p class="success-lead">QR นี้เป็นของกลุ่ม {{ session.group.group_name }} กรุณาติดต่อทีมงานถ้าคิดว่าข้อมูลกลุ่มไม่ถูกต้อง</p>
+        <p class="success-lead">QR รุ่นเดิมนี้ผูกกับ {{ session.group.group_name }}</p>
+        {% elif state == "not_today" or state == "closed" %}
+        <div class="success-mark status-mark--pending" aria-hidden="true"><svg class="icon"><use href="{% static 'school/images/icons.svg' %}#clock"></use></svg></div>
+        <span class="eyebrow">คาบเรียนยังไม่เปิด</span>
+        <h1 id="attendance-title">{% if state == "closed" %}ปิดรับเช็กอินแล้ว{% else %}QR นี้ใช้ในวันที่เรียนเท่านั้น{% endif %}</h1>
+        <p class="success-lead">{{ session.title }} · {{ session.date|date:"d/m/Y" }}</p>
         {% elif state == "not_student" %}
         <div class="success-mark status-mark--pending" aria-hidden="true">
             <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#info"></use></svg>

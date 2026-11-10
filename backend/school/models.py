@@ -752,28 +752,35 @@ def notify_student_payment_approved(sender, instance, **kwargs):
 class AttendanceSession(TimeStampedModel):
     group = models.ForeignKey(
         TeacherGroup,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="attendance_sessions",
     )
+    title = models.CharField(max_length=255, default="คาบเรียน")
+    topic = models.TextField(blank=True)
     date = models.DateField()
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=["group", "date"],
-                name="uniq_attendance_session_group_date",
-            )
-        ]
+    starts_at = models.DateTimeField(null=True, blank=True)
+    ends_at = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_attendance_sessions",
+    )
 
     def __str__(self):
-        return f"{self.group} - {self.date}"
+        return f"{self.title} - {self.date}"
 
 
 class AttendanceRecord(TimeStampedModel):
     class Status(models.TextChoices):
-        PRESENT = "present", "Present"
-        ABSENT = "absent", "Absent"
-        LATE = "late", "Late"
+        PRESENT = "present", "มาเรียน"
+        ABSENT = "absent", "ขาด"
+        LATE = "late", "มาสาย"
+        LEAVE = "leave", "ลา"
 
     attendance_session = models.ForeignKey(
         AttendanceSession,
@@ -786,6 +793,15 @@ class AttendanceRecord(TimeStampedModel):
         related_name="attendance_records",
     )
     status = models.CharField(max_length=20, choices=Status.choices)
+    checked_in_at = models.DateTimeField(null=True, blank=True)
+    note = models.CharField(max_length=255, blank=True)
+    marked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="marked_attendance_records",
+    )
 
     class Meta:
         constraints = [

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}รายชื่อเช็กอิน {{ attendance_session.title }} | BRI{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261003-nav-dropdown-1">
+<link rel="stylesheet" href="{% static 'school/css/attendance_roster.css' %}?v=20261111-1">
+{% endblock %}
+{% block content %}
+{% if is_school_admin_view %}{% include "school/includes/school_admin_nav.html" %}{% endif %}
+<main class="attendance-roster-page">
+    <header class="attendance-roster-hero">
+        <div><span>LIVE ATTENDANCE</span><h1>{{ attendance_session.title }}</h1><p>{{ attendance_session.date|date:"d/m/Y" }}{% if attendance_session.starts_at %} · เริ่ม {{ attendance_session.starts_at|date:"H:i" }} น.{% endif %}{% if attendance_session.topic %} · {{ attendance_session.topic }}{% endif %}</p></div>
+        <div class="attendance-roster-actions">
+            {% if is_school_admin_view %}<a href="{% url 'school:admin_attendance_qr' %}?session={{ attendance_session.pk }}">เปิด QR</a>{% else %}<a href="{% url 'school:teacher_dashboard' %}#learning">กลับ Dashboard</a>{% endif %}
+        </div>
+    </header>
+
+    <section class="attendance-roster-stats" aria-label="สรุปการเข้าเรียน">
+        <article data-count-status="present"><span>มาเรียน</span><strong>{{ counts.present }}</strong></article>
+        <article data-count-status="late"><span>มาสาย</span><strong>{{ counts.late }}</strong></article>
+        <article data-count-status="not_checked_in"><span>ยังไม่เช็กอิน</span><strong>{{ counts.not_checked_in }}</strong></article>
+        <article data-count-status="absent"><span>ขาด</span><strong>{{ counts.absent }}</strong></article>
+        <article data-count-status="leave"><span>ลา</span><strong>{{ counts.leave }}</strong></article>
+    </section>
+
+    <section class="attendance-roster-panel" data-attendance-roster>
+        <header><div><span>STUDENT ROSTER</span><h2>{% if is_school_admin_view %}นักศึกษาทั้งโรงเรียน{% else %}นักศึกษาในกลุ่มที่คุณดูแล{% endif %}</h2></div><p data-roster-status role="status" aria-live="polite">ระบบจะไม่ให้การสแกนซ้ำเขียนทับสถานะที่ผู้ดูแลกำหนด</p></header>
+        <form hidden>{% csrf_token %}</form>
+        <div class="attendance-roster-list">
+            {% for item in roster %}
+            <article class="attendance-roster-row" data-roster-row data-student-id="{{ item.student.pk }}" data-status="{{ item.status }}">
+                <span class="attendance-roster-avatar">{{ item.student.person.first_name|slice:":1"|upper }}</span>
+                <div class="attendance-roster-student"><strong>{{ item.student.person.full_name }}</strong><small>{{ item.student.student_id }}{% if item.student.group %} · {{ item.student.group.group_name }}{% endif %}</small></div>
+                <div class="attendance-roster-time"><span data-record-state>{% if item.record %}{{ item.record.get_status_display }}{% else %}ยังไม่เช็กอิน{% endif %}</span><strong data-checkin-time>{% if item.record.checked_in_at %}{{ item.record.checked_in_at|date:"H:i" }} น.{% endif %}</strong></div>
+                <div class="attendance-status-picker{% if not is_school_admin_view %} attendance-status-picker--teacher{% endif %}"{% if item.record.checked_in_at and not is_school_admin_view %} data-locked{% endif %}>
+                    {% if is_school_admin_view %}
+                    <button type="button" data-set-status="present"{% if item.status == "present" %} class="is-active"{% endif %}>มา</button>
+                    <button type="button" data-set-status="late"{% if item.status == "late" %} class="is-active"{% endif %}>สาย</button>
+                    {% endif %}
+                    <button type="button" data-set-status="absent"{% if item.status == "absent" %} class="is-active"{% endif %}>ขาด</button>
+                    <button type="button" data-set-status="leave"{% if item.status == "leave" %} class="is-active"{% endif %}>ลา</button>
+                    <button type="button" data-set-status="not_checked_in"{% if item.status == "not_checked_in" %} class="is-active"{% endif %}>รอเช็กอิน</button>
+                </div>
+            </article>
+            {% empty %}<div class="attendance-roster-empty">ยังไม่มีนักศึกษาในขอบเขตนี้</div>{% endfor %}
+        </div>
+    </section>
+</main>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'school/js/attendance_roster.js' %}?v=20261111-1" defer></script>{% endblock %}

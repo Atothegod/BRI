@@ -133,7 +133,7 @@ def authenticated_home_url(user):
     if can_view_teacher_dashboard(user):
         return "school:teacher_dashboard"
     if is_teacher(user):
-        return f"{resolve_url('school:teacher_login')}?teacher_status=pending"
+        return "school:teacher_dashboard"
     return "school:registration"
 
 
@@ -209,8 +209,6 @@ class TeacherLoginView(RoleLoginView):
         return is_teacher(user)
 
     def get_authenticated_redirect_url(self, user):
-        if is_teacher(user) and not user.can_access_teacher_dashboard():
-            return None
         return authenticated_home_url(user)
 
 
@@ -595,7 +593,7 @@ def teacher_register(request):
     if request.method == "POST" and form.is_valid():
         user = form.save()
         login(request, user, backend="django.contrib.auth.backends.ModelBackend")
-        return redirect(f"{resolve_url('school:teacher_login')}?teacher_status=registered_pending")
+        return redirect("school:teacher_dashboard")
 
     return render(
         request,
@@ -613,7 +611,7 @@ def post_login_redirect(request):
     if can_view_teacher_dashboard(request.user):
         return redirect("school:teacher_dashboard")
     if is_teacher(request.user):
-        return redirect(f"{resolve_url('school:teacher_login')}?teacher_status=pending")
+        return redirect("school:teacher_dashboard")
     return redirect("school:registration")
 
 
@@ -627,7 +625,7 @@ def teacher_pending_approval(request):
     if request.user.can_access_teacher_dashboard():
         return redirect("school:teacher_dashboard")
 
-    return redirect(f"{resolve_url('school:teacher_login')}?teacher_status=pending")
+    return redirect("school:teacher_dashboard")
 
 
 @login_required
@@ -635,7 +633,7 @@ def teacher_dashboard(request):
     if not can_view_teacher_dashboard(request.user):
         if not is_teacher(request.user):
             raise PermissionDenied
-        return redirect(f"{resolve_url('school:teacher_login')}?teacher_status=pending")
+        return render(request, "school/teacher_pending_approval.html")
 
     groups = list(
         TeacherGroup.objects.filter(
@@ -899,7 +897,7 @@ def teacher_calendar(request):
     if not can_view_teacher_dashboard(request.user):
         if not is_teacher(request.user):
             raise PermissionDenied
-        return redirect(f"{resolve_url('school:teacher_login')}?teacher_status=pending")
+        return redirect("school:teacher_dashboard")
 
     groups = list(
         teacher_accessible_groups(request.user).annotate(
@@ -2198,6 +2196,9 @@ def student_dashboard(request):
     assignment_rows = []
     recent_attendance = []
     appointment_rows = []
+    attendance_summary = {"present": 0, "absent": 0, "late": 0, "total": 0}
+    group_student_count = 0
+    group_lesson_count = 0
 
     if student and student.group_id:
         submissions = {
@@ -2233,6 +2234,26 @@ def student_dashboard(request):
             .order_by("-attendance_session__date")[:6]
         )
         recent_attendance = attendance_records
+        attendance_summary = {
+            "present": AttendanceRecord.objects.filter(
+                student=student,
+                attendance_session__group=student.group,
+                status=AttendanceRecord.Status.PRESENT,
+            ).count(),
+            "absent": AttendanceRecord.objects.filter(
+                student=student,
+                attendance_session__group=student.group,
+                status=AttendanceRecord.Status.ABSENT,
+            ).count(),
+            "late": AttendanceRecord.objects.filter(
+                student=student,
+                attendance_session__group=student.group,
+                status=AttendanceRecord.Status.LATE,
+            ).count(),
+            "total": AttendanceSession.objects.filter(group=student.group).count(),
+        }
+        group_student_count = Student.objects.filter(group=student.group, is_active=True).count()
+        group_lesson_count = AttendanceSession.objects.filter(group=student.group).count()
         appointment_rows = (
             AppointmentParticipant.objects.select_related("appointment")
             .filter(
@@ -2255,6 +2276,9 @@ def student_dashboard(request):
             "assignment_rows": assignment_rows,
             "recent_attendance": recent_attendance,
             "appointment_rows": appointment_rows,
+            "attendance_summary": attendance_summary,
+            "group_student_count": group_student_count,
+            "group_lesson_count": group_lesson_count,
             "line_return_url": settings.LINE_RETURN_URL,
             **get_liff_context(request, reload_on_sync=not bool(line_user_id)),
         },

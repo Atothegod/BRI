@@ -14,29 +14,27 @@
             {% include "school/includes/brand_logo.html" with variant="success" %}
         </a>
 
-        <div class="success-mark pending-mark">
-            <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#clock"></use></svg>
+        <div class="success-mark">
+            <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#check-circle"></use></svg>
         </div>
 
-        <span class="eyebrow">Teacher access pending</span>
-        <h1 id="pending-title">รอการอนุมัติจากผู้ดูแลระบบ</h1>
+        <span class="eyebrow">เข้าสู่ระบบสำเร็จ</span>
+        <h1 id="pending-title">ส่งคำขอเรียบร้อยแล้ว</h1>
         <p class="success-lead">
-            บัญชี {{ request.user.teacher_display_name }} ลงทะเบียนเรียบร้อยแล้ว
-            เมื่อได้รับอนุมัติ คุณจะเข้าสู่แดชบอร์ดผู้สอนได้ทันที
+            บัญชี {{ request.user.teacher_display_name }} กำลังรอผู้ดูแลระบบตรวจสอบและอนุมัติสิทธิ์
+            กรุณากลับมาใหม่หลังจากได้รับแจ้งว่าเปิดสิทธิ์เรียบร้อยแล้ว
         </p>
 
         <div class="receipt-block">
             <span>สถานะบัญชีผู้สอน</span>
-            <strong>ยังไม่อนุมัติ</strong>
-            <small>ส่งคำขอเมื่อ {{ request.user.date_joined|date:"d M Y H:i" }}</small>
+            <strong>รอการตรวจสอบ</strong>
+            <small>เมื่ออนุมัติแล้ว หน้านี้จะเปลี่ยนเป็น Dashboard ผู้สอนโดยอัตโนมัติ</small>
         </div>
 
-        <form class="pending-actions" method="post" action="{% url 'school:logout' %}">
-            {% csrf_token %}
-            <button class="button button--secondary success-action" type="submit">
-                <span>ออกจากระบบ</span>
-            </button>
-        </form>
+        <div class="pending-actions">
+            <a class="button button--primary success-action" href="{% url 'school:teacher_dashboard' %}"><span>ตรวจสอบสิทธิ์อีกครั้ง</span></a>
+            <form method="post" action="{% url 'school:logout' %}">{% csrf_token %}<button class="button button--secondary success-action" type="submit"><span>ออกจากระบบ</span></button></form>
+        </div>
     </section>
 </main>
 {% endblock %}

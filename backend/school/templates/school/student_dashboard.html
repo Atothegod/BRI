@@ -4,7 +4,7 @@
 {% block title %}Student Dashboard | BRI School of Fivefold{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/student_portal.css' %}?v=20260918-student-1">
+<link rel="stylesheet" href="{% static 'school/css/student_portal.css' %}?v=20261110-student-workspace-2">
 {% endblock %}
 
 {% block content %}
@@ -13,41 +13,49 @@
         <a class="student-brand" href="{% url 'school:student_dashboard' %}" aria-label="BRI School of Fivefold">
             {% include "school/includes/brand_logo.html" with variant="nav" %}
         </a>
+        <div class="student-space-title"><strong>BRI INSTITUTE</strong><span>STUDENT SPACE</span></div>
         <nav aria-label="เมนูนักเรียน">
-            <a class="is-active" href="{% url 'school:student_dashboard' %}">Dashboard</a>
+            <a class="is-active" href="{% url 'school:student_dashboard' %}">ภาพรวม</a>
             <a href="{% url 'school:student_homework_upload' %}">การบ้าน</a>
         </nav>
+        {% if student_state == "ready" %}<div class="student-sidebar-account"><strong>{{ student.person.full_name }}</strong><span>{{ student.student_id }}</span></div>{% endif %}
     </header>
 
     {% if student_state == "ready" %}
     <section class="student-hero" aria-labelledby="student-dashboard-title">
         <div>
             <span>BRI STUDENT DASHBOARD</span>
-            <h1 id="student-dashboard-title">สวัสดี {{ student.person.nickname|default:student.person.first_name }}</h1>
-            <p>{{ student.group.group_name|default:"ยังไม่มีกลุ่ม" }}{% if student.group.grade_level %} · {{ student.group.grade_level }}{% endif %}</p>
+            <h1 id="student-dashboard-title">สวัสดี คุณ{{ student.person.full_name }}</h1>
+            <p>ภาพรวมข้อมูลการเรียนและงานของคุณ</p>
         </div>
-        <div class="student-id-card">
-            <small>รหัสนักเรียน</small>
-            <strong>{{ student.student_id }}</strong>
-        </div>
+        <div class="student-approved-badge">ได้รับการอนุมัติแล้ว</div>
     </section>
 
-    <section class="student-metrics" aria-label="ภาพรวมการเรียน">
-        <article>
-            <span>เข้าเรียน</span>
-            <strong>{% if learning.attendance_percent is not None %}{{ learning.attendance_percent }}%{% else %}-{% endif %}</strong>
-            <small>{{ learning.attendance_attended }}/{{ learning.attendance_total }} ครั้ง</small>
+    <section class="student-profile-grid" aria-label="ข้อมูลนักเรียนและกลุ่ม">
+        <article class="student-card-panel">
+            <header><strong>STUDENT CARD</strong><span>บัตรนักเรียน</span></header>
+            <div class="student-card-identity">
+                {% if student.person.photo %}<img src="{{ student.person.photo.url }}" alt="รูปของ {{ student.person.full_name }}">{% else %}<span class="student-photo-fallback">{{ student.person.first_name|slice:":1"|upper }}</span>{% endif %}
+                <div><h2>คุณ{{ student.person.full_name }}</h2><p>รหัสนักเรียน : {{ student.student_id }}</p><p>รุ่นที่ : {{ student.group.grade_level|default:"ไม่ระบุ" }}</p></div>
+            </div>
+            <button type="button" onclick="window.print()">พิมพ์บัตรนักเรียน</button>
         </article>
-        <article>
-            <span>ส่งการบ้าน</span>
-            <strong>{% if learning.homework_percent is not None %}{{ learning.homework_percent }}%{% else %}-{% endif %}</strong>
-            <small>{{ learning.homework_submitted }}/{{ learning.homework_total }} งาน</small>
+        <article class="student-group-panel">
+            <header><strong>MY GROUP</strong><span>กลุ่มของฉัน</span></header>
+            <h2>ชื่อกลุ่ม : {{ student.group.group_name|default:"ยังไม่มีกลุ่ม" }}</h2>
+            <p>อาจารย์ผู้ดูแลกลุ่ม : <strong>{{ student.group.teacher_names|default:"รอประกาศ" }}</strong></p>
+            <div><section><span>เพื่อนในกลุ่ม</span><strong>{{ group_student_count }}</strong><small>คน</small></section><section><span>ครั้งเรียนในระบบ</span><strong>{{ group_lesson_count }}</strong><small>ครั้ง</small></section></div>
         </article>
-        <article>
-            <span>สถานะชำระเงิน</span>
-            <strong>{% if student.is_paid %}ผ่าน{% else %}รอตรวจ{% endif %}</strong>
-            <small>{% if student.is_paid %}พร้อมเรียน{% elif student.payment_slip %}ส่งสลิปแล้ว{% else %}ยังไม่ส่งสลิป{% endif %}</small>
-        </article>
+    </section>
+
+    <section class="student-attendance-summary" aria-labelledby="attendance-summary-title">
+        <div class="student-attendance-title"><h2 id="attendance-summary-title">ATTENDANCE</h2><span>สรุปการเข้าเรียนของฉัน</span></div>
+        <div class="student-attendance-metrics">
+            <article><span>เช็กอินแล้ว</span><strong>{{ attendance_summary.present }}</strong><small>คลาส</small></article>
+            <article><span>ขาดเรียน</span><strong>{{ attendance_summary.absent }}</strong><small>คลาส</small></article>
+            <article><span>มาสาย</span><strong>{{ attendance_summary.late }}</strong><small>คลาส</small></article>
+            <article><span>คลาสทั้งหมด</span><strong>{{ attendance_summary.total }}</strong><small>คลาส</small></article>
+        </div>
     </section>
 
     <div class="student-grid">
@@ -74,11 +82,11 @@
             </div>
         </section>
 
-        <section class="student-panel" aria-labelledby="student-appointments-title">
+        <section class="student-panel student-class-panel" aria-labelledby="student-appointments-title">
             <div class="student-panel-heading">
                 <div>
-                    <span>APPOINTMENTS</span>
-                    <h2 id="student-appointments-title">นัดเรียนถัดไป</h2>
+                    <span>CLASS / LESSON</span>
+                    <h2 id="student-appointments-title">ตารางเรียนถัดไป</h2>
                 </div>
             </div>
             <div class="student-task-list">

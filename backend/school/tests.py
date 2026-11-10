@@ -751,7 +751,8 @@ class TeacherFlowTests(TestCase):
 
         self.assertRedirects(
             response,
-            f"{reverse('school:teacher_login')}?teacher_status=registered_pending",
+            reverse("school:teacher_dashboard"),
+            fetch_redirect_response=False,
         )
         user = get_user_model().objects.get(username="teacher@example.com")
         self.assertEqual(user.role, user.Role.TEACHER)
@@ -765,7 +766,7 @@ class TeacherFlowTests(TestCase):
             TeacherGroup.objects.filter(teacher=user, group_name="อ.เอก", is_active=True).exists()
         )
 
-    def test_registered_pending_teacher_sees_login_notice(self):
+    def test_registered_pending_teacher_sees_dashboard_pending_page(self):
         User = get_user_model()
         teacher = User.objects.create_user(
             username="teacher1",
@@ -776,13 +777,12 @@ class TeacherFlowTests(TestCase):
         )
         self.client.force_login(teacher)
 
-        response = self.client.get(
-            f"{reverse('school:teacher_login')}?teacher_status=registered_pending"
-        )
+        response = self.client.get(reverse("school:teacher_dashboard"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "ลงทะเบียนเรียบร้อยแล้ว")
-        self.assertContains(response, "กำลังรอผู้ดูแลระบบอนุมัติ")
+        self.assertTemplateUsed(response, "school/teacher_pending_approval.html")
+        self.assertContains(response, "เข้าสู่ระบบสำเร็จ")
+        self.assertContains(response, "รอการตรวจสอบ")
 
     def test_teacher_can_login_with_email_and_password(self):
         User = get_user_model()
@@ -809,7 +809,7 @@ class TeacherFlowTests(TestCase):
         )
         self.assertEqual(int(self.client.session["_auth_user_id"]), teacher.pk)
 
-    def test_unapproved_teacher_login_flow_returns_to_login_with_notice(self):
+    def test_unapproved_teacher_login_flow_reaches_dashboard_pending_page(self):
         User = get_user_model()
         teacher = User.objects.create_user(
             username="teacher1",
@@ -833,11 +833,12 @@ class TeacherFlowTests(TestCase):
             response.redirect_chain,
             [
                 (reverse("school:post_login_redirect"), 302),
-                (f"{reverse('school:teacher_login')}?teacher_status=pending", 302),
+                (reverse("school:teacher_dashboard"), 302),
             ],
         )
         self.assertEqual(int(self.client.session["_auth_user_id"]), teacher.pk)
-        self.assertContains(response, "บัญชีผู้สอนยังไม่อนุมัติ")
+        self.assertContains(response, "ส่งคำขอเรียบร้อยแล้ว")
+        self.assertContains(response, "กรุณากลับมาใหม่")
 
     def test_approved_teacher_post_login_redirects_to_teacher_dashboard(self):
         User = get_user_model()
@@ -1012,10 +1013,9 @@ class TeacherFlowTests(TestCase):
         self.client.force_login(teacher)
         response = self.client.get(reverse("school:teacher_dashboard"))
 
-        self.assertRedirects(
-            response,
-            f"{reverse('school:teacher_login')}?teacher_status=pending",
-        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "school/teacher_pending_approval.html")
+        self.assertContains(response, "รอการตรวจสอบ")
 
     def test_teacher_dashboard_shows_only_students_in_teacher_groups(self):
         User = get_user_model()
@@ -1119,6 +1119,10 @@ class TeacherFlowTests(TestCase):
         self.assertContains(response, "ยังไม่ส่ง")
         self.assertContains(response, 'id="teacher-tab-overview"')
         self.assertContains(response, 'class="teacher-health-track"')
+        self.assertContains(response, "ยืนยันนักศึกษาแล้ว")
+        self.assertContains(response, "data-teacher-student-search")
+        self.assertContains(response, f'id="student-detail-{student.pk}"')
+        self.assertContains(response, "เพิ่มเติม")
 
     def test_teacher_group_filter_cannot_select_another_teachers_group(self):
         User = get_user_model()
@@ -1292,6 +1296,51 @@ class TeacherFlowTests(TestCase):
         self.assertContains(response, "คัดลอกเลขบัญชี 111-8-33249-7")
         self.assertContains(response, 'data-copy-value="1118332497"')
         self.assertContains(response, "ส่งสลิปให้ตรวจสอบ")
+
+    def test_student_dashboard_uses_real_group_and_attendance_summary(self):
+        User = get_user_model()
+        teacher = User.objects.create_user(
+            username="student-dashboard-teacher",
+            role=User.Role.TEACHER,
+            nickname="แสง",
+            is_teacher_approved=True,
+        )
+        group = TeacherGroup.objects.create(teacher=teacher, group_name="Moses", grade_level="BRI5")
+        person = Person.objects.create(
+            first_name="Student", last_name="Workspace", line_user_id="Ustudentworkspace",
+            status=Person.Status.PASSED,
+        )
+        student = Student.objects.get(person=person)
+        student.group = group
+        student.save(update_fields=["group"])
+        present_session = AttendanceSession.objects.create(group=group, date=timezone.localdate())
+        absent_session = AttendanceSession.objects.create(
+            group=group, date=timezone.localdate() - timedelta(days=7),
+        )
+        AttendanceRecord.objects.create(
+            attendance_session=present_session, student=student, status=AttendanceRecord.Status.PRESENT,
+        )
+        AttendanceRecord.objects.create(
+            attendance_session=absent_session, student=student, status=AttendanceRecord.Status.ABSENT,
+        )
+        session = self.client.session
+        session["line_profile"] = {
+            "line_user_id": person.line_user_id,
+            "line_display_name": "Student Workspace",
+            "line_picture_url": "",
+            "verified": True,
+        }
+        session.save()
+
+        response = self.client.get(reverse("school:student_dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "STUDENT CARD")
+        self.assertContains(response, "ชื่อกลุ่ม : Moses")
+        self.assertContains(response, "อาจารย์แสง")
+        self.assertEqual(response.context["attendance_summary"]["present"], 1)
+        self.assertEqual(response.context["attendance_summary"]["absent"], 1)
+        self.assertEqual(response.context["attendance_summary"]["total"], 2)
 
     def test_student_payment_upload_requires_line_session(self):
         person = Person.objects.create(first_name="Paid", last_name="Student")

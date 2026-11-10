@@ -779,7 +779,7 @@ class TeacherFlowTests(TestCase):
         teacher.refresh_from_db()
         self.assertEqual(teacher.nickname, "เอก")
         self.assertEqual(teacher.teacher_display_name, "อาจารย์เอก")
-        self.assertTrue(TeacherGroup.objects.filter(teacher=teacher, group_name="เอก").exists())
+        self.assertFalse(TeacherGroup.objects.filter(teacher=teacher).exists())
 
     def test_registered_pending_teacher_sees_dashboard_pending_page(self):
         User = get_user_model()

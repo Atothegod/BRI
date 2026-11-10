@@ -44,6 +44,13 @@ class TeacherGroupManagementTests(TestCase):
         self.assertContains(response, 'data-teacher-board')
         self.assertContains(response, 'data-teacher-card', count=2)
 
+    def test_unassigned_approved_teacher_appears_as_draggable_pool_card(self):
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "อาจารย์รอจัดกลุ่ม")
+        self.assertContains(response, 'data-teacher-id="%s"' % self.teacher_two.pk)
+        self.assertContains(response, 'draggable="true"')
+
     def test_admin_can_create_group(self):
         response = self.client.post(self.url, {"group_name": "  กลุ่ม Revelation  "})
 
@@ -68,6 +75,31 @@ class TeacherGroupManagementTests(TestCase):
         self.second_group.refresh_from_db()
         self.assertEqual(self.first_group.teacher, self.teacher_two)
         self.assertEqual(self.second_group.teacher, self.teacher_one)
+
+    def test_ajax_delete_group_returns_teachers_and_students_to_unassigned(self):
+        person = Person.objects.create(
+            first_name="Delete", last_name="Group", status=Person.Status.PASSED,
+        )
+        student = Student.objects.get(person=person)
+        student.group = self.first_group
+        student.save(update_fields=["group"])
+
+        response = self.client.post(
+            self.url,
+            {"action": "delete_group", "group": self.first_group.pk},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["ok"])
+        self.assertIn(self.teacher_one.pk, response.json()["teacher_ids"])
+        self.first_group.refresh_from_db()
+        student.refresh_from_db()
+        self.assertFalse(self.first_group.is_active)
+        self.assertIsNone(self.first_group.teacher_id)
+        self.assertFalse(self.first_group.teachers.exists())
+        self.assertIsNone(student.group_id)
+        self.assertTrue(TeacherGroup.objects.filter(pk=self.first_group.pk).exists())
 
     def test_pending_teacher_cannot_be_moved(self):
         User = get_user_model()

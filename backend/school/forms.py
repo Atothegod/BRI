@@ -10,7 +10,6 @@ from django.db.models import Q
 from django.utils import timezone
 
 from .models import HomeworkSubmission, PaymentSlip, Person, Student
-from .teacher_groups import ensure_default_teacher_group
 
 
 CONTROL_CLASS = "form-control"
@@ -739,10 +738,7 @@ class TeacherDisplayNameForm(forms.ModelForm):
 
     @transaction.atomic
     def save(self, commit=True):
-        user = super().save(commit=commit)
-        if commit:
-            ensure_default_teacher_group(user)
-        return user
+        return super().save(commit=commit)
 
 
 class PaymentSlipUploadForm(forms.Form):

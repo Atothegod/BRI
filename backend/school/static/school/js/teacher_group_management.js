@@ -2,7 +2,7 @@
     "use strict";
     const board = document.querySelector("[data-teacher-board]");
     if (!board) return;
-    const lanes = Array.from(board.querySelectorAll("[data-teacher-lane]"));
+    let lanes = Array.from(board.querySelectorAll("[data-teacher-lane]"));
     const status = board.querySelector("[data-teacher-status]");
     const createDialog = document.querySelector("#teacher-group-create-dialog");
     const moveDialog = document.querySelector("#teacher-move-dialog");
@@ -31,6 +31,46 @@
     };
     const findLane = (groupId) => lanes.find((lane) => lane.dataset.groupId === groupId);
     const setStatus = (text, state = "") => { status.textContent = text; status.dataset.state = state; };
+
+    const deleteGroup = async (button) => {
+        if (moving) return;
+        const groupNode = button.closest("[data-teacher-lane]");
+        const studentCount = Number(button.dataset.studentCount || 0);
+        const detail = studentCount
+            ? ` นักศึกษา ${studentCount} คนจะกลับไปอยู่ในรายการรอจัดกลุ่ม`
+            : "";
+        if (!window.confirm(`ลบกลุ่ม “${button.dataset.groupName}” หรือไม่? อาจารย์จะกลับไปที่ Teacher Pool${detail} และประวัติเดิมจะยังอยู่`)) return;
+        const pool = findLane("");
+        const body = new FormData();
+        body.set("action", "delete_group");
+        body.set("group", button.dataset.groupId);
+        if (csrf) body.set("csrfmiddlewaretoken", csrf);
+        moving = true;
+        groupNode.classList.add("is-deleting");
+        setStatus(`กำลังลบกลุ่ม ${button.dataset.groupName}...`, "saving");
+        try {
+            const response = await fetch(window.location.pathname, {method:"POST", body, headers:{"X-Requested-With":"XMLHttpRequest"}, credentials:"same-origin"});
+            const result = await response.json();
+            if (!response.ok || !result.ok) throw new Error(result.message || "ลบกลุ่มไม่สำเร็จ");
+            const poolList = pool.querySelector("[data-lane-list]");
+            groupNode.querySelectorAll("[data-teacher-card]").forEach((card) => {
+                card.dataset.groupId = "";
+                poolList.insertBefore(card, poolList.querySelector("[data-lane-empty]"));
+            });
+            groupNode.remove();
+            lanes = lanes.filter((lane) => lane !== groupNode);
+            moveDialog.querySelector(`[data-move-target][data-group-id="${button.dataset.groupId}"]`)?.remove();
+            const groupStat = document.querySelector(".teacher-group-stats > div:first-child strong");
+            if (groupStat) groupStat.textContent = String(Math.max(0, Number(groupStat.textContent) - 1));
+            updateStats();
+            setStatus(result.message, "success");
+        } catch (error) {
+            groupNode.classList.remove("is-deleting");
+            setStatus(error.message || "ลบกลุ่มไม่สำเร็จ", "error");
+        } finally {
+            moving = false;
+        }
+    };
 
     const moveTeacher = async (card, lane) => {
         if (!card || !lane || moving || card.dataset.groupId === lane.dataset.groupId) return;
@@ -91,6 +131,11 @@
         lanes.forEach((lane) => lane.classList.remove("is-drag-over"));
     });
     board.addEventListener("click", (event) => {
+        const deleteButton = event.target.closest("[data-delete-group]");
+        if (deleteButton) {
+            deleteGroup(deleteButton);
+            return;
+        }
         const button = event.target.closest("[data-open-move-dialog]");
         if (!button) return;
         selectedCard = button.closest("[data-teacher-card]");

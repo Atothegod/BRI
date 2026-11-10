@@ -51,7 +51,10 @@
                         <div><span>GROUP {{ forloop.counter|stringformat:"02d" }}</span><h3>{{ group.group_name }}</h3></div>
                         <strong><span data-lane-count>{{ group.managed_teachers|length }}</span> ผู้สอน</strong>
                     </header>
-                    <div class="teacher-group-node__meta"><span>{{ group.active_student_count }} นักศึกษา</span><a href="{% url 'school:student_group_assignment' %}">จัดนักศึกษา →</a></div>
+                    <div class="teacher-group-node__meta">
+                        <span>{{ group.active_student_count }} นักศึกษา</span>
+                        <div><a href="{% url 'school:student_group_assignment' %}">จัดนักศึกษา →</a><button type="button" data-delete-group data-group-id="{{ group.pk }}" data-group-name="{{ group.group_name }}" data-student-count="{{ group.active_student_count }}">ลบกลุ่ม</button></div>
+                    </div>
                     <div class="teacher-group-node__teachers" data-lane-list>
                         {% for teacher in group.managed_teachers %}{% include "school/includes/teacher_group_card.html" with teacher=teacher %}{% endfor %}
                         <p class="teacher-lane-empty" data-lane-empty{% if group.managed_teachers %} hidden{% endif %}>ลากอาจารย์มาวางในกลุ่มนี้</p>

@@ -13,8 +13,9 @@
         <div>
             <span>BRI STUDENT GROUPS</span>
             <h1>จัดกลุ่มนักศึกษา</h1>
-            <p>ลากนักศึกษาไปยังกลุ่มปลายทาง ระบบจะบันทึกให้ทันที</p>
+            <p>ผังกลุ่ม → ผู้สอน → นักศึกษา ลากการ์ดเข้ากลุ่มหรือกดปุ่ม Assign ได้ทันที</p>
         </div>
+        <a class="student-group-teacher-link" href="{% url 'school:teacher_group_management' %}">จัดกลุ่มผู้สอน</a>
     </header>
 
     <section class="assignment-stats" aria-label="สรุปการจัดกลุ่ม">
@@ -73,13 +74,19 @@
                              data-group-id="{{ group.pk }}"
                              data-group-name="{{ group.group_name }}"
                              aria-labelledby="lane-group-{{ group.pk }}-title">
-                        <header class="assignment-lane-heading">
-                            <div>
-                                <span>{{ group.teacher_names }}</span>
-                                <h3 id="lane-group-{{ group.pk }}-title">{{ group.group_name }}</h3>
+                        <div class="assignment-hierarchy-root">
+                            <header class="assignment-lane-heading">
+                                <div><span>TEACHING GROUP {{ forloop.counter|stringformat:"02d" }}</span><h3 id="lane-group-{{ group.pk }}-title">{{ group.group_name }}</h3></div>
+                                <strong data-lane-count>{{ group.board_students|length }}</strong>
+                            </header>
+                            <div class="assignment-hierarchy-connector" aria-hidden="true"></div>
+                            <div class="assignment-teacher-nodes" aria-label="ผู้สอนใน {{ group.group_name }}">
+                                {% for teacher in group.teacher_list %}
+                                <div class="assignment-teacher-node"><span aria-hidden="true">{{ teacher.nickname|slice:":1"|default:"อ" }}</span><div><strong>{{ teacher.teacher_display_name }}</strong><small>ผู้ดูแลกลุ่ม</small></div></div>
+                                {% empty %}<div class="assignment-teacher-node assignment-teacher-node--empty">ยังไม่กำหนดผู้สอน</div>{% endfor %}
                             </div>
-                            <strong data-lane-count>{{ group.board_students|length }}</strong>
-                        </header>
+                            <div class="assignment-student-label"><span>STUDENTS</span><strong>นักศึกษาในกลุ่ม</strong></div>
+                        </div>
                         <div class="assignment-lane-list" data-lane-list>
                             {% for student in group.board_students %}
                                 {% include "school/includes/student_group_card.html" with student=student %}
@@ -129,7 +136,7 @@
     <section class="empty-groups">
         <strong>ยังไม่มีกลุ่มที่พร้อมใช้งาน</strong>
         <p>สร้างกลุ่มและกำหนดผู้สอนก่อนเริ่มจัดนักศึกษา</p>
-        <a class="admin-action-link" href="{% url 'admin:school_teachergroup_add' %}">สร้างกลุ่มใน Django Admin</a>
+        <a class="admin-action-link" href="{% url 'school:teacher_group_management' %}">สร้างกลุ่มผู้สอน</a>
     </section>
     {% endif %}
 </main>

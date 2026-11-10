@@ -1,0 +1,5 @@
+<article class="teacher-node-card" draggable="true" tabindex="0" data-teacher-card data-teacher-id="{{ teacher.pk }}" data-teacher-name="{{ teacher.teacher_display_name }}" data-group-id="{{ teacher.managed_group_id|default:'' }}">
+    <span class="teacher-node-card__avatar" aria-hidden="true">{{ teacher.nickname|slice:":1"|default:"อ" }}</span>
+    <div><strong>{{ teacher.teacher_display_name }}</strong><small>{{ teacher.email|default:teacher.username }}</small></div>
+    <button type="button" data-open-move-dialog aria-label="ย้ายกลุ่มให้ {{ teacher.teacher_display_name }}">ย้ายกลุ่ม</button>
+</article>

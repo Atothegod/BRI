@@ -6,11 +6,17 @@ from . import views
 from . import interviews
 from . import line_messages
 from . import student_groups
+from . import teacher_group_management
 
 
 app_name = "school"
 
 urlpatterns = [
+    path(
+        "school-admin/teacher-groups/",
+        teacher_group_management.teacher_group_management,
+        name="teacher_group_management",
+    ),
     path(
         "school-admin/student-groups/",
         student_groups.student_group_assignment,

@@ -10,13 +10,19 @@
 }
 
 .student-group-page .page-heading {
+    display: flex;
     min-height: 142px;
     color: #ffffff;
     background: var(--assignment-forest);
     border-color: #091a12;
     border-left-color: var(--assignment-gold);
     box-shadow: 0 14px 32px rgba(18, 39, 29, 0.16);
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
 }
+
+.student-group-teacher-link { padding: 10px 15px; color: var(--assignment-forest); background: #f0d98e; border: 1px solid #f6e8b8; border-radius: 7px; font-size: .72rem; font-weight: 850; white-space: nowrap; }
 
 .student-group-page .page-heading span {
     color: #e8d392;
@@ -198,7 +204,7 @@
     display: flex;
     width: 304px;
     min-width: 304px;
-    max-height: 66vh;
+    max-height: 72vh;
     overflow: hidden;
     background: #e8eee9;
     border: 1px solid #c9d5cb;
@@ -237,6 +243,15 @@
     justify-content: space-between;
     gap: 10px;
 }
+
+.assignment-hierarchy-root { position: relative; background: #fff; }
+.assignment-hierarchy-connector { width: 2px; height: 18px; margin: 0 auto; background: #91a294; }
+.assignment-teacher-nodes { position: relative; display: grid; padding: 8px 10px 12px; background: #f6f8f6; border-bottom: 1px solid #cfdbd1; gap: 6px; }
+.assignment-teacher-nodes::before { position: absolute; top: 0; right: 28px; left: 28px; height: 1px; background: #b4c1b6; content: ""; }
+.assignment-teacher-node { position: relative; z-index: 1; display: grid; min-width: 0; padding: 7px 8px; background: #fff; border: 1px solid #d3ddd5; border-left: 3px solid var(--assignment-gold); border-radius: 6px; grid-template-columns: 28px minmax(0, 1fr); align-items: center; gap: 7px; }
+.assignment-teacher-node > span { display: grid; width: 28px; height: 28px; color: #fff; background: var(--assignment-sage); border-radius: 50%; font-size: .64rem; font-weight: 900; place-items: center; }
+.assignment-teacher-node strong,.assignment-teacher-node small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.assignment-teacher-node strong{color:var(--assignment-forest);font-size:.67rem}.assignment-teacher-node small{margin-top:1px;color:var(--assignment-muted);font-size:.56rem}.assignment-teacher-node--empty{display:block;color:var(--assignment-muted);font-size:.64rem;text-align:center}
+.assignment-student-label { display: flex; padding: 7px 11px; color: var(--assignment-muted); background: #e8eee9; border-bottom: 1px solid #cfdbd1; justify-content: space-between; font-size: .58rem; }.assignment-student-label span{font-weight:900;letter-spacing:.08em}.assignment-student-label strong{color:var(--assignment-forest)}
 
 .assignment-lane-heading div {
     min-width: 0;
@@ -336,7 +351,7 @@
 
 .student-board-card header {
     display: grid;
-    grid-template-columns: 36px minmax(0, 1fr) 30px;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
     align-items: center;
     gap: 9px;
 }
@@ -377,16 +392,19 @@
 }
 
 .student-move-button {
-    display: grid;
-    width: 30px;
+    display: flex;
+    width: auto;
     height: 30px;
-    padding: 0;
+    padding: 0 7px;
     color: var(--assignment-sage);
     background: #f6f8f6;
     border: 1px solid #d2ddd4;
-    border-radius: 50%;
+    border-radius: 5px;
     cursor: pointer;
-    place-items: center;
+    align-items: center;
+    gap: 4px;
+    font-size: .55rem;
+    font-weight: 850;
 }
 
 .student-move-button:hover,
@@ -397,8 +415,8 @@
 }
 
 .student-move-button svg {
-    width: 16px;
-    height: 16px;
+    width: 13px;
+    height: 13px;
     fill: none;
     stroke: currentColor;
     stroke-width: 2;
@@ -582,6 +600,7 @@
 }
 
 @media (max-width: 900px) {
+    .student-group-page .page-heading { align-items: flex-start; flex-direction: column; }
     .assignment-stats {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }

@@ -12,8 +12,8 @@
             <strong>{{ student.person.full_name }}</strong>
             <small>{% if student.student_id %}{{ student.student_id }}{% else %}ยังไม่มีรหัส{% endif %}{% if student.person.nickname %} · {{ student.person.nickname }}{% endif %}</small>
         </div>
-        <button type="button" class="student-move-button" data-open-move-dialog title="ย้ายกลุ่ม" aria-label="ย้ายกลุ่มให้ {{ student.person.full_name }}">
-            <svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
+        <button type="button" class="student-move-button" data-open-move-dialog title="Assign กลุ่ม" aria-label="Assign กลุ่มให้ {{ student.person.full_name }}">
+            <span>Assign</span><svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
         </button>
     </header>
     <footer>

@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}กลุ่มผู้สอน | BRI{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'school/css/interviews.css' %}?v=20260913-font-3">
+<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261003-nav-dropdown-1">
+<link rel="stylesheet" href="{% static 'school/css/teacher_group_management.css' %}?v=20261111-1">
+{% endblock %}
+{% block content %}
+{% include "school/includes/school_admin_nav.html" %}
+<main class="interviews teacher-group-page">
+    <header class="page-heading teacher-group-hero">
+        <div>
+            <span>BRI TEACHING STRUCTURE</span>
+            <h1>กลุ่มผู้สอน</h1>
+            <p>สร้างกลุ่มและย้ายอาจารย์ระหว่างกลุ่มได้ทันที หนึ่งกลุ่มมีผู้สอนได้หลายคน</p>
+        </div>
+        <button type="button" class="teacher-group-create-trigger" data-open-create-group>+ สร้างกลุ่มใหม่</button>
+    </header>
+
+    <section class="teacher-group-stats" aria-label="สรุปกลุ่มผู้สอน">
+        <div><span>กลุ่มทั้งหมด</span><strong>{{ stats.groups }}</strong></div>
+        <div><span>อาจารย์ทั้งหมด</span><strong data-stat-total>{{ stats.teachers }}</strong></div>
+        <div><span>อยู่ในกลุ่มแล้ว</span><strong data-stat-assigned>{{ stats.assigned }}</strong></div>
+        <div><span>รอจัดกลุ่ม</span><strong data-stat-unassigned>{{ stats.unassigned }}</strong></div>
+    </section>
+
+    {% for message in messages %}<p role="status" class="notice">{{ message }}</p>{% endfor %}
+
+    <section class="teacher-structure" data-teacher-board>
+        <header class="teacher-structure__heading">
+            <div><span>ORGANIZATION MAP</span><h2>ผังทีมผู้สอน</h2></div>
+            <p data-teacher-status role="status" aria-live="polite">ลากการ์ดอาจารย์ไปยังกลุ่ม หรือกด “ย้ายกลุ่ม” บนการ์ด</p>
+        </header>
+
+        <div class="teacher-structure__canvas">
+            <section class="teacher-pool" data-teacher-lane data-group-id="" data-group-name="ยังไม่มีกลุ่ม">
+                <header><div><span>TEACHER POOL</span><h3>อาจารย์รอจัดกลุ่ม</h3></div><strong data-lane-count>{{ unassigned_teachers|length }}</strong></header>
+                <div class="teacher-pool__list" data-lane-list>
+                    {% for teacher in unassigned_teachers %}{% include "school/includes/teacher_group_card.html" with teacher=teacher %}{% endfor %}
+                    <p class="teacher-lane-empty" data-lane-empty{% if unassigned_teachers %} hidden{% endif %}>อาจารย์ทุกคนมีกลุ่มแล้ว</p>
+                </div>
+            </section>
+
+            <div class="teacher-org-root"><span>BRI INSTITUTE</span><strong>Teaching Groups</strong></div>
+            <div class="teacher-org-line" aria-hidden="true"></div>
+            <div class="teacher-group-grid">
+                {% for group in groups %}
+                <section class="teacher-group-node" data-teacher-lane data-group-id="{{ group.pk }}" data-group-name="{{ group.group_name }}">
+                    <header class="teacher-group-node__header">
+                        <div><span>GROUP {{ forloop.counter|stringformat:"02d" }}</span><h3>{{ group.group_name }}</h3></div>
+                        <strong><span data-lane-count>{{ group.managed_teachers|length }}</span> ผู้สอน</strong>
+                    </header>
+                    <div class="teacher-group-node__meta"><span>{{ group.active_student_count }} นักศึกษา</span><a href="{% url 'school:student_group_assignment' %}">จัดนักศึกษา →</a></div>
+                    <div class="teacher-group-node__teachers" data-lane-list>
+                        {% for teacher in group.managed_teachers %}{% include "school/includes/teacher_group_card.html" with teacher=teacher %}{% endfor %}
+                        <p class="teacher-lane-empty" data-lane-empty{% if group.managed_teachers %} hidden{% endif %}>ลากอาจารย์มาวางในกลุ่มนี้</p>
+                    </div>
+                </section>
+                {% empty %}
+                <button type="button" class="teacher-group-first" data-open-create-group><strong>ยังไม่มีกลุ่มผู้สอน</strong><span>สร้างกลุ่มแรกเพื่อเริ่มจัดทีม</span></button>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <dialog class="teacher-group-dialog" id="teacher-group-create-dialog"{% if form.errors %} data-has-errors{% endif %}>
+        <form method="post">
+            {% csrf_token %}
+            <header><span>NEW TEACHING GROUP</span><h2>สร้างกลุ่มผู้สอน</h2><p>ตั้งชื่อที่จำง่าย เช่น Moses, กลุ่ม A หรือชื่อรุ่น</p></header>
+            <div class="teacher-group-dialog__body">
+                <label for="{{ form.group_name.id_for_label }}">ชื่อกลุ่ม</label>
+                {{ form.group_name }}
+                {{ form.group_name.errors }}
+            </div>
+            <footer><button type="button" data-close-create-group>ยกเลิก</button><button type="submit">สร้างกลุ่ม</button></footer>
+        </form>
+    </dialog>
+
+    <dialog class="teacher-move-dialog" id="teacher-move-dialog">
+        <header><span>MOVE TEACHER</span><h2>ย้ายอาจารย์ไปกลุ่ม</h2><p data-dialog-teacher-name></p></header>
+        <div class="teacher-move-options">
+            <button type="button" data-move-target data-group-id=""><strong>ยังไม่มีกลุ่ม</strong><span>นำกลับไปรอจัดกลุ่ม</span></button>
+            {% for group in groups %}<button type="button" data-move-target data-group-id="{{ group.pk }}"><strong>{{ group.group_name }}</strong><span>{{ group.managed_teachers|length }} ผู้สอน · {{ group.active_student_count }} นักศึกษา</span></button>{% endfor %}
+        </div>
+        <footer><button type="button" data-close-move-dialog>ปิด</button></footer>
+    </dialog>
+</main>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'school/js/teacher_group_management.js' %}?v=20261111-1" defer></script>{% endblock %}

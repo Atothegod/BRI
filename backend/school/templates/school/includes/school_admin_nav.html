@@ -10,6 +10,10 @@
                 <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#landmark"></use></svg>
                 <span>ภาพรวม</span>
             </a>
+            <a href="{% url 'school:teacher_group_management' %}"{% if request.resolver_match.url_name == "teacher_group_management" %} class="is-active" aria-current="page"{% endif %}>
+                <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#user"></use></svg>
+                <span>กลุ่มผู้สอน</span>
+            </a>
             <a href="{% url 'school:student_group_assignment' %}"{% if request.resolver_match.url_name == "student_group_assignment" %} class="is-active" aria-current="page"{% endif %}>
                 <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#user"></use></svg>
                 <span>จัดกลุ่มนักศึกษา</span>

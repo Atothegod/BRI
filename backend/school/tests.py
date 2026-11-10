@@ -28,6 +28,7 @@ from .models import (
     AttendanceSession,
     HomeworkAssignment,
     HomeworkSubmission,
+    PaymentSlip,
     Person,
     Student,
     TeacherGroup,
@@ -1277,8 +1278,7 @@ class TeacherFlowTests(TestCase):
         response = self.client.get(reverse("school:student_payment_upload"))
 
         self.assertContains(response, "school/images/payment.jpg")
-        self.assertContains(response, "ค่าธรรมเนียมการศึกษา")
-        self.assertContains(response, "3,990")
+        self.assertContains(response, "สลิปใบใหม่")
         self.assertContains(response, "คัดลอกเลขบัญชี 111-8-33249-7")
         self.assertContains(response, 'data-copy-value="1118332497"')
         self.assertContains(response, "ส่งสลิปให้ตรวจสอบ")
@@ -1337,6 +1337,34 @@ class TeacherFlowTests(TestCase):
         self.assertRedirects(response, reverse("school:student_payment_upload"))
         student.refresh_from_db()
         self.assertTrue(student.payment_slip.name.startswith("payment_slips/"))
+
+    def test_student_can_upload_four_installment_slips(self):
+        person = Person.objects.create(
+            first_name="Installment", last_name="Student", line_user_id="Uinstallments",
+            status=Person.Status.PASSED,
+        )
+        student = Student.objects.get(person=person)
+        session = self.client.session
+        session["line_profile"] = {
+            "line_user_id": person.line_user_id,
+            "line_display_name": "Installment Student",
+            "line_picture_url": "",
+            "verified": True,
+        }
+        session.save()
+        data = {}
+        for index in range(1, 5):
+            suffix = "" if index == 1 else f"_{index}"
+            data[f"payment_slip{suffix}"] = SimpleUploadedFile(
+                f"slip-{index}.gif",
+                b"GIF87a\x01\x00\x01\x00\x80\x01\x00\x00\x00\x00ccc,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;",
+                content_type="image/gif",
+            )
+
+        response = self.client.post(reverse("school:student_payment_upload"), data)
+
+        self.assertRedirects(response, reverse("school:student_payment_upload"))
+        self.assertEqual(student.payment_slips.count(), 4)
 
     def test_student_payment_upload_requires_student_status(self):
         person = Person.objects.create(

@@ -248,10 +248,55 @@
 }
 
 .payment-review-image {
+    position: relative;
     display: block;
     min-height: 260px;
     background: #edf2ed;
 }
+
+.payment-review-images {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2px;
+    background: #dbe5dc;
+}
+
+.payment-review-images--1 { grid-template-columns: 1fr; }
+
+.payment-review-image span {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    left: 8px;
+    padding: 6px 8px;
+    color: #fff;
+    background: rgba(10, 35, 24, 0.84);
+    border-radius: 5px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-align: center;
+}
+
+.payment-review-images .payment-review-image,
+.payment-review-images .payment-review-image img {
+    min-height: 150px;
+}
+
+.payment-review-total {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    align-items: baseline;
+    margin: 14px 0;
+    padding: 12px;
+    color: #20533a;
+    background: #edf7f0;
+    border-radius: 7px;
+}
+
+.payment-review-total strong { margin-left: auto; }
+.payment-review-total small { flex-basis: 100%; }
+.payment-review-total.is-incomplete { color: #8a3418; background: #fff4e8; }
 
 .payment-review-image img {
     width: 100%;

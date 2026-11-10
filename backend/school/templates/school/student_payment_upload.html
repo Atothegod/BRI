@@ -4,7 +4,7 @@
 {% block title %}อัปโหลดสลิป | BRI School of Fivefold{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20261017-line-id-help-1">
+<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20261110-payment-installments-1">
 {% endblock %}
 
 {% block content %}
@@ -59,13 +59,15 @@
             <img src="{% static 'school/images/payment.jpg' %}" alt="ข้อมูลบัญชีสำหรับชำระค่าเทอม BRI 5" width="1200" height="1691">
         </figure>
 
-        <div class="payment-amount-card" aria-label="ค่าธรรมเนียมการศึกษา 3,990 บาท">
-            <div>
-                <span>ค่าธรรมเนียมการศึกษา</span>
-                <small>ยอดที่ต้องชำระ</small>
+        {% if active_slips %}
+        <section class="payment-installment-summary" aria-label="สลิปที่ส่งแล้ว">
+            <div><strong>ส่งแล้ว {{ active_slips|length }} จาก 4 สลิป</strong></div>
+            <small>ทีมงานจะตรวจสอบจากรูปสลิปที่แนบ</small>
+            <div class="payment-submitted-slips">
+                {% for slip in active_slips %}<a href="{{ slip.image.url }}" target="_blank" rel="noopener"><img src="{{ slip.image.url }}" alt="สลิปใบที่ {{ forloop.counter }}"><span>สลิปใบที่ {{ forloop.counter }}</span></a>{% endfor %}
             </div>
-            <strong>3,990 <span>บาท</span></strong>
-        </div>
+        </section>
+        {% endif %}
 
         <div class="payment-bank-actions">
             <button class="button button--secondary payment-copy-button" type="button" data-copy-account data-copy-value="1118332497" aria-describedby="payment-copy-status">
@@ -89,17 +91,20 @@
             {{ form.line_user_id }}
             {{ form.non_field_errors }}
 
-            <div class="field-group{% if form.payment_slip.errors %} has-error{% endif %}">
-                <label class="field-label" for="{{ form.payment_slip.id_for_label }}">รูปสลิปการโอนเงิน</label>
+            {% if available_slip_slots >= 1 %}<div class="payment-slip-upload-row"><div class="field-group{% if form.payment_slip.errors %} has-error{% endif %}">
+                <label class="field-label" for="{{ form.payment_slip.id_for_label }}">สลิปใบใหม่</label>
                 <label class="upload-control" for="{{ form.payment_slip.id_for_label }}">
                     <span class="upload-icon"><svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#upload-cloud"></use></svg></span>
                     <span><strong data-file-label>เลือกรูปสลิป</strong><small>JPG, PNG หรือ WEBP</small></span>
                 </label>
                 {{ form.payment_slip }}
                 {{ form.payment_slip.errors }}
-            </div>
+            </div></div>{% endif %}
+            {% if available_slip_slots >= 2 %}<div class="payment-slip-upload-row payment-slip-upload-row--optional"><div class="field-group"><label class="field-label" for="{{ form.payment_slip_2.id_for_label }}">สลิปเพิ่มเติม (ถ้ามี)</label>{{ form.payment_slip_2 }}{{ form.payment_slip_2.errors }}</div></div>{% endif %}
+            {% if available_slip_slots >= 3 %}<div class="payment-slip-upload-row payment-slip-upload-row--optional"><div class="field-group"><label class="field-label" for="{{ form.payment_slip_3.id_for_label }}">สลิปเพิ่มเติม (ถ้ามี)</label>{{ form.payment_slip_3 }}{{ form.payment_slip_3.errors }}</div></div>{% endif %}
+            {% if available_slip_slots >= 4 %}<div class="payment-slip-upload-row payment-slip-upload-row--optional"><div class="field-group"><label class="field-label" for="{{ form.payment_slip_4.id_for_label }}">สลิปเพิ่มเติม (ถ้ามี)</label>{{ form.payment_slip_4 }}{{ form.payment_slip_4.errors }}</div></div>{% endif %}
 
-            <button class="button button--primary button--submit" type="submit"{% if is_preview %} disabled aria-disabled="true"{% endif %}>
+            <button class="button button--primary button--submit" type="submit"{% if is_preview or not available_slip_slots %} disabled aria-disabled="true"{% endif %}>
                 <span>ส่งสลิปให้ตรวจสอบ</span>
                 <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#check-circle"></use></svg>
             </button>

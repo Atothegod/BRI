@@ -49,6 +49,7 @@ from .models import (
     AttendanceSession,
     HomeworkAssignment,
     HomeworkSubmission,
+    PaymentSlip,
     Person,
     Student,
     TeacherGroup,
@@ -1340,8 +1341,8 @@ def admin_payment_slip_review(request):
 
     if request.method == "POST":
         student = (
-            Student.objects.select_related("person")
-            .filter(pk=request.POST.get("student"), payment_slip__isnull=False)
+            Student.objects.select_related("person").prefetch_related("payment_slips")
+            .filter(pk=request.POST.get("student"), payment_slips__isnull=False)
             .first()
         )
         action = request.POST.get("action")
@@ -1360,6 +1361,9 @@ def admin_payment_slip_review(request):
                     "updated_at",
                 ]
             )
+            student.payment_slips.exclude(status=PaymentSlip.Status.NEEDS_FIX).update(
+                status=PaymentSlip.Status.APPROVED
+            )
             messages.success(request, f"ยืนยันสลิปของ {student.person.full_name} แล้ว")
         elif action == "needs_fix":
             student.is_paid = False
@@ -1373,6 +1377,9 @@ def admin_payment_slip_review(request):
                     "updated_at",
                 ]
             )
+            student.payment_slips.filter(status=PaymentSlip.Status.PENDING).update(
+                status=PaymentSlip.Status.NEEDS_FIX
+            )
             messages.warning(request, f"ส่งสถานะให้แก้ไขสลิปของ {student.person.full_name} แล้ว")
         else:
             messages.error(request, "คำสั่งตรวจสลิปไม่ถูกต้อง")
@@ -1385,9 +1392,16 @@ def admin_payment_slip_review(request):
 
     students = (
         Student.objects.select_related("person", "group")
-        .exclude(payment_slip="")
-        .exclude(payment_slip__isnull=True)
+        .filter(payment_slips__isnull=False)
+        .prefetch_related(
+            Prefetch(
+                "payment_slips",
+                queryset=PaymentSlip.objects.order_by("created_at", "pk"),
+                to_attr="prefetched_payment_slips",
+            )
+        )
         .order_by("-updated_at", "student_id")
+        .distinct()
     )
     if status == "pending":
         students = students.filter(is_paid=False).exclude(
@@ -1407,21 +1421,21 @@ def admin_payment_slip_review(request):
         )
 
     counts = {
-        "pending": Student.objects.exclude(payment_slip="")
-        .exclude(payment_slip__isnull=True)
+        "pending": Student.objects.filter(payment_slips__isnull=False)
         .filter(is_paid=False)
         .exclude(admin_validation_status=Student.AdminValidationStatus.NEEDS_FIX)
+        .distinct()
         .count(),
-        "paid": Student.objects.exclude(payment_slip="")
-        .exclude(payment_slip__isnull=True)
+        "paid": Student.objects.filter(payment_slips__isnull=False)
         .filter(is_paid=True)
+        .distinct()
         .count(),
-        "needs_fix": Student.objects.exclude(payment_slip="")
-        .exclude(payment_slip__isnull=True)
+        "needs_fix": Student.objects.filter(payment_slips__isnull=False)
         .filter(admin_validation_status=Student.AdminValidationStatus.NEEDS_FIX)
+        .distinct()
         .count(),
-        "all": Student.objects.exclude(payment_slip="")
-        .exclude(payment_slip__isnull=True)
+        "all": Student.objects.filter(payment_slips__isnull=False)
+        .distinct()
         .count(),
     }
     page = Paginator(students, 30).get_page(request.GET.get("page"))
@@ -2298,6 +2312,12 @@ def student_payment_upload(request):
     )
     uploaded_student = None
 
+    active_slips = []
+    if student:
+        active_slips = list(
+            student.payment_slips.exclude(status=PaymentSlip.Status.NEEDS_FIX)
+        )
+
     if should_bind_form and form.is_valid():
         uploaded_student = form.save()
         messages.success(
@@ -2315,6 +2335,8 @@ def student_payment_upload(request):
             "payment_state": payment_state,
             "person": person,
             "student": student,
+            "active_slips": active_slips,
+            "available_slip_slots": max(Student.MAX_PAYMENT_SLIPS - len(active_slips), 0),
             "is_preview": is_preview,
             "line_return_url": settings.LINE_RETURN_URL,
             **get_liff_context(request, reload_on_sync=not bool(line_user_id)),

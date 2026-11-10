@@ -9,7 +9,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
-from .models import HomeworkSubmission, Person, Student
+from .models import HomeworkSubmission, PaymentSlip, Person, Student
 from .teacher_groups import ensure_default_teacher_group
 
 
@@ -739,6 +739,9 @@ class PaymentSlipUploadForm(forms.Form):
             }
         )
     )
+    payment_slip_2 = forms.ImageField(required=False, widget=forms.ClearableFileInput(attrs={"class": "file-input", "accept": "image/jpeg,image/png,image/webp"}))
+    payment_slip_3 = forms.ImageField(required=False, widget=forms.ClearableFileInput(attrs={"class": "file-input", "accept": "image/jpeg,image/png,image/webp"}))
+    payment_slip_4 = forms.ImageField(required=False, widget=forms.ClearableFileInput(attrs={"class": "file-input", "accept": "image/jpeg,image/png,image/webp"}))
 
     def __init__(self, *args, line_profile=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -766,13 +769,33 @@ class PaymentSlipUploadForm(forms.Form):
                 "ระบบยืนยันการชำระเงินของคุณเรียบร้อยแล้ว ไม่ต้องส่งสลิปซ้ำ"
             )
 
+        self.existing_slips = list(
+            self.student.payment_slips.exclude(status=PaymentSlip.Status.NEEDS_FIX)
+        )
+        available_slots = Student.MAX_PAYMENT_SLIPS - len(self.existing_slips)
+        submitted = []
+        for index in range(1, Student.MAX_PAYMENT_SLIPS + 1):
+            suffix = "" if index == 1 else f"_{index}"
+            image = cleaned_data.get(f"payment_slip{suffix}")
+            if image:
+                submitted.append(image)
+        if len(submitted) > available_slots:
+            raise forms.ValidationError(f"แนบสลิปได้สูงสุด {Student.MAX_PAYMENT_SLIPS} ใบ")
+        cleaned_data["submitted_slips"] = submitted
+
         cleaned_data["line_user_id"] = line_user_id
         return cleaned_data
 
     def save(self):
-        self.student.payment_slip = self.cleaned_data["payment_slip"]
+        submitted = self.cleaned_data["submitted_slips"]
+        PaymentSlip.objects.bulk_create([
+            PaymentSlip(student=self.student, image=image)
+            for image in submitted
+        ])
+        self.student.payment_slip = submitted[-1]
         self.student.is_paid = False
-        self.student.save(update_fields=["payment_slip", "is_paid"])
+        self.student.admin_validation_status = Student.AdminValidationStatus.PENDING
+        self.student.save(update_fields=["payment_slip", "is_paid", "admin_validation_status"])
         return self.student
 
 

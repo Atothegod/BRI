@@ -541,6 +541,7 @@ class TeacherGroup(TimeStampedModel):
 
 
 class Student(TimeStampedModel):
+    MAX_PAYMENT_SLIPS = 4
     class AdminValidationStatus(models.TextChoices):
         PENDING = "pending", "Pending"
         APPROVED = "approved", "Approved"
@@ -589,6 +590,33 @@ class Student(TimeStampedModel):
 
     def __str__(self):
         return f"{self.student_id} - {self.person.full_name}"
+
+    @property
+    def active_payment_slips(self):
+        slips = getattr(self, "prefetched_payment_slips", None)
+        if slips is None:
+            return list(self.payment_slips.exclude(status=PaymentSlip.Status.NEEDS_FIX))
+        return [slip for slip in slips if slip.status != PaymentSlip.Status.NEEDS_FIX]
+
+class PaymentSlip(TimeStampedModel):
+    class Status(models.TextChoices):
+        PENDING = "pending", "รอตรวจ"
+        APPROVED = "approved", "ยืนยันแล้ว"
+        NEEDS_FIX = "needs_fix", "ต้องแก้ไข"
+
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name="payment_slips",
+    )
+    image = models.ImageField(upload_to="payment_slips/")
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+
+    class Meta:
+        ordering = ("created_at", "pk")
+
+    def __str__(self):
+        return f"{self.student.student_id} - สลิป #{self.pk or '-'}"
 
 
 def line_notification_sent(person, key):

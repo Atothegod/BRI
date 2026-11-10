@@ -4,7 +4,7 @@
 {% block title %}ตรวจสลิปการโอนเงิน | BRI{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261003-nav-dropdown-1">
+<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261110-payment-installments-1">
 {% endblock %}
 
 {% block content %}
@@ -40,9 +40,9 @@
         <section class="payment-review-grid" aria-label="รายการสลิป">
             {% for student in page_obj %}
             <article class="payment-review-card">
-                <a class="payment-review-image" href="{{ student.payment_slip.url }}" target="_blank" rel="noopener">
-                    <img src="{{ student.payment_slip.url }}" alt="สลิปของ {{ student.person.full_name }}">
-                </a>
+                <div class="payment-review-images payment-review-images--{{ student.prefetched_payment_slips|length }}">
+                    {% for slip in student.prefetched_payment_slips %}<a class="payment-review-image" href="{{ slip.image.url }}" target="_blank" rel="noopener"><img src="{{ slip.image.url }}" alt="สลิปใบที่ {{ forloop.counter }} ของ {{ student.person.full_name }}"><span>สลิปใบที่ {{ forloop.counter }}{% if slip.status == 'needs_fix' %} · ต้องแก้ไข{% endif %}</span></a>{% endfor %}
+                </div>
                 <form method="post" class="payment-review-body">
                     {% csrf_token %}
                     <input type="hidden" name="student" value="{{ student.pk }}">
@@ -60,12 +60,13 @@
                         <span class="admin-status admin-status--pending">รอตรวจ</span>
                         {% endif %}
                     </div>
+                    <div class="payment-review-total"><span>สลิปที่ส่งมา</span><strong>{{ student.active_payment_slips|length }} ใบ</strong></div>
                     <label class="admin-textarea-field">
                         <span>หมายเหตุการตรวจ</span>
                         <textarea name="payment_review_note" rows="3" placeholder="เช่น จำนวนเงินถูกต้อง / รูปไม่ชัด / ต้องส่งใหม่">{{ student.payment_review_note }}</textarea>
                     </label>
                     <div class="payment-review-actions">
-                        <button type="submit" name="action" value="approve">ยืนยันสลิป</button>
+                        <button type="submit" name="action" value="approve">ยืนยันยอดชำระ</button>
                         <button type="submit" name="action" value="needs_fix" class="secondary">ให้แก้ไข</button>
                     </div>
                 </form>

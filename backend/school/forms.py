@@ -670,17 +670,6 @@ class TeacherLoginForm(AuthenticationForm):
 
 
 class TeacherSignupForm(UserCreationForm):
-    nickname = forms.CharField(
-        max_length=100,
-        label="ชื่อที่แสดงหลังคำว่า อาจารย์",
-        widget=forms.TextInput(
-            attrs={
-                "class": CONTROL_CLASS,
-                "autocomplete": "nickname",
-                "placeholder": "เช่น เอก",
-            }
-        ),
-    )
     email = forms.EmailField(
         widget=forms.EmailInput(
             attrs={
@@ -693,7 +682,7 @@ class TeacherSignupForm(UserCreationForm):
 
     class Meta(UserCreationForm.Meta):
         model = get_user_model()
-        fields = ("email", "nickname")
+        fields = ("email",)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -714,12 +703,44 @@ class TeacherSignupForm(UserCreationForm):
     def save(self, commit=True):
         user = super().save(commit=False)
         user.role = user.Role.TEACHER
-        user.nickname = self.cleaned_data["nickname"].strip()
         user.email = self.cleaned_data["email"]
         user.username = user.email
 
         if commit:
             user.save()
+        return user
+
+
+class TeacherDisplayNameForm(forms.ModelForm):
+    nickname = forms.CharField(
+        max_length=100,
+        label="ชื่อเล่นสำหรับแสดงผล",
+        widget=forms.TextInput(attrs={
+            "class": CONTROL_CLASS,
+            "autocomplete": "nickname",
+            "placeholder": "เช่น เอก",
+            "autofocus": True,
+        }),
+    )
+
+    class Meta:
+        model = get_user_model()
+        fields = ("nickname",)
+
+    def clean_nickname(self):
+        nickname = self.cleaned_data["nickname"].strip()
+        if nickname.startswith("อาจารย์"):
+            nickname = nickname.removeprefix("อาจารย์").strip()
+        elif nickname.startswith("อ."):
+            nickname = nickname.removeprefix("อ.").strip()
+        if not nickname:
+            raise forms.ValidationError("กรุณาระบุชื่อเล่นที่ต้องการแสดง")
+        return nickname
+
+    @transaction.atomic
+    def save(self, commit=True):
+        user = super().save(commit=commit)
+        if commit:
             ensure_default_teacher_group(user)
         return user
 

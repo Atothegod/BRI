@@ -671,7 +671,7 @@ class TeacherFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Continue with Google")
         self.assertContains(response, reverse("google_login"))
-        self.assertContains(response, "ชื่อเล่น")
+        self.assertNotContains(response, 'name="nickname"')
         self.assertNotContains(response, "ชื่อผู้ใช้")
         self.assertNotContains(response, 'name="username"')
 
@@ -743,7 +743,6 @@ class TeacherFlowTests(TestCase):
             reverse("school:teacher_register"),
             {
                 "email": "teacher@example.com",
-                "nickname": "อ.เอก",
                 "password1": "StrongPass12345",
                 "password2": "StrongPass12345",
             },
@@ -751,20 +750,36 @@ class TeacherFlowTests(TestCase):
 
         self.assertRedirects(
             response,
-            reverse("school:teacher_dashboard"),
+            reverse("school:teacher_profile"),
             fetch_redirect_response=False,
         )
         user = get_user_model().objects.get(username="teacher@example.com")
         self.assertEqual(user.role, user.Role.TEACHER)
         self.assertEqual(user.email, "teacher@example.com")
-        self.assertEqual(user.nickname, "อ.เอก")
+        self.assertEqual(user.nickname, "")
         self.assertEqual(user.google_email, "")
         self.assertIsNone(user.google_connected_at)
         self.assertFalse(user.is_teacher_approved)
         self.assertIsNone(user.teacher_approved_at)
-        self.assertTrue(
-            TeacherGroup.objects.filter(teacher=user, group_name="อ.เอก", is_active=True).exists()
+        self.assertFalse(TeacherGroup.objects.filter(teacher=user).exists())
+
+    def test_teacher_profile_sets_same_display_name_after_email_login(self):
+        User = get_user_model()
+        teacher = User.objects.create_user(
+            username="profile-teacher", email="profile@example.com", password="pass",
+            role=User.Role.TEACHER,
         )
+        self.client.force_login(teacher)
+
+        page = self.client.get(reverse("school:teacher_profile"))
+        response = self.client.post(reverse("school:teacher_profile"), {"nickname": "อาจารย์เอก"})
+
+        self.assertContains(page, "อยากให้เราเรียกคุณว่าอะไร?")
+        self.assertRedirects(response, reverse("school:teacher_dashboard"), fetch_redirect_response=False)
+        teacher.refresh_from_db()
+        self.assertEqual(teacher.nickname, "เอก")
+        self.assertEqual(teacher.teacher_display_name, "อาจารย์เอก")
+        self.assertTrue(TeacherGroup.objects.filter(teacher=teacher, group_name="เอก").exists())
 
     def test_registered_pending_teacher_sees_dashboard_pending_page(self):
         User = get_user_model()
@@ -773,6 +788,7 @@ class TeacherFlowTests(TestCase):
             email="teacher@example.com",
             password="StrongPass12345",
             role=User.Role.TEACHER,
+            nickname="เอก",
             is_teacher_approved=False,
         )
         self.client.force_login(teacher)
@@ -816,6 +832,7 @@ class TeacherFlowTests(TestCase):
             email="teacher@example.com",
             password="StrongPass12345",
             role=User.Role.TEACHER,
+            nickname="เอก",
             is_teacher_approved=False,
         )
 
@@ -840,12 +857,37 @@ class TeacherFlowTests(TestCase):
         self.assertContains(response, "ส่งคำขอเรียบร้อยแล้ว")
         self.assertContains(response, "กรุณากลับมาใหม่")
 
+    def test_teacher_without_display_name_is_sent_to_profile_after_login(self):
+        User = get_user_model()
+        User.objects.create_user(
+            username="teacher-without-name",
+            email="without-name@example.com",
+            password="StrongPass12345",
+            role=User.Role.TEACHER,
+        )
+
+        response = self.client.post(
+            reverse("school:teacher_login"),
+            {"username": "without-name@example.com", "password": "StrongPass12345"},
+            follow=True,
+        )
+
+        self.assertEqual(
+            response.redirect_chain,
+            [
+                (reverse("school:post_login_redirect"), 302),
+                (reverse("school:teacher_profile"), 302),
+            ],
+        )
+        self.assertContains(response, "อยากให้เราเรียกคุณว่าอะไร?")
+
     def test_approved_teacher_post_login_redirects_to_teacher_dashboard(self):
         User = get_user_model()
         teacher = User.objects.create_user(
             username="teacher1",
             password="pass",
             role=User.Role.TEACHER,
+            nickname="เอก",
             is_staff=True,
             is_teacher_approved=True,
         )
@@ -862,6 +904,7 @@ class TeacherFlowTests(TestCase):
             email="teacher@example.com",
             password="StrongPass12345",
             role=User.Role.TEACHER,
+            nickname="เอก",
             is_teacher_approved=True,
         )
 
@@ -1007,6 +1050,7 @@ class TeacherFlowTests(TestCase):
             username="teacher1",
             password="pass",
             role=User.Role.TEACHER,
+            nickname="เอก",
             is_teacher_approved=False,
         )
 
@@ -1030,6 +1074,7 @@ class TeacherFlowTests(TestCase):
             username="teacher2",
             password="pass",
             role=User.Role.TEACHER,
+            nickname="เมตริก",
             is_teacher_approved=True,
         )
         group = TeacherGroup.objects.create(teacher=teacher, group_name="กลุ่ม A")
@@ -1055,6 +1100,7 @@ class TeacherFlowTests(TestCase):
             username="metrics-teacher",
             password="pass",
             role=User.Role.TEACHER,
+            nickname="เจ้าของกลุ่ม",
             is_teacher_approved=True,
         )
         group = TeacherGroup.objects.create(teacher=teacher, group_name="Metrics Group")
@@ -1130,6 +1176,7 @@ class TeacherFlowTests(TestCase):
             username="owner-teacher",
             password="pass",
             role=User.Role.TEACHER,
+            nickname="เจ้าของกลุ่ม",
             is_teacher_approved=True,
         )
         other_teacher = User.objects.create_user(

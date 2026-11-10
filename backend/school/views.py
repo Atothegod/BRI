@@ -32,6 +32,7 @@ from .forms import (
     PersonForm,
     REGION_OPTIONS,
     TeacherLoginForm,
+    TeacherDisplayNameForm,
     TeacherSignupForm,
 )
 from .line import (
@@ -130,6 +131,8 @@ def authenticated_home_url(user):
         return "school:admin_overview_dashboard"
     if is_operation(user):
         return "school:admin_payment_slip_review"
+    if is_teacher(user) and not user.nickname.strip():
+        return "school:teacher_profile"
     if can_view_teacher_dashboard(user):
         return "school:teacher_dashboard"
     if is_teacher(user):
@@ -593,7 +596,7 @@ def teacher_register(request):
     if request.method == "POST" and form.is_valid():
         user = form.save()
         login(request, user, backend="django.contrib.auth.backends.ModelBackend")
-        return redirect("school:teacher_dashboard")
+        return redirect("school:teacher_profile")
 
     return render(
         request,
@@ -608,11 +611,30 @@ def post_login_redirect(request):
         return redirect("school:admin_overview_dashboard")
     if is_operation(request.user):
         return redirect("school:admin_payment_slip_review")
+    if is_teacher(request.user) and not request.user.nickname.strip():
+        return redirect("school:teacher_profile")
     if can_view_teacher_dashboard(request.user):
         return redirect("school:teacher_dashboard")
     if is_teacher(request.user):
         return redirect("school:teacher_dashboard")
     return redirect("school:registration")
+
+
+@login_required
+def teacher_profile(request):
+    if not is_teacher(request.user):
+        if is_school_admin(request.user):
+            return redirect("school:admin_overview_dashboard")
+        raise PermissionDenied
+    if request.user.nickname.strip() and request.method != "POST":
+        return redirect("school:teacher_dashboard")
+
+    form = TeacherDisplayNameForm(request.POST or None, instance=request.user)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, f"ตั้งชื่อที่แสดงเป็น {request.user.teacher_display_name} เรียบร้อยแล้ว")
+        return redirect("school:teacher_dashboard")
+    return render(request, "school/teacher_profile.html", {"form": form})
 
 
 @login_required
@@ -630,6 +652,8 @@ def teacher_pending_approval(request):
 
 @login_required
 def teacher_dashboard(request):
+    if is_teacher(request.user) and not request.user.nickname.strip():
+        return redirect("school:teacher_profile")
     if not can_view_teacher_dashboard(request.user):
         if not is_teacher(request.user):
             raise PermissionDenied
@@ -894,6 +918,8 @@ def parse_teacher_calendar_month(value):
 @login_required
 @never_cache
 def teacher_calendar(request):
+    if is_teacher(request.user) and not request.user.nickname.strip():
+        return redirect("school:teacher_profile")
     if not can_view_teacher_dashboard(request.user):
         if not is_teacher(request.user):
             raise PermissionDenied

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}ตั้งชื่อผู้สอน | BRI School of Fivefold{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'school/css/teacher_auth.css' %}?v=20261111-profile-1">{% endblock %}
+
+{% block content %}
+<main class="teacher-auth-page">
+    <section class="teacher-auth-shell" aria-labelledby="teacher-profile-title">
+        <a class="teacher-auth-brand" href="{% url 'school:registration' %}" aria-label="BRI School of Fivefold">{% include "school/includes/brand_logo.html" with variant="success" %}</a>
+        <header class="teacher-auth-heading">
+            <span>ตั้งค่าโปรไฟล์ผู้สอน</span>
+            <h1 id="teacher-profile-title">อยากให้เราเรียกคุณว่าอะไร?</h1>
+            <p>ตั้งชื่อครั้งเดียวเพื่อใช้แสดงใน Dashboard รายชื่อกลุ่ม และหน้าของนักเรียน</p>
+        </header>
+
+        {% if form.errors %}<div class="form-alert" role="alert"><svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#info"></use></svg><div><strong>กรุณาตรวจสอบชื่อที่แสดง</strong>{{ form.non_field_errors }}</div></div>{% endif %}
+
+        <div class="teacher-display-preview" aria-live="polite">
+            <span>ตัวอย่างชื่อที่แสดง</span>
+            <strong data-teacher-name-preview>อาจารย์{% if form.nickname.value %}{{ form.nickname.value }}{% else %}ชื่อเล่น{% endif %}</strong>
+        </div>
+
+        <form class="teacher-auth-form" method="post" novalidate>
+            {% csrf_token %}
+            <div class="field-group{% if form.nickname.errors %} has-error{% endif %}">
+                <label class="field-label" for="{{ form.nickname.id_for_label }}">ชื่อเล่น</label>
+                {{ form.nickname }}
+                {{ form.nickname.errors }}
+                <small>ไม่ต้องพิมพ์คำว่า “อาจารย์” ระบบจะเติมให้โดยอัตโนมัติ</small>
+            </div>
+            <button class="teacher-auth-submit" type="submit"><span>บันทึกและดำเนินการต่อ</span><svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg></button>
+        </form>
+
+        <form class="teacher-profile-logout" method="post" action="{% url 'school:logout' %}">{% csrf_token %}<button type="submit">ออกจากระบบ</button></form>
+    </section>
+</main>
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'school/js/teacher_profile.js' %}?v=20261111-profile-1" defer></script>{% endblock %}

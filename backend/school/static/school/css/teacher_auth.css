@@ -8,6 +8,37 @@
     --auth-danger: #b42318;
 }
 
+.teacher-display-preview {
+    display: grid;
+    margin: 18px 0;
+    padding: 18px;
+    color: #ffffff;
+    background: linear-gradient(135deg, #173d2b, #42634e);
+    border-left: 5px solid #d6b75f;
+    border-radius: 10px;
+    gap: 5px;
+}
+
+.teacher-display-preview span {
+    color: #d8e4db;
+    font-size: .72rem;
+    font-weight: 750;
+}
+
+.teacher-display-preview strong {
+    font-size: 1.55rem;
+}
+
+.teacher-auth-form .field-group > small {
+    display: block;
+    margin-top: 6px;
+    color: #647168;
+    font-size: .72rem;
+}
+
+.teacher-profile-logout { margin-top: 12px; text-align: center; }
+.teacher-profile-logout button { padding: 8px 12px; color: #526159; background: transparent; border: 0; border-bottom: 1px solid currentColor; cursor: pointer; }
+
 *,
 *::before,
 *::after {

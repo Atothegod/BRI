@@ -57,13 +57,6 @@
                 {{ form.email.errors }}
             </div>
 
-            <div class="field-group{% if form.nickname.errors %} has-error{% endif %}">
-                <label class="field-label" for="{{ form.nickname.id_for_label }}">ชื่อเล่นสำหรับแสดงผล</label>
-                {{ form.nickname }}
-                {{ form.nickname.errors }}
-                <small>ระบบจะแสดงเป็น “อาจารย์ชื่อเล่น” เช่น อาจารย์เอก</small>
-            </div>
-
             <div class="field-group{% if form.password1.errors %} has-error{% endif %}">
                 <label class="field-label" for="{{ form.password1.id_for_label }}">รหัสผ่าน</label>
                 {{ form.password1 }}

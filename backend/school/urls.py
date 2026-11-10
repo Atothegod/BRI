@@ -83,6 +83,7 @@ urlpatterns = [
     path("school-admin/attendance/qr/", views.admin_attendance_qr, name="admin_attendance_qr"),
     path("attendance/check-in/<str:token>/", views.attendance_check_in, name="attendance_check_in"),
     path("teachers/register/", views.teacher_register, name="teacher_register"),
+    path("teachers/profile/", views.teacher_profile, name="teacher_profile"),
     path("teachers/pending/", views.teacher_pending_approval, name="teacher_pending_approval"),
     path("teachers/dashboard/", views.teacher_dashboard, name="teacher_dashboard"),
     path("teachers/calendar/", views.teacher_calendar, name="teacher_calendar"),

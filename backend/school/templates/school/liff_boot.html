@@ -4,22 +4,35 @@
 {% block title %}กำลังเปิดหน้า | BRI School of Fivefold{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20260914-journey-1">
+<link rel="stylesheet" href="{% static 'school/css/registration.css' %}?v=20261111-liff-loader-1">
 {% endblock %}
 
 {% block content %}
-<main class="success-page liff-boot-page">
-    <section class="success-shell liff-boot-shell" aria-labelledby="liff-boot-title">
-        <a class="mobile-brand success-brand" href="{% url 'school:registration' %}" aria-label="BRI School of Fivefold">
+<main class="liff-loader-page">
+    <div class="liff-loader-glow liff-loader-glow--one" aria-hidden="true"></div>
+    <div class="liff-loader-glow liff-loader-glow--two" aria-hidden="true"></div>
+    <section class="liff-loader-shell" aria-labelledby="liff-boot-title" aria-describedby="liff-boot-description" role="status" aria-live="polite">
+        <div class="liff-loader-brand" aria-label="BRI School of Fivefold">
             {% include "school/includes/brand_logo.html" with variant="success" %}
-        </a>
-
-        <div class="success-mark liff-boot-mark" aria-hidden="true">
-            <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
         </div>
-        <span class="eyebrow">LINE</span>
-        <h1 id="liff-boot-title">กำลังเปิดหน้าที่เลือก</h1>
-        <p class="success-lead">กรุณารอสักครู่ ระบบกำลังเชื่อมต่อกับ LINE</p>
+
+        <div class="liff-loader-visual" aria-hidden="true">
+            <span class="liff-loader-orbit liff-loader-orbit--outer"></span>
+            <span class="liff-loader-orbit liff-loader-orbit--inner"></span>
+            <span class="liff-loader-core">BRI</span>
+        </div>
+
+        <span class="liff-loader-eyebrow"><i aria-hidden="true"></i> SECURE LINE ACCESS</span>
+        <h1 id="liff-boot-title">กำลังเปิด My Account</h1>
+        <p id="liff-boot-description">กำลังยืนยันบัญชีและเตรียม Dashboard ของคุณ</p>
+
+        <div class="liff-loader-progress" aria-hidden="true"><span></span></div>
+        <div class="liff-loader-steps" aria-hidden="true">
+            <span>ยืนยัน LINE</span>
+            <span>ตรวจสอบบัญชี</span>
+            <span>เปิด Dashboard</span>
+        </div>
+        <small>ระบบจะพาคุณไปต่อโดยอัตโนมัติ</small>
     </section>
 </main>
 {% endblock %}

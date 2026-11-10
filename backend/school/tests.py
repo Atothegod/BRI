@@ -1850,7 +1850,7 @@ class LiffFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "school/liff_boot.html")
-        self.assertContains(response, "กำลังเปิดหน้าที่เลือก")
+        self.assertContains(response, "กำลังเปิด My Account")
         self.assertContains(response, "liff_bridge.js")
         self.assertNotContains(response, "registration-form")
 
@@ -1862,7 +1862,7 @@ class LiffFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "school/liff_boot.html")
-        self.assertContains(response, "กำลังเปิดหน้าที่เลือก")
+        self.assertContains(response, "กำลังเปิด My Account")
         self.assertNotContains(response, "registration-form")
 
 
@@ -1891,4 +1891,4 @@ class LocalDevLiffDisabledTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "school/registration.html")
-        self.assertNotContains(response, "กำลังเปิดหน้าที่เลือก")
+        self.assertNotContains(response, "กำลังเปิด My Account")

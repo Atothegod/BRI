@@ -2754,13 +2754,212 @@ select.form-control {
     gap: 10px;
 }
 
-.liff-boot-mark {
-    animation: liffPulse 1.4s ease-in-out infinite;
+.liff-loader-page {
+    position: relative;
+    display: grid;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: max(28px, env(safe-area-inset-top)) 22px max(28px, env(safe-area-inset-bottom));
+    overflow: hidden;
+    color: #f8f4e9;
+    background:
+        radial-gradient(circle at 50% 42%, rgba(91, 128, 102, 0.3), transparent 34%),
+        linear-gradient(145deg, #071a12 0%, #102d20 52%, #07170f 100%);
+    isolation: isolate;
+    place-items: center;
 }
 
-@keyframes liffPulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.06); }
+.liff-loader-page::before {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    content: "";
+    opacity: 0.16;
+    background-image: linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
+    background-size: 42px 42px;
+    mask-image: linear-gradient(to bottom, transparent, #000 20%, #000 75%, transparent);
+}
+
+.liff-loader-glow {
+    position: absolute;
+    z-index: -1;
+    width: 320px;
+    height: 320px;
+    filter: blur(18px);
+    opacity: 0.23;
+    background: #c9a94e;
+    border-radius: 50%;
+    animation: liffGlow 5s ease-in-out infinite alternate;
+}
+
+.liff-loader-glow--one { top: -190px; right: -150px; }
+.liff-loader-glow--two { bottom: -220px; left: -160px; animation-delay: -2.5s; }
+
+.liff-loader-shell {
+    display: flex;
+    width: min(100%, 470px);
+    min-height: 570px;
+    padding: 32px 28px 30px;
+    align-items: center;
+    text-align: center;
+    background: linear-gradient(150deg, rgba(255,255,255,.1), rgba(255,255,255,.035));
+    border: 1px solid rgba(234, 213, 151, 0.25);
+    border-radius: 28px;
+    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255,255,255,.12);
+    backdrop-filter: blur(18px);
+    flex-direction: column;
+    animation: liffShellIn 650ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+.liff-loader-brand {
+    width: fit-content;
+    margin-bottom: 46px;
+    padding: 7px 13px;
+    background: rgba(3, 17, 11, 0.52);
+    border: 1px solid rgba(255,255,255,.09);
+    border-radius: 9px;
+}
+
+.liff-loader-brand .brand-logo-frame { width: 184px; height: 44px; }
+.liff-loader-brand .brand-logo-frame img { width: 262px; height: 262px; }
+
+.liff-loader-visual {
+    position: relative;
+    display: grid;
+    width: 148px;
+    height: 148px;
+    margin-bottom: 36px;
+    place-items: center;
+}
+
+.liff-loader-orbit {
+    position: absolute;
+    border-radius: 50%;
+}
+
+.liff-loader-orbit--outer {
+    inset: 0;
+    border: 1px solid rgba(224, 192, 101, 0.24);
+    border-top: 2px solid #dfc16a;
+    border-right: 2px solid rgba(223, 193, 106, 0.62);
+    box-shadow: 0 0 28px rgba(210, 175, 78, 0.13);
+    animation: liffSpin 1.7s linear infinite;
+}
+
+.liff-loader-orbit--inner {
+    inset: 14px;
+    border: 1px solid rgba(215, 242, 224, 0.16);
+    border-bottom: 2px solid #bde0c8;
+    animation: liffSpinReverse 2.4s linear infinite;
+}
+
+.liff-loader-core {
+    display: grid;
+    width: 94px;
+    height: 94px;
+    color: #f5e7b9;
+    background: radial-gradient(circle at 35% 30%, #315a43, #173526 66%, #10281c);
+    border: 1px solid rgba(235, 211, 141, 0.32);
+    border-radius: 50%;
+    box-shadow: 0 12px 34px rgba(0,0,0,.28), inset 0 1px 12px rgba(255,255,255,.08);
+    font-family: Georgia, serif;
+    font-size: 1.45rem;
+    letter-spacing: .08em;
+    place-items: center;
+    animation: liffCorePulse 2s ease-in-out infinite;
+}
+
+.liff-loader-eyebrow {
+    display: inline-flex;
+    margin-bottom: 10px;
+    color: #d9bd6a;
+    font-size: .68rem;
+    font-weight: 850;
+    letter-spacing: .16em;
+    align-items: center;
+    gap: 8px;
+}
+
+.liff-loader-eyebrow i {
+    width: 7px;
+    height: 7px;
+    background: #8de6a7;
+    border-radius: 50%;
+    box-shadow: 0 0 12px #72d991;
+    animation: liffSignal 1.4s ease-in-out infinite;
+}
+
+.liff-loader-shell h1 {
+    margin: 0;
+    color: #fffdf7;
+    font-size: clamp(1.7rem, 7vw, 2.25rem);
+    line-height: 1.2;
+    letter-spacing: -.025em;
+}
+
+.liff-loader-shell p {
+    margin: 10px 0 25px;
+    color: rgba(240, 244, 240, 0.72);
+    font-size: .98rem;
+    line-height: 1.5;
+}
+
+.liff-loader-progress {
+    width: 100%;
+    height: 4px;
+    overflow: hidden;
+    background: rgba(255,255,255,.09);
+    border-radius: 999px;
+}
+
+.liff-loader-progress span {
+    display: block;
+    width: 48%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, #dfbf65, #a8d8b6, transparent);
+    border-radius: inherit;
+    animation: liffProgress 1.5s ease-in-out infinite;
+}
+
+.liff-loader-steps {
+    display: flex;
+    width: 100%;
+    margin-top: 12px;
+    color: rgba(239, 242, 238, 0.54);
+    font-size: .66rem;
+    font-weight: 650;
+    justify-content: space-between;
+}
+
+.liff-loader-shell small {
+    margin-top: auto;
+    padding-top: 28px;
+    color: rgba(239, 242, 238, 0.48);
+    font-size: .72rem;
+}
+
+@keyframes liffSpin { to { transform: rotate(360deg); } }
+@keyframes liffSpinReverse { to { transform: rotate(-360deg); } }
+@keyframes liffCorePulse { 50% { transform: scale(.96); box-shadow: 0 8px 26px rgba(0,0,0,.25), 0 0 26px rgba(194,224,202,.09); } }
+@keyframes liffSignal { 50% { opacity: .45; transform: scale(.75); } }
+@keyframes liffProgress { from { transform: translateX(-120%); } to { transform: translateX(220%); } }
+@keyframes liffGlow { to { opacity: .36; transform: scale(1.18) translate3d(12px, 16px, 0); } }
+@keyframes liffShellIn { from { opacity: 0; transform: translateY(14px) scale(.985); } to { opacity: 1; transform: none; } }
+
+@media (max-width: 480px) {
+    .liff-loader-shell { min-height: min(610px, calc(100dvh - 52px)); padding: 28px 22px 24px; border-radius: 24px; }
+    .liff-loader-brand { margin-bottom: 38px; }
+    .liff-loader-visual { width: 138px; height: 138px; margin-bottom: 31px; }
+    .liff-loader-core { width: 88px; height: 88px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .liff-loader-glow,
+    .liff-loader-shell,
+    .liff-loader-orbit,
+    .liff-loader-core,
+    .liff-loader-eyebrow i,
+    .liff-loader-progress span { animation-duration: 4s; }
 }
 
 @keyframes panelIn {

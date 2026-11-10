@@ -779,6 +779,43 @@ def teacher_dashboard(request):
 
     attention_students = [student for student in students if student.needs_attention][:5]
 
+    homework_assignments = list(
+        HomeworkAssignment.objects.select_related("group")
+        .filter(group__in=scope_groups)
+        .prefetch_related("homework_submissions")
+        .order_by("-due_date", "group__group_name", "title")
+    )
+    students_by_group = {}
+    for student in students:
+        students_by_group.setdefault(student.group_id, []).append(student)
+    homework_tracking_rows = []
+    for assignment in homework_assignments:
+        submissions = {
+            submission.student_id: submission
+            for submission in assignment.homework_submissions.all()
+        }
+        entries = []
+        for student in students_by_group.get(assignment.group_id, []):
+            submission = submissions.get(student.pk)
+            is_submitted = bool(
+                submission
+                and submission.status in (
+                    HomeworkSubmission.Status.SUBMITTED,
+                    HomeworkSubmission.Status.LATE,
+                )
+            )
+            entries.append({
+                "student": student,
+                "submission": submission,
+                "is_submitted": is_submitted,
+            })
+        homework_tracking_rows.append({
+            "assignment": assignment,
+            "entries": entries,
+            "submitted_count": sum(entry["is_submitted"] for entry in entries),
+            "missing_count": sum(not entry["is_submitted"] for entry in entries),
+        })
+
     upcoming_assignments = (
         HomeworkAssignment.objects.select_related("group")
         .filter(group__in=scope_groups, due_date__gte=timezone.localdate())
@@ -833,6 +870,7 @@ def teacher_dashboard(request):
         "has_learning_data": bool(attendance_percentages or homework_percentages),
         "needs_attention_count": needs_attention_count,
         "attention_students": attention_students,
+        "homework_tracking_rows": homework_tracking_rows,
         "dashboard_groups": dashboard_groups,
         "upcoming_assignments": upcoming_assignments,
         "recent_attendance_sessions": recent_attendance_sessions,

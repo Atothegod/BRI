@@ -4,7 +4,7 @@
 {% block title %}{% block dashboard_title %}Dashboard ผู้สอน{% endblock %} | BRI School of Fivefold{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/teacher_dashboard.css' %}?v=20260916-dashboard-2">
+<link rel="stylesheet" href="{% static 'school/css/teacher_dashboard.css' %}?v=20261110-homework-tracking-1">
 {% endblock %}
 
 {% block content %}
@@ -37,7 +37,7 @@
         <div class="teacher-sidebar-account">
             <span class="teacher-avatar">{{ request.user.display_initial }}</span>
             <div>
-                <strong>{{ request.user.display_name }}</strong>
+                <strong>{{ request.user.teacher_display_name }}</strong>
                 <span>บัญชีผู้สอน</span>
             </div>
         </div>

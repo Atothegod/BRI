@@ -530,7 +530,7 @@ class TeacherGroup(TimeStampedModel):
     def teacher_names(self):
         names = []
         for teacher in self.teacher_list:
-            display_name = getattr(teacher, "display_name", "") or teacher.get_full_name() or teacher.username
+            display_name = getattr(teacher, "teacher_display_name", "") or teacher.get_full_name() or teacher.username
             names.append(display_name)
         return ", ".join(names) or "ยังไม่กำหนดผู้สอน"
 

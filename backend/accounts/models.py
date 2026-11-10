@@ -37,6 +37,15 @@ class User(AbstractUser):
     def display_initial(self):
         return (self.display_name[:1] or "?").upper()
 
+    @property
+    def teacher_display_name(self):
+        name = self.display_name
+        if self.role != self.Role.TEACHER or name.startswith("อาจารย์"):
+            return name
+        if name.startswith("อ."):
+            name = name[2:].strip()
+        return f"อาจารย์{name}"
+
     def __str__(self):
         return self.display_name
 

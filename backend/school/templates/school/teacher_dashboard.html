@@ -6,7 +6,7 @@
     <header class="teacher-page-heading" id="dashboard-top">
         <div>
             <span class="teacher-eyebrow">BRI TEACHER DASHBOARD</span>
-            <h1>สวัสดี {{ request.user.display_name }}</h1>
+            <h1>สวัสดี {{ request.user.teacher_display_name }}</h1>
             <p>{% if selected_group %}ภาพรวมของ {{ selected_group.group_name }}{% else %}ภาพรวมนักศึกษาทุกกลุ่มที่คุณดูแล{% endif %}</p>
         </div>
         <div class="teacher-heading-scope">
@@ -170,6 +170,35 @@
                             {% empty %}<tr><td class="teacher-empty-row" colspan="6"><strong>ยังไม่มีนักศึกษาในกลุ่มนี้</strong><span>เมื่อผู้ดูแลจัดนักศึกษาเข้ากลุ่ม รายชื่อจะแสดงที่นี่</span></td></tr>{% endfor %}
                         </tbody>
                     </table>
+                </div>
+            </section>
+
+            <section class="teacher-section teacher-homework-tracker teacher-tab-panel teacher-tab-panel--learning" id="homework-tracker" data-tab-panel="learning" aria-labelledby="homework-tracker-title">
+                <div class="teacher-section-heading">
+                    <div><span class="teacher-eyebrow">HOMEWORK TRACKING</span><h2 id="homework-tracker-title">ติดตามการบ้านรายคน</h2></div>
+                    <span>{{ homework_tracking_rows|length }} งาน</span>
+                </div>
+                <div class="teacher-homework-assignments">
+                    {% for row in homework_tracking_rows %}
+                    <article class="teacher-homework-assignment">
+                        <header>
+                            <div><strong>{{ row.assignment.title }}</strong><small>{{ row.assignment.group.group_name }} · กำหนดส่ง {{ row.assignment.due_date|date:"d M Y" }}</small></div>
+                            <div><span class="homework-count homework-count--done">ส่งแล้ว {{ row.submitted_count }}</span><span class="homework-count homework-count--missing">ยังไม่ส่ง {{ row.missing_count }}</span></div>
+                        </header>
+                        <div class="teacher-homework-students">
+                            {% for entry in row.entries %}
+                            <div class="teacher-homework-student{% if not entry.is_submitted %} is-missing{% endif %}">
+                                <div><strong>{{ entry.student.person.full_name }}</strong><small>{{ entry.student.student_id }}</small></div>
+                                {% if entry.is_submitted %}
+                                <span class="homework-state homework-state--done">{% if entry.submission.status == 'late' %}ส่งช้า{% else %}ส่งแล้ว{% endif %}</span>
+                                {% else %}
+                                <span class="homework-state homework-state--missing">ยังไม่ส่ง</span>
+                                {% endif %}
+                            </div>
+                            {% empty %}<div class="learning-empty">ยังไม่มีนักศึกษาในกลุ่มนี้</div>{% endfor %}
+                        </div>
+                    </article>
+                    {% empty %}<div class="teacher-empty-state"><strong>ยังไม่มีการบ้านในกลุ่มที่ดูแล</strong><span>เมื่อมีการสร้างงาน รายชื่อผู้ส่งและยังไม่ส่งจะแสดงที่นี่</span></div>{% endfor %}
                 </div>
             </section>
 

@@ -672,12 +672,12 @@ class TeacherLoginForm(AuthenticationForm):
 class TeacherSignupForm(UserCreationForm):
     nickname = forms.CharField(
         max_length=100,
-        label="ชื่อเล่น",
+        label="ชื่อที่แสดงหลังคำว่า อาจารย์",
         widget=forms.TextInput(
             attrs={
                 "class": CONTROL_CLASS,
                 "autocomplete": "nickname",
-                "placeholder": "เช่น อ.เอก",
+                "placeholder": "เช่น เอก",
             }
         ),
     )

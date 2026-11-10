@@ -1044,7 +1044,7 @@ class TeacherFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "school/teacher_dashboard_base.html")
-        self.assertContains(response, "สวัสดี อ.เอก")
+        self.assertContains(response, "สวัสดี อาจารย์เอก")
         self.assertNotContains(response, "teacher1")
         self.assertContains(response, "Visible Student")
         self.assertNotContains(response, "Hidden Student")
@@ -1107,6 +1107,16 @@ class TeacherFlowTests(TestCase):
         self.assertEqual(response.context["dashboard_groups"][0].dashboard_attendance, 50)
         self.assertEqual(response.context["dashboard_groups"][0].dashboard_homework, 50)
         self.assertEqual(response.context["dashboard_groups"][0].dashboard_attention_count, 1)
+        tracking_rows = response.context["homework_tracking_rows"]
+        self.assertEqual(len(tracking_rows), 2)
+        first_tracking = next(row for row in tracking_rows if row["assignment"] == first_assignment)
+        second_tracking = next(row for row in tracking_rows if row["assignment"].title == "Second assignment")
+        self.assertEqual(first_tracking["submitted_count"], 1)
+        self.assertEqual(first_tracking["missing_count"], 0)
+        self.assertEqual(second_tracking["submitted_count"], 0)
+        self.assertEqual(second_tracking["missing_count"], 1)
+        self.assertContains(response, "ติดตามการบ้านรายคน")
+        self.assertContains(response, "ยังไม่ส่ง")
         self.assertContains(response, 'id="teacher-tab-overview"')
         self.assertContains(response, 'class="teacher-health-track"')
 

@@ -9,24 +9,30 @@
         if (!slotSelect) return;
         const eventId = eventSelect.value;
         const slots = slotData[eventId] || [];
+        const selectedMode = modeSelect?.value || '';
+        const visibleSlots = selectedMode
+            ? slots.filter(slot => slot.mode === selectedMode)
+            : slots;
         const selectedSlot = keepSelection ? slotSelect.dataset.selectedSlot : '';
         slotSelect.replaceChildren();
         const defaultOption = document.createElement('option');
         defaultOption.value = '';
         defaultOption.textContent = !eventId
             ? 'เลือกกิจกรรมก่อน'
-            : slots.length
+            : visibleSlots.length
                 ? 'ทุกช่วงเวลา'
-                : 'กิจกรรมนี้ไม่มี Slot';
+                : selectedMode
+                    ? `ไม่มี Slot แบบ ${selectedMode === 'online' ? 'Online' : 'Onsite'}`
+                    : 'กิจกรรมนี้ไม่มี Slot';
         slotSelect.append(defaultOption);
-        slots.forEach(slot => {
+        visibleSlots.forEach(slot => {
             const option = document.createElement('option');
             option.value = String(slot.id);
             option.textContent = slot.label;
             option.selected = String(slot.id) === selectedSlot;
             slotSelect.append(option);
         });
-        slotSelect.disabled = !eventId || slots.length === 0;
+        slotSelect.disabled = !eventId || visibleSlots.length === 0;
         if (modeSelect) {
             modeSelect.disabled = !eventId;
             if (!eventId) modeSelect.value = '';
@@ -36,6 +42,8 @@
     document.querySelectorAll('[data-slot-event]').forEach(eventSelect => {
         eventSelect.addEventListener('change', () => refreshSlots(eventSelect, false));
         refreshSlots(eventSelect, true);
+        const modeSelect = eventSelect.closest('form')?.querySelector('[data-mode-select]');
+        modeSelect?.addEventListener('change', () => refreshSlots(eventSelect, false));
     });
 
     const applicantBoxes = [...document.querySelectorAll('.export-person-picker input[name="people"]')];

@@ -44,6 +44,7 @@ from .line import (
 from .models import (
     Appointment,
     AppointmentParticipant,
+    AppointmentSlot,
     AttendanceRecord,
     AttendanceSession,
     HomeworkAssignment,
@@ -1480,6 +1481,15 @@ def filter_applications_by_interview(queryset, event_value="", slot_value="", mo
         slot_id = None
     if mode not in {"online", "onsite"}:
         mode = ""
+    if slot_id:
+        selected_slot = AppointmentSlot.objects.filter(
+            pk=slot_id,
+            appointment__appointment_type=Appointment.Type.INTERVIEW,
+        ).first()
+        if selected_slot is None or (event_id and selected_slot.appointment_id != event_id):
+            slot_id = None
+        elif not event_id:
+            event_id = selected_slot.appointment_id
     if not (event_id or slot_id or mode):
         return queryset, event_id, slot_id, mode
 
@@ -1631,20 +1641,45 @@ def admin_exports(request):
             applicants,
             request.GET.get("application_event", ""),
             request.GET.get("application_slot", ""),
-            request.GET.get("application_mode", ""),
+            "",
         )
     )
     applicant_result_count = applicants.count()
     applicant_options = list(applicants[:80])
+    applicant_participations = {}
+    if application_event_id and applicant_options:
+        applicant_participations = {
+            participant.person_id: participant
+            for participant in AppointmentParticipant.objects.filter(
+                appointment_id=application_event_id,
+                person_id__in=[person.pk for person in applicant_options],
+            ).select_related("appointment", "selected_slot")
+        }
+        for person in applicant_options:
+            participant = applicant_participations.get(person.pk)
+            person.export_filter_participant = participant
+            person.export_filter_mode_label = (
+                "Online" if participant and export_participant_interview_mode(participant) == "online"
+                else "Onsite" if participant else ""
+            )
     appointment_options = list(interview_appointment_queryset()[:80])
+    if application_event_id and not any(
+        appointment.pk == application_event_id for appointment in appointment_options
+    ):
+        selected_appointment = interview_appointment_queryset().filter(
+            pk=application_event_id,
+        ).first()
+        if selected_appointment:
+            appointment_options.insert(0, selected_appointment)
     interview_slots_by_appointment = {
         str(appointment.pk): [
             {
                 "id": slot.pk,
                 "label": (
                     f"{timezone.localtime(slot.starts_at):%d/%m/%Y %H:%M}–"
-                    f"{timezone.localtime(slot.ends_at):%H:%M}"
+                    f"{timezone.localtime(slot.ends_at):%H:%M} · {slot.get_interview_mode_display()}"
                 ),
+                "mode": slot.interview_mode,
             }
             for slot in appointment.slots.all()
         ]
@@ -1656,7 +1691,6 @@ def admin_exports(request):
             "q": applicant_query,
             "application_event": application_event_id or "",
             "application_slot": application_slot_id or "",
-            "application_mode": application_mode,
         }.items()
         if value
     })
@@ -1748,6 +1782,8 @@ def export_application_forms(request):
 def export_participant_interview_mode(participant):
     if participant.invitation_interview_mode:
         return participant.invitation_interview_mode
+    if participant.selected_slot_id:
+        return participant.selected_slot.interview_mode
     if participant.invitation_meeting_url.strip():
         return "online"
     searchable_text = " ".join([
@@ -1865,7 +1901,16 @@ def export_applications_csv(request):
             "วันที่สมัคร",
         ]
     )
-    people = application_export_queryset()
+    people = filter_application_queryset(
+        application_export_queryset(),
+        request.GET.get("q", "").strip(),
+    )
+    people, _, _, _ = filter_applications_by_interview(
+        people,
+        request.GET.get("application_event", ""),
+        request.GET.get("application_slot", ""),
+        request.GET.get("application_mode", ""),
+    )
     for person in people:
         student = getattr(person, "student", None)
         group = student.group if student else None

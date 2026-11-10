@@ -1157,6 +1157,7 @@ class AppointmentScheduleTests(TestCase):
             slot_start=["09:30", "13:00"],
             slot_end=["10:30", "15:00"],
             slot_capacity=["1", "1"],
+            slot_mode=["onsite", "online"],
         )
         appointment = Appointment.objects.get()
         morning_slot, afternoon_slot = appointment.slots.order_by("starts_at")
@@ -1177,6 +1178,7 @@ class AppointmentScheduleTests(TestCase):
 
         picker = self.client.get(reverse("school:admin_exports"), filters)
         self.assertEqual(picker.context["applicant_result_count"], 1)
+        self.assertEqual(picker.context["applicant_options"][0].export_filter_mode_label, "Online")
         self.assertContains(picker, "เลือกทั้งหมดที่แสดง")
         self.assertContains(picker, "data-select-all-applicants")
         self.assertContains(picker, participants[1].person.full_name)
@@ -1192,6 +1194,19 @@ class AppointmentScheduleTests(TestCase):
         table = self.client.get(reverse("school:export_application_forms"), filters)
         self.assertContains(table, participants[1].person.full_name)
         self.assertNotContains(table, participants[0].person.full_name)
+
+        csv_response = self.client.get(reverse("school:export_applications_csv"), filters)
+        csv_content = csv_response.content.decode("utf-8-sig")
+        self.assertIn(participants[1].person.full_name, csv_content)
+        self.assertNotIn(participants[0].person.full_name, csv_content)
+
+        export_page = self.client.get(reverse("school:admin_exports"), filters)
+        slot_data = export_page.context["interview_slots_by_appointment"][str(appointment.pk)]
+        self.assertEqual([item["mode"] for item in slot_data], ["onsite", "online"])
+        self.assertContains(
+            export_page,
+            f"{reverse('school:export_applications_csv')}?application_event={appointment.pk}",
+        )
 
     def test_interview_roster_can_filter_slot_and_show_interview_mode(self):
         self.schedule(

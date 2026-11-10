@@ -35,11 +35,6 @@
                         {% for appointment in appointment_options %}<option value="{{ appointment.pk }}"{% if application_event_id == appointment.pk %} selected{% endif %}>{{ appointment.title }} · {{ appointment.starts_at|thai_date }}</option>{% endfor %}
                     </select></label>
                     <label><span>ช่วงเวลา</span><select name="application_slot" data-slot-select data-selected-slot="{{ application_slot_id|default:'' }}" disabled><option value="">เลือก Event ก่อน</option></select></label>
-                    <label><span>รูปแบบ</span><select name="application_mode"{% if not application_event_id %} disabled{% endif %} data-mode-select>
-                        <option value="">Online + Onsite</option>
-                        <option value="onsite"{% if application_mode == 'onsite' %} selected{% endif %}>Onsite</option>
-                        <option value="online"{% if application_mode == 'online' %} selected{% endif %}>Online</option>
-                    </select></label>
                     <div class="export-filter-actions">
                         <button type="submit">ค้นหาตามตัวกรอง</button>
                         {% if has_application_filters %}<a href="{% url 'school:admin_exports' %}">ล้างตัวกรอง</a>{% endif %}
@@ -49,7 +44,6 @@
                     <input type="hidden" name="q" value="{{ applicant_query }}">
                     <input type="hidden" name="application_event" value="{{ application_event_id|default:'' }}">
                     <input type="hidden" name="application_slot" value="{{ application_slot_id|default:'' }}">
-                    <input type="hidden" name="application_mode" value="{{ application_mode }}">
                     <div class="export-picker-toolbar">
                         <label><input type="checkbox" data-select-all-applicants{% if not applicant_options %} disabled{% endif %}> เลือกทั้งหมดที่แสดง</label>
                         <span>เลือกแล้ว <strong data-selected-applicant-count>0</strong> จาก {{ applicant_options|length }} คนที่แสดง</span>
@@ -60,7 +54,7 @@
                             <input type="checkbox" name="people" value="{{ person.pk }}">
                             <span>
                                 <strong>{{ person.full_name }}</strong>
-                                <small>{% if person.student %}{{ person.student.student_id }} · {% endif %}{{ person.nickname|default:"-" }} · {{ person.phone|default:"ไม่มีเบอร์" }}</small>
+                                <small>{% if person.student %}{{ person.student.student_id }} · {% endif %}{{ person.nickname|default:"-" }} · {{ person.phone|default:"ไม่มีเบอร์" }}{% if person.export_filter_participant %} · {{ person.export_filter_mode_label }}{% if person.export_filter_participant.selected_slot %} · {{ person.export_filter_participant.selected_slot.starts_at|date:"H:i" }}–{{ person.export_filter_participant.selected_slot.ends_at|date:"H:i" }}{% else %} · ยังไม่เลือกเวลา{% endif %}{% endif %}</small>
                             </span>
                         </label>
                         {% empty %}
@@ -88,7 +82,7 @@
                 </div>
                 <div class="export-workflow-actions">
                     <a class="export-main-action" href="{% url 'school:export_application_forms' %}{% if application_filter_query %}?{{ application_filter_query }}{% endif %}" target="_blank" rel="noopener">เปิดตารางรวม</a>
-                    <a class="export-secondary-action" href="{% url 'school:export_applications_csv' %}">CSV สำหรับ Sheets</a>
+                    <a class="export-secondary-action" href="{% url 'school:export_applications_csv' %}{% if application_filter_query %}?{{ application_filter_query }}{% endif %}">CSV สำหรับ Sheets</a>
                 </div>
             </article>
 
@@ -163,4 +157,4 @@
 </main>
 {{ interview_slots_by_appointment|json_script:"export-interview-slots" }}
 {% endblock %}
-{% block extra_js %}<script src="{% static 'school/js/admin_exports.js' %}?v=20261015-select-all-3" defer></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'school/js/admin_exports.js' %}?v=20261110-export-filters-4" defer></script>{% endblock %}

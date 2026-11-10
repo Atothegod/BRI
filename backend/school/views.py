@@ -2116,8 +2116,11 @@ ATTENDANCE_SIGNING_SALT = "school.attendance.check-in"
 
 def attendance_check_in_links(request, session):
     token = signing.dumps({"session_id": session.pk}, salt=ATTENDANCE_SIGNING_SALT)
-    check_in_url = request.build_absolute_uri(
-        reverse("school:attendance_check_in", kwargs={"token": token})
+    check_in_path = reverse("school:attendance_check_in", kwargs={"token": token})
+    check_in_url = (
+        f"https://liff.line.me/{settings.LINE_LIFF_ID}{check_in_path}"
+        if settings.LINE_LIFF_ENABLED and settings.LINE_LIFF_ID
+        else request.build_absolute_uri(check_in_path)
     )
     qr_image_url = "https://api.qrserver.com/v1/create-qr-code/?" + urlencode(
         {"size": "320x320", "margin": 10, "data": check_in_url}
@@ -2529,7 +2532,7 @@ def student_dashboard(request):
     assignment_rows = []
     recent_attendance = []
     appointment_rows = []
-    attendance_summary = {"present": 0, "absent": 0, "late": 0, "total": 0}
+    attendance_summary = {"present": 0, "absent": 0, "late": 0, "leave": 0, "total": 0}
     group_student_count = 0
     group_lesson_count = 0
 
@@ -2561,49 +2564,28 @@ def student_dashboard(request):
                 }
             )
 
-        attendance_records = (
-            AttendanceRecord.objects.select_related("attendance_session")
-            .filter(student=student)
-            .filter(
-                Q(attendance_session__group__isnull=True)
-                | Q(attendance_session__group=student.group)
-            )
-            .order_by("-attendance_session__date")[:6]
-        )
-        recent_attendance = attendance_records
+    if student:
+        attendance_scope = Q(attendance_session__group__isnull=True)
+        session_scope = Q(group__isnull=True)
+        if student.group_id:
+            attendance_scope |= Q(attendance_session__group=student.group)
+            session_scope |= Q(group=student.group)
+
+        attendance_records = AttendanceRecord.objects.filter(
+            student=student,
+        ).filter(attendance_scope)
+        recent_attendance = attendance_records.select_related(
+            "attendance_session"
+        ).order_by("-attendance_session__date", "-checked_in_at")[:6]
         attendance_summary = {
-            "present": AttendanceRecord.objects.filter(
-                student=student,
-                status=AttendanceRecord.Status.PRESENT,
-            ).filter(
-                Q(attendance_session__group__isnull=True)
-                | Q(attendance_session__group=student.group)
-            ).count(),
-            "absent": AttendanceRecord.objects.filter(
-                student=student,
-                status=AttendanceRecord.Status.ABSENT,
-            ).filter(
-                Q(attendance_session__group__isnull=True)
-                | Q(attendance_session__group=student.group)
-            ).count(),
-            "late": AttendanceRecord.objects.filter(
-                student=student,
-                status=AttendanceRecord.Status.LATE,
-            ).filter(
-                Q(attendance_session__group__isnull=True)
-                | Q(attendance_session__group=student.group)
-            ).count(),
-            "leave": AttendanceRecord.objects.filter(
-                student=student,
-                status=AttendanceRecord.Status.LEAVE,
-            ).filter(
-                Q(attendance_session__group__isnull=True)
-                | Q(attendance_session__group=student.group)
-            ).count(),
-            "total": AttendanceSession.objects.filter(
-                Q(group__isnull=True) | Q(group=student.group)
-            ).count(),
+            "present": attendance_records.filter(status=AttendanceRecord.Status.PRESENT).count(),
+            "absent": attendance_records.filter(status=AttendanceRecord.Status.ABSENT).count(),
+            "late": attendance_records.filter(status=AttendanceRecord.Status.LATE).count(),
+            "leave": attendance_records.filter(status=AttendanceRecord.Status.LEAVE).count(),
+            "total": AttendanceSession.objects.filter(session_scope).count(),
         }
+
+    if student and student.group_id:
         group_student_count = Student.objects.filter(group=student.group, is_active=True).count()
         group_lesson_count = AttendanceSession.objects.filter(
             Q(group__isnull=True) | Q(group=student.group)

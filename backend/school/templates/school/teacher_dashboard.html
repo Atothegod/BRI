@@ -208,7 +208,7 @@
                     {% for row in homework_tracking_rows %}
                     <article class="teacher-homework-assignment">
                         <header>
-                            <div><strong>{{ row.assignment.title }}</strong><small>{{ row.assignment.group.group_name }} · กำหนดส่ง {{ row.assignment.due_date|date:"d M Y" }}</small></div>
+                            <div><strong>{{ row.assignment.title }}</strong><small>{{ row.assignment.group.group_name }} · กำหนดส่ง {{ row.assignment.due_date|date:"d M Y" }}</small>{% if row.assignment.description %}<p>{{ row.assignment.description|truncatechars:180 }}</p>{% endif %}</div>
                             <div><span class="homework-count homework-count--done">ส่งแล้ว {{ row.submitted_count }}</span><span class="homework-count homework-count--missing">ยังไม่ส่ง {{ row.missing_count }}</span></div>
                         </header>
                         <div class="teacher-homework-students">
@@ -216,7 +216,7 @@
                             <div class="teacher-homework-student{% if not entry.is_submitted %} is-missing{% endif %}">
                                 <div><strong>{{ entry.student.person.full_name }}</strong><small>{{ entry.student.student_id }}</small></div>
                                 {% if entry.is_submitted %}
-                                <span class="homework-state homework-state--done">{% if entry.submission.status == 'late' %}ส่งช้า{% else %}ส่งแล้ว{% endif %}</span>
+                                <div class="teacher-homework-submission-actions"><span class="homework-state homework-state--done">{% if entry.submission.status == 'late' %}ส่งช้า{% else %}ส่งแล้ว{% endif %}</span>{% if entry.submission.submission_file %}<a href="{{ entry.submission.submission_file.url }}" target="_blank" rel="noopener">เปิดงาน</a>{% endif %}</div>
                                 {% else %}
                                 <span class="homework-state homework-state--missing">ยังไม่ส่ง</span>
                                 {% endif %}

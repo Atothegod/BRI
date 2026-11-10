@@ -1972,6 +1972,9 @@ button {
 .teacher-homework-student > div { display: grid; gap: 2px; min-width: 0; }
 .teacher-homework-student strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .teacher-homework-student small { color: var(--teacher-muted); }
+.teacher-homework-assignment header p { max-width: 760px; margin: 4px 0 0; color: var(--teacher-muted); font-size: .76rem; line-height: 1.5; }
+.teacher-homework-submission-actions { display: flex; align-items: center; gap: 7px; }
+.teacher-homework-submission-actions a { color: var(--teacher-forest); border-bottom: 1px solid currentColor; font-size: .7rem; font-weight: 800; }
 
 .teacher-dashboard-heading {
     min-height: 132px;

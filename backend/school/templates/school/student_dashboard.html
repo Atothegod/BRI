@@ -5,6 +5,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'school/css/student_portal.css' %}?v=20261110-student-workspace-2">
+<link rel="stylesheet" href="{% static 'school/css/student_dashboard.css' %}?v=20261111-bri-redesign-1">
 {% endblock %}
 
 {% block content %}
@@ -15,46 +16,47 @@
         </a>
         <div class="student-space-title"><strong>BRI INSTITUTE</strong><span>STUDENT SPACE</span></div>
         <nav aria-label="เมนูนักเรียน">
-            <a class="is-active" href="{% url 'school:student_dashboard' %}">ภาพรวม</a>
-            <a href="{% url 'school:student_homework_upload' %}">การบ้าน</a>
+            <a class="is-active" href="{% url 'school:student_dashboard' %}"><svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#landmark"></use></svg><span>ภาพรวม</span></a>
+            <a href="{% url 'school:student_homework_upload' %}"><svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#upload-cloud"></use></svg><span>ส่งการบ้าน</span></a>
         </nav>
-        {% if student_state == "ready" %}<div class="student-sidebar-account"><strong>{{ student.person.full_name }}</strong><span>{{ student.student_id }}</span></div>{% endif %}
+        {% if student_state == "ready" %}<div class="student-sidebar-account"><span class="student-sidebar-avatar">{{ student.person.first_name|slice:":1"|upper }}</span><div><strong>{{ student.person.full_name }}</strong><span>{{ student.student_id }}</span></div></div>{% endif %}
     </header>
 
     {% if student_state == "ready" %}
     <section class="student-hero" aria-labelledby="student-dashboard-title">
         <div>
-            <span>BRI STUDENT DASHBOARD</span>
+            <span class="student-kicker">BRI STUDENT DASHBOARD</span>
             <h1 id="student-dashboard-title">สวัสดี คุณ{{ student.person.full_name }}</h1>
-            <p>ภาพรวมข้อมูลการเรียนและงานของคุณ</p>
+            <p>ทุกข้อมูลการเรียน งาน และการเข้าเรียนของคุณอยู่ที่นี่</p>
         </div>
-        <div class="student-approved-badge">ได้รับการอนุมัติแล้ว</div>
+        <div class="student-approved-badge"><svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#shield-check"></use></svg><span>บัญชีนักเรียนพร้อมใช้งาน</span></div>
     </section>
 
     <section class="student-profile-grid" aria-label="ข้อมูลนักเรียนและกลุ่ม">
         <article class="student-card-panel">
+            <span class="student-card-watermark" aria-hidden="true">BRI</span>
             <header><strong>STUDENT CARD</strong><span>บัตรนักเรียน</span></header>
             <div class="student-card-identity">
                 {% if student.person.photo %}<img src="{{ student.person.photo.url }}" alt="รูปของ {{ student.person.full_name }}">{% else %}<span class="student-photo-fallback">{{ student.person.first_name|slice:":1"|upper }}</span>{% endif %}
-                <div><h2>คุณ{{ student.person.full_name }}</h2><p>รหัสนักเรียน : {{ student.student_id }}</p><p>รุ่นที่ : {{ student.group.grade_level|default:"ไม่ระบุ" }}</p></div>
+                <div><span>BRI SCHOOL OF FIVEFOLD</span><h2>คุณ{{ student.person.full_name }}</h2><p>รหัสนักเรียน <strong>{{ student.student_id }}</strong></p><p>รุ่น <strong>{{ student.group.grade_level|default:"รอระบุ" }}</strong></p></div>
             </div>
-            <button type="button" onclick="window.print()">พิมพ์บัตรนักเรียน</button>
+            <button type="button" onclick="window.print()"><svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#copy"></use></svg> พิมพ์บัตรนักเรียน</button>
         </article>
         <article class="student-group-panel">
-            <header><strong>MY GROUP</strong><span>กลุ่มของฉัน</span></header>
-            <h2>ชื่อกลุ่ม : {{ student.group.group_name|default:"ยังไม่มีกลุ่ม" }}</h2>
-            <p>อาจารย์ผู้ดูแลกลุ่ม : <strong>{{ student.group.teacher_names|default:"รอประกาศ" }}</strong></p>
-            <div><section><span>เพื่อนในกลุ่ม</span><strong>{{ group_student_count }}</strong><small>คน</small></section><section><span>ครั้งเรียนในระบบ</span><strong>{{ group_lesson_count }}</strong><small>ครั้ง</small></section></div>
+            <header><div><span>MY COMMUNITY</span><strong>กลุ่มของฉัน</strong></div><span class="student-group-icon"><svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#user"></use></svg></span></header>
+            <div class="student-group-name"><span>MY GROUP</span><h2>ชื่อกลุ่ม : {{ student.group.group_name|default:"ยังไม่มีกลุ่ม" }}</h2></div>
+            <p><span>อาจารย์ผู้ดูแล</span><strong>{{ student.group.teacher_names|default:"รอประกาศ" }}</strong></p>
+            <div class="student-group-stats"><section><span>เพื่อนร่วมกลุ่ม</span><strong>{{ group_student_count }}</strong><small>คน</small></section><section><span>คาบในระบบ</span><strong>{{ group_lesson_count }}</strong><small>ครั้ง</small></section></div>
         </article>
     </section>
 
     <section class="student-attendance-summary" aria-labelledby="attendance-summary-title">
-        <div class="student-attendance-title"><h2 id="attendance-summary-title">ATTENDANCE</h2><span>สรุปการเข้าเรียนของฉัน</span></div>
+        <div class="student-attendance-title"><div><span>LEARNING PROGRESS</span><h2 id="attendance-summary-title">การเข้าเรียนของฉัน</h2></div><span>อัปเดตจากการสแกน QR ล่าสุด</span></div>
         <div class="student-attendance-metrics">
-            <article><span>เช็กอินแล้ว</span><strong>{{ attendance_summary.present }}</strong><small>คลาส</small></article>
-            <article><span>ขาด / ลา</span><strong>{{ attendance_summary.absent }} / {{ attendance_summary.leave }}</strong><small>คลาส</small></article>
-            <article><span>มาสาย</span><strong>{{ attendance_summary.late }}</strong><small>คลาส</small></article>
-            <article><span>คลาสทั้งหมด</span><strong>{{ attendance_summary.total }}</strong><small>คลาส</small></article>
+            <article class="is-present"><span class="student-metric-icon"><svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#check-circle"></use></svg></span><div><span>มาเรียน</span><strong>{{ attendance_summary.present }}</strong><small>คลาส</small></div></article>
+            <article class="is-late"><span class="student-metric-icon"><svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#clock"></use></svg></span><div><span>มาสาย</span><strong>{{ attendance_summary.late }}</strong><small>คลาส</small></div></article>
+            <article class="is-absent"><span class="student-metric-icon"><svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#info"></use></svg></span><div><span>ขาด / ลา</span><strong>{{ attendance_summary.absent }}<i>/</i>{{ attendance_summary.leave }}</strong><small>คลาส</small></div></article>
+            <article class="is-total"><span class="student-metric-icon"><svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#calendar-days"></use></svg></span><div><span>คาบทั้งหมด</span><strong>{{ attendance_summary.total }}</strong><small>คลาส</small></div></article>
         </div>
     </section>
 
@@ -62,18 +64,17 @@
         <section class="student-panel student-homework-preview" aria-labelledby="student-homework-title">
             <div class="student-panel-heading">
                 <div>
-                    <span>HOMEWORK</span>
-                    <h2 id="student-homework-title">งานที่ต้องส่ง</h2>
+                    <span>HOMEWORK</span><h2 id="student-homework-title">งานที่ต้องส่ง</h2>
                 </div>
-                <a href="{% url 'school:student_homework_upload' %}">ส่งการบ้าน</a>
+                <a href="{% url 'school:student_homework_upload' %}">ดูการบ้านทั้งหมด <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#chevron-right"></use></svg></a>
             </div>
             <div class="student-task-list">
                 {% for row in assignment_rows %}
                 <article class="{% if row.is_done %}is-done{% elif row.is_late %}is-late{% endif %}">
                     <time datetime="{{ row.assignment.due_date|date:'Y-m-d' }}">{{ row.assignment.due_date|date:"d M" }}</time>
                     <div>
-                        <strong>{{ row.assignment.title }}</strong>
-                        <small>{% if row.is_done %}ส่งแล้ว{% elif row.is_late %}เลยกำหนดแล้ว{% else %}รอส่ง{% endif %}</small>
+                        <a href="{% url 'school:student_homework_detail' row.assignment.pk %}"><strong>{{ row.assignment.title }}</strong></a>
+                        <small class="student-task-status">{% if row.is_done %}ส่งแล้ว{% elif row.is_late %}เลยกำหนดแล้ว{% else %}รอส่ง{% endif %}</small>
                     </div>
                 </article>
                 {% empty %}
@@ -85,8 +86,7 @@
         <section class="student-panel student-class-panel" aria-labelledby="student-appointments-title">
             <div class="student-panel-heading">
                 <div>
-                    <span>CLASS / LESSON</span>
-                    <h2 id="student-appointments-title">ตารางเรียนถัดไป</h2>
+                    <span>CLASS / LESSON</span><h2 id="student-appointments-title">ตารางเรียนถัดไป</h2>
                 </div>
             </div>
             <div class="student-task-list">
@@ -109,15 +109,14 @@
         <section class="student-panel student-attendance-panel" aria-labelledby="student-attendance-title">
             <div class="student-panel-heading">
                 <div>
-                    <span>ATTENDANCE</span>
-                    <h2 id="student-attendance-title">เช็กชื่อล่าสุด</h2>
+                    <span>ATTENDANCE</span><h2 id="student-attendance-title">เช็กชื่อล่าสุด</h2>
                 </div>
             </div>
             <div class="student-attendance-list">
                 {% for record in recent_attendance %}
                 <article>
                     <time datetime="{{ record.attendance_session.date|date:'Y-m-d' }}">{{ record.attendance_session.date|date:"d M" }}</time>
-                    <div><strong>{{ record.attendance_session.title }}</strong><small>{{ record.get_status_display }}</small></div>
+                    <div><strong>{{ record.attendance_session.title }}</strong><small class="is-{{ record.status }}">{{ record.get_status_display }}</small></div>
                 </article>
                 {% empty %}
                 <div class="student-empty">ยังไม่มีข้อมูลเช็กชื่อ</div>

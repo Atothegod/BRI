@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.core import signing
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -10,6 +10,7 @@ from .models import AttendanceRecord, AttendanceSession, Person, Student, Teache
 from .views import ATTENDANCE_SIGNING_SALT
 
 
+@override_settings(LINE_LIFF_ENABLED=True, LINE_LIFF_ID="1234567890-Attendance")
 class SchoolwideAttendanceTests(TestCase):
     def setUp(self):
         User = get_user_model()
@@ -86,6 +87,10 @@ class SchoolwideAttendanceTests(TestCase):
         self.assertIsNone(attendance_session.group_id)
         self.assertEqual(attendance_session.created_by, self.admin)
         self.assertContains(response, "QR สำหรับทั้งโรงเรียน")
+        self.assertContains(
+            response,
+            f"https://liff.line.me/1234567890-Attendance/attendance/check-in/",
+        )
         self.assertContains(response, reverse("school:attendance_session_detail", args=[attendance_session.pk]))
 
     def test_scan_within_sixty_minutes_marks_present_for_any_group(self):
@@ -108,6 +113,20 @@ class SchoolwideAttendanceTests(TestCase):
         record = AttendanceRecord.objects.get(attendance_session=attendance_session, student=self.student)
         self.assertEqual(record.status, AttendanceRecord.Status.LATE)
         self.assertContains(response, "มาสาย")
+
+    def test_schoolwide_checkin_updates_dashboard_without_student_group(self):
+        self.student.group = None
+        self.student.save(update_fields=["group"])
+        attendance_session = self.make_session(minutes_ago=10)
+        self.set_line_profile(self.student)
+
+        check_in_response = self.client.get(self.check_in_url(attendance_session))
+        dashboard_response = self.client.get(reverse("school:student_dashboard"))
+
+        self.assertContains(check_in_response, "เช็กชื่อเรียบร้อย")
+        self.assertEqual(dashboard_response.context["attendance_summary"]["present"], 1)
+        self.assertEqual(dashboard_response.context["attendance_summary"]["total"], 1)
+        self.assertEqual(len(dashboard_response.context["recent_attendance"]), 1)
 
     def test_repeat_scan_does_not_overwrite_manual_leave(self):
         attendance_session = self.make_session(minutes_ago=10)

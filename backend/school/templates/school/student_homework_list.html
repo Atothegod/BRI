@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}การบ้าน | BRI Student Space{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'school/css/student_portal.css' %}?v=20261110-student-workspace-2">
+<link rel="stylesheet" href="{% static 'school/css/student_dashboard.css' %}?v=20261111-bri-redesign-1">
+<link rel="stylesheet" href="{% static 'school/css/homework_workspace.css' %}?v=20261111-assignment-1">
+{% endblock %}
+
+{% block content %}
+<main class="student-portal homework-student-page" data-student-portal>
+    <header class="student-topbar">
+        <a class="student-brand" href="{% url 'school:student_dashboard' %}" aria-label="BRI School of Fivefold">{% include "school/includes/brand_logo.html" with variant="nav" %}</a>
+        <div class="student-space-title"><strong>BRI INSTITUTE</strong><span>STUDENT SPACE</span></div>
+        <nav aria-label="เมนูนักเรียน"><a href="{% url 'school:student_dashboard' %}"><svg class="icon"><use href="{% static 'school/images/icons.svg' %}#landmark"></use></svg><span>ภาพรวม</span></a><a class="is-active" href="{% url 'school:student_homework_upload' %}"><svg class="icon"><use href="{% static 'school/images/icons.svg' %}#upload-cloud"></use></svg><span>การบ้าน</span></a></nav>
+        {% if student_state == "ready" %}<div class="student-sidebar-account"><span class="student-sidebar-avatar">{{ student.person.first_name|slice:":1"|upper }}</span><div><strong>{{ student.person.full_name }}</strong><span>{{ student.student_id }}</span></div></div>{% endif %}
+    </header>
+
+    {% if student_state == "ready" %}
+    <header class="homework-student-hero"><div><span>MY ASSIGNMENTS</span><h1>การบ้านของฉัน</h1><p>{{ student.group.group_name|default:"ยังไม่มีกลุ่ม" }} · เปิดงาน อ่านรายละเอียด และส่งไฟล์ได้จากที่เดียว</p></div><div class="homework-student-count"><strong>{{ assignment_rows|length }}</strong><span>งานทั้งหมด</span></div></header>
+    {% for message in messages %}<div class="homework-flash {{ message.tags }}" role="status">{{ message }}</div>{% endfor %}
+    <section class="homework-student-grid" aria-label="รายการการบ้าน">
+        {% for row in assignment_rows %}
+        <a class="homework-student-card{% if row.is_submitted %} is-submitted{% elif row.is_overdue %} is-overdue{% endif %}" href="{% url 'school:student_homework_detail' row.assignment.pk %}">
+            <div class="homework-student-card-icon"><svg class="icon"><use href="{% static 'school/images/icons.svg' %}#upload-cloud"></use></svg></div>
+            <div class="homework-student-card-body"><div class="homework-card-meta"><span>{{ student.group.group_name }}</span><time datetime="{{ row.assignment.due_date|date:'Y-m-d' }}">กำหนด {{ row.assignment.due_date|date:"d M Y" }}</time></div><h2>{{ row.assignment.title }}</h2><p>{{ row.assignment.description|default:"เปิดเพื่อดูรายละเอียดและส่งการบ้าน"|truncatechars:145 }}</p></div>
+            <footer><span class="homework-status">{% if row.is_submitted %}{% if row.submission.status == 'late' %}ส่งแล้ว · ล่าช้า{% else %}Turned in{% endif %}{% elif row.is_overdue %}เลยกำหนด{% else %}มอบหมายแล้ว{% endif %}</span><span class="homework-open">เปิดงาน <svg class="icon"><use href="{% static 'school/images/icons.svg' %}#chevron-right"></use></svg></span></footer>
+        </a>
+        {% empty %}<div class="homework-empty homework-empty--wide"><svg class="icon"><use href="{% static 'school/images/icons.svg' %}#check-circle"></use></svg><strong>ยังไม่มีงานที่ได้รับมอบหมาย</strong><span>เมื่อ School Admin สร้างการบ้าน งานจะปรากฏที่หน้านี้</span></div>{% endfor %}
+    </section>
+    {% else %}
+    <section class="student-state"><span>STUDENT ACCESS</span><h1>ยังไม่สามารถเปิดการบ้านได้</h1><p>กรุณาเปิดผ่าน LINE และตรวจสอบสถานะนักเรียน</p><a href="{{ line_return_url }}" data-liff-close>กลับไปยัง LINE</a></section>
+    {% endif %}
+</main>
+{% endblock %}
+{% block extra_js %}{% include "school/includes/liff_bridge.html" %}{% endblock %}

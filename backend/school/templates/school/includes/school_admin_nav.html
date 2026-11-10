@@ -22,6 +22,10 @@
                 <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#check-circle"></use></svg>
                 <span>QR เช็คชื่อ</span>
             </a>
+            <a href="{% url 'school:admin_homework' %}"{% if request.resolver_match.url_name == "admin_homework" %} class="is-active" aria-current="page"{% endif %}>
+                <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#upload-cloud"></use></svg>
+                <span>การบ้าน</span>
+            </a>
             <a href="{% url 'school:admin_exports' %}"{% if request.resolver_match.url_name == "admin_exports" %} class="is-active" aria-current="page"{% endif %}>
                 <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#calendar-days"></use></svg>
                 <span>Export</span>

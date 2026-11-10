@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ assignment.title }} | BRI Student Space{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'school/css/student_portal.css' %}?v=20261110-student-workspace-2">
+<link rel="stylesheet" href="{% static 'school/css/student_dashboard.css' %}?v=20261111-bri-redesign-1">
+<link rel="stylesheet" href="{% static 'school/css/homework_workspace.css' %}?v=20261111-assignment-1">
+{% endblock %}
+
+{% block content %}
+<main class="student-portal homework-student-page" data-student-portal>
+    <header class="student-topbar">
+        <a class="student-brand" href="{% url 'school:student_dashboard' %}">{% include "school/includes/brand_logo.html" with variant="nav" %}</a>
+        <div class="student-space-title"><strong>BRI INSTITUTE</strong><span>STUDENT SPACE</span></div>
+        <nav><a href="{% url 'school:student_dashboard' %}"><svg class="icon"><use href="{% static 'school/images/icons.svg' %}#landmark"></use></svg><span>ภาพรวม</span></a><a class="is-active" href="{% url 'school:student_homework_upload' %}"><svg class="icon"><use href="{% static 'school/images/icons.svg' %}#upload-cloud"></use></svg><span>การบ้าน</span></a></nav>
+        <div class="student-sidebar-account"><span class="student-sidebar-avatar">{{ student.person.first_name|slice:":1"|upper }}</span><div><strong>{{ student.person.full_name }}</strong><span>{{ student.student_id }}</span></div></div>
+    </header>
+
+    <a class="homework-back" href="{% url 'school:student_homework_upload' %}"><svg class="icon"><use href="{% static 'school/images/icons.svg' %}#arrow-left"></use></svg> การบ้านทั้งหมด</a>
+    {% for message in messages %}<div class="homework-flash {{ message.tags }}" role="status">{{ message }}</div>{% endfor %}
+    <div class="homework-detail-layout">
+        <article class="homework-detail-card">
+            <header><span class="homework-detail-icon"><svg class="icon"><use href="{% static 'school/images/icons.svg' %}#upload-cloud"></use></svg></span><div><span>{{ assignment.group.group_name }} · ASSIGNMENT</span><h1>{{ assignment.title }}</h1></div></header>
+            <div class="homework-detail-meta"><section><span>กำหนดส่ง</span><strong>{{ assignment.due_date|date:"d M Y" }}</strong></section><section><span>สถานะ</span><strong>{% if submission %}{% if submission.status == 'late' %}ส่งล่าช้า{% else %}ส่งแล้ว{% endif %}{% elif is_overdue %}เลยกำหนด{% else %}ยังไม่ส่ง{% endif %}</strong></section></div>
+            <section class="homework-instructions"><span>INSTRUCTIONS</span><h2>รายละเอียดงาน</h2><div>{{ assignment.description|default:"ไม่มีรายละเอียดเพิ่มเติม"|linebreaks }}</div></section>
+        </article>
+
+        <aside class="homework-turnin-card">
+            <div class="homework-turnin-heading"><span>MY WORK</span><h2>งานของฉัน</h2><p>{% if submission %}ส่งล่าสุด {{ submission.submitted_at|date:"d M Y · H:i" }} น.{% else %}แนบไฟล์แล้วกด Turn in เพื่อส่งงาน{% endif %}</p></div>
+            {% if submission and submission.submission_file %}<a class="homework-current-file" href="{{ submission.submission_file.url }}" target="_blank" rel="noopener"><svg class="icon"><use href="{% static 'school/images/icons.svg' %}#check-circle"></use></svg><span><strong>{{ submission_filename }}</strong><small>ไฟล์ที่ส่งล่าสุด</small></span></a>{% endif %}
+            <form method="post" enctype="multipart/form-data" class="homework-turnin-form" data-student-upload-form>
+                {% csrf_token %}
+                {% if form.errors %}<div class="homework-form-errors">กรุณาเลือกไฟล์ที่ต้องการส่ง</div>{% endif %}
+                <label class="homework-dropzone"><svg class="icon"><use href="{% static 'school/images/icons.svg' %}#upload-cloud"></use></svg><span><strong data-student-file-label>{% if submission %}เลือกไฟล์ใหม่{% else %}เพิ่มไฟล์งาน{% endif %}</strong><small>PDF, Office, รูปภาพ หรือ ZIP</small></span>{{ form.homework_file }}</label>
+                <label class="homework-note"><span>ข้อความถึงอาจารย์ (ถ้ามี)</span>{{ form.student_note }}</label>
+                <button type="submit"><span>{% if submission %}Turn in again{% else %}Turn in{% endif %}</span><svg class="icon"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg></button>
+            </form>
+            <small class="homework-turnin-help">การส่งใหม่จะแทนที่ไฟล์เดิมและบันทึกเวลาล่าสุด</small>
+        </aside>
+    </div>
+</main>
+{% endblock %}
+{% block extra_js %}{% include "school/includes/liff_bridge.html" %}<script src="{% static 'school/js/student_portal.js' %}?v=20260918-student-1" defer></script>{% endblock %}

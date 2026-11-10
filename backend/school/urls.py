@@ -4,6 +4,7 @@ from django.views.generic import RedirectView
 
 from . import views
 from . import interviews
+from . import homework
 from . import line_messages
 from . import student_groups
 from . import teacher_group_management
@@ -12,6 +13,7 @@ from . import teacher_group_management
 app_name = "school"
 
 urlpatterns = [
+    path("school-admin/homework/", homework.admin_homework, name="admin_homework"),
     path(
         "school-admin/teacher-groups/",
         teacher_group_management.teacher_group_management,
@@ -98,6 +100,7 @@ urlpatterns = [
     path("teachers/calendar/", views.teacher_calendar, name="teacher_calendar"),
     path("teachers/calendar/participants/<int:pk>/notify/", views.teacher_calendar_notify, name="teacher_calendar_notify"),
     path("students/dashboard/", views.student_dashboard, name="student_dashboard"),
-    path("students/homework/", views.student_homework_upload, name="student_homework_upload"),
+    path("students/homework/", homework.student_homework_list, name="student_homework_upload"),
+    path("students/homework/<int:pk>/", homework.student_homework_detail, name="student_homework_detail"),
     path("students/payment/", views.student_payment_upload, name="student_payment_upload"),
 ]

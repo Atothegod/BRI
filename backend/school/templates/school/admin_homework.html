@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}จัดการการบ้าน | BRI School Admin{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261003-nav-dropdown-1">
+<link rel="stylesheet" href="{% static 'school/css/homework_workspace.css' %}?v=20261111-assignment-1">
+{% endblock %}
+
+{% block content %}
+{% include "school/includes/school_admin_nav.html" %}
+<main class="dashboard-page homework-admin-page">
+    <div class="dashboard-shell homework-admin-shell">
+        <header class="homework-admin-hero">
+            <div><span>BRI ASSIGNMENTS</span><h1>การบ้านและงานมอบหมาย</h1><p>สร้างงานให้กลุ่มนักศึกษา อาจารย์ประจำกลุ่มจะเห็นความคืบหน้า และนักศึกษาส่งไฟล์ผ่าน Student Space</p></div>
+            <div class="homework-admin-hero-stats"><section><strong>{{ assignment_count }}</strong><span>งานทั้งหมด</span></section><section><strong>{{ group_count }}</strong><span>กลุ่มเรียน</span></section></div>
+        </header>
+
+        {% for message in messages %}<div class="homework-flash {{ message.tags }}" role="status">{{ message }}</div>{% endfor %}
+
+        <div class="homework-admin-layout">
+            <section class="homework-create-card" aria-labelledby="create-assignment-title">
+                <div class="homework-section-heading"><span class="homework-heading-icon"><svg class="icon"><use href="{% static 'school/images/icons.svg' %}#upload-cloud"></use></svg></span><div><span>CREATE ASSIGNMENT</span><h2 id="create-assignment-title">สร้างการบ้านใหม่</h2></div></div>
+                <form method="post" class="homework-create-form">
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}<div class="homework-form-errors">{{ form.non_field_errors }}</div>{% endif %}
+                    {% for field in form %}<label><span>{{ field.label }}</span>{{ field }}{% if field.errors %}<small class="homework-field-error">{{ field.errors|striptags }}</small>{% endif %}</label>{% endfor %}
+                    <div class="homework-publish-note"><svg class="icon"><use href="{% static 'school/images/icons.svg' %}#info"></use></svg><span>เมื่อเผยแพร่ นักศึกษาในกลุ่มและอาจารย์ผู้ดูแลจะเห็นงานนี้ทันที</span></div>
+                    <button type="submit"><span>เผยแพร่การบ้าน</span><svg class="icon"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg></button>
+                </form>
+            </section>
+
+            <section class="homework-admin-list" aria-labelledby="assignment-list-title">
+                <div class="homework-list-heading"><div><span>ASSIGNMENT LIBRARY</span><h2 id="assignment-list-title">งานที่เผยแพร่แล้ว</h2></div><strong>{{ assignment_count }} งาน</strong></div>
+                <div class="homework-admin-cards">
+                    {% for assignment in assignments %}
+                    <article class="homework-admin-card{% if assignment.is_overdue %} is-overdue{% endif %}">
+                        <div class="homework-admin-card-top"><span class="homework-assignment-icon"><svg class="icon"><use href="{% static 'school/images/icons.svg' %}#upload-cloud"></use></svg></span><div><span>{{ assignment.group.group_name }}</span><h3>{{ assignment.title }}</h3></div><time datetime="{{ assignment.due_date|date:'Y-m-d' }}">กำหนด {{ assignment.due_date|date:"d M Y" }}</time></div>
+                        {% if assignment.description %}<p>{{ assignment.description|truncatechars:180 }}</p>{% else %}<p class="is-muted">ไม่มีรายละเอียดเพิ่มเติม</p>{% endif %}
+                        <div class="homework-progress-label"><span>ส่งแล้ว {{ assignment.submitted_count }} จาก {{ assignment.target_count }}</span><strong>{{ assignment.progress_percent }}%</strong></div>
+                        <div class="homework-progress"><span style="width: {{ assignment.progress_percent }}%"></span></div>
+                        <footer><span class="is-done">ส่งแล้ว {{ assignment.submitted_count }}</span><span class="is-missing">ยังไม่ส่ง {{ assignment.missing_count }}</span><small>สร้างโดย {{ assignment.created_by.get_full_name|default:assignment.created_by.username|default:"School Admin" }}</small></footer>
+                    </article>
+                    {% empty %}<div class="homework-empty"><svg class="icon"><use href="{% static 'school/images/icons.svg' %}#upload-cloud"></use></svg><strong>ยังไม่มีการบ้าน</strong><span>สร้างงานแรกจากแบบฟอร์มด้านซ้ายได้เลย</span></div>{% endfor %}
+                </div>
+            </section>
+        </div>
+    </div>
+</main>
+{% endblock %}

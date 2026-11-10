@@ -10,7 +10,7 @@ from django.core import signing
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import CharField, Count, Q, Value
+from django.db.models import BooleanField, CharField, Count, Exists, OuterRef, Q, Subquery, Value
 from django.db.models.fields.json import KeyTextTransform, KeyTransform
 from django.db.models.functions import Coalesce
 from django.http import JsonResponse
@@ -102,6 +102,61 @@ def confirmed_interview_people():
         appointment__appointment_type=Appointment.Type.INTERVIEW,
         response_status=AppointmentParticipant.ResponseStatus.CONFIRMED,
     ).values("person_id")
+
+
+def appointment_ready_candidates(appointment_type):
+    """People who have never been invited, or ignored their latest closed event."""
+    full_appointment_ids = [
+        appointment.pk
+        for appointment in Appointment.objects.filter(
+            appointment_type=appointment_type,
+        ).prefetch_related("slots").annotate(
+            confirmed_count=Count(
+                "participants",
+                filter=Q(participants__response_status=AppointmentParticipant.ResponseStatus.CONFIRMED),
+                distinct=True,
+            ),
+        )
+        if appointment_is_full(appointment, appointment.confirmed_count)
+    ]
+    latest = AppointmentParticipant.objects.filter(
+        person_id=OuterRef("pk"),
+        appointment__appointment_type=appointment_type,
+    ).order_by("-pk")
+    people = appointment_candidates(appointment_type).annotate(
+        latest_participation_id=Subquery(latest.values("pk")[:1]),
+        latest_appointment_id=Subquery(latest.values("appointment_id")[:1]),
+        latest_appointment_status=Subquery(latest.values("appointment__status")[:1]),
+        latest_appointment_start=Subquery(latest.values("appointment__starts_at")[:1]),
+        latest_response_status=Subquery(latest.values("response_status")[:1]),
+        latest_notification_status=Subquery(latest.values("notification_status")[:1]),
+    ).annotate(
+        latest_has_slots=Exists(
+            AppointmentSlot.objects.filter(appointment_id=OuterRef("latest_appointment_id")),
+            output_field=BooleanField(),
+        ),
+        latest_has_open_slots=Exists(
+            AppointmentSlot.objects.filter(
+                appointment_id=OuterRef("latest_appointment_id"),
+                ends_at__gt=timezone.now(),
+            ),
+            output_field=BooleanField(),
+        ),
+    )
+    latest_event_closed = (
+        ~Q(latest_appointment_status=Appointment.Status.SCHEDULED)
+        | Q(latest_has_slots=False, latest_appointment_start__lte=timezone.now())
+        | Q(latest_has_slots=True, latest_has_open_slots=False)
+        | Q(latest_appointment_id__in=full_appointment_ids)
+    )
+    return people.filter(
+        Q(latest_participation_id__isnull=True)
+        | (
+            Q(latest_response_status=AppointmentParticipant.ResponseStatus.WAITING)
+            & Q(latest_notification_status=AppointmentParticipant.NotificationStatus.SENT)
+            & latest_event_closed
+        )
+    )
 
 
 def invitation_message(data):
@@ -205,9 +260,7 @@ class AppointmentScheduleForm(forms.Form):
             if choice[0] in ADMIN_APPOINTMENT_TYPES
         ]
         self.fields["appointment_type"].initial = appointment_type
-        people = appointment_candidates(appointment_type)
-        if appointment_type == Appointment.Type.INTERVIEW:
-            people = people.exclude(pk__in=confirmed_interview_people())
+        people = appointment_ready_candidates(appointment_type)
         if selected_appointment is not None:
             people = people.exclude(appointment_participations__appointment=selected_appointment)
         self.fields["people"].queryset = people
@@ -1079,7 +1132,7 @@ def interview_schedule(request):
         ids = list(form.cleaned_data["people"].values_list("pk", flat=True))
         appointment_type = form.cleaned_data["appointment_type"]
         with transaction.atomic():
-            people = list(appointment_candidates(appointment_type).select_for_update().filter(pk__in=ids).order_by("pk"))
+            people = list(appointment_ready_candidates(appointment_type).select_for_update().filter(pk__in=ids).order_by("pk"))
             if len(people) != len(ids):
                 form.add_error("people", "สถานะผู้เข้าร่วมเปลี่ยนแล้ว กรุณาเลือกใหม่")
             elif selected_appointment is not None and selected_appointment.participants.filter(person_id__in=ids).exists():
@@ -1151,7 +1204,8 @@ def interview_schedule(request):
         audience = "unsent"
     if audience == "next_round" and selected_appointment is None and source_appointment is None:
         audience = "unsent"
-    people = appointment_candidates(appointment_type).order_by("-created_at", "-pk")
+    candidates = appointment_candidates(appointment_type)
+    people = candidates.order_by("-created_at", "-pk")
     participations = AppointmentParticipant.objects.none()
     confirmed_people = confirmed_interview_people() if appointment_type == Appointment.Type.INTERVIEW else Person.objects.none().values("pk")
     if selected_appointment is None:
@@ -1162,7 +1216,7 @@ def interview_schedule(request):
         elif audience == "confirmed_other" and appointment_type == Appointment.Type.INTERVIEW:
             people = people.filter(pk__in=confirmed_people)
         elif audience == "unsent":
-            people = people.exclude(pk__in=confirmed_people)
+            people = appointment_ready_candidates(appointment_type).order_by("-created_at", "-pk")
     audience_counts = {
         "unsent": people.count(),
         "waiting": 0,
@@ -1186,7 +1240,7 @@ def interview_schedule(request):
             pk__in=next_round_participations.values("pk"),
         )
         audience_counts = {
-            "unsent": people.exclude(pk__in=participant_people).exclude(pk__in=confirmed_people).count(),
+            "unsent": appointment_ready_candidates(appointment_type).exclude(pk__in=participant_people).count(),
             "waiting": waiting_display_participations.count(),
             "confirmed": confirmed_participations.count(),
             "failed": participations.filter(notification_status=AppointmentParticipant.NotificationStatus.FAILED).count(),
@@ -1196,7 +1250,7 @@ def interview_schedule(request):
             ).count() if appointment_type == Appointment.Type.INTERVIEW else 0,
         }
         if audience == "unsent":
-            people = people.exclude(pk__in=participant_people).exclude(pk__in=confirmed_people)
+            people = appointment_ready_candidates(appointment_type).exclude(pk__in=participant_people).order_by("-created_at", "-pk")
         elif audience == "confirmed_other":
             people = people.filter(pk__in=confirmed_people).exclude(
                 pk__in=confirmed_participations.values("person_id"),

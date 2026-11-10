@@ -644,6 +644,66 @@ class AppointmentScheduleTests(TestCase):
         self.assertEqual(appointment.participants.count(), 2)
         self.assertEqual(len(self.client.session["appointment_send_queue"]), 1)
 
+    def test_ready_to_send_excludes_people_waiting_in_an_open_previous_event(self):
+        self.schedule(people=[self.people[0].pk])
+        previous = Appointment.objects.get()
+        participant = previous.participants.get()
+        participant.notification_status = AppointmentParticipant.NotificationStatus.SENT
+        participant.notification_count = 1
+        participant.save(update_fields=["notification_status", "notification_count"])
+        next_event = Appointment.objects.create(
+            appointment_type=Appointment.Type.INTERVIEW,
+            title="สัมภาษณ์รอบใหม่",
+            starts_at=self.at + timedelta(days=7),
+        )
+        AppointmentSlot.objects.create(
+            appointment=next_event,
+            starts_at=self.at + timedelta(days=7),
+            ends_at=self.at + timedelta(days=7, hours=1),
+            capacity=10,
+        )
+
+        response = self.client.get(self.url, {
+            "type": "interview", "event": next_event.pk, "audience": "unsent",
+        })
+
+        self.assertNotContains(response, self.people[0].full_name)
+        self.assertContains(response, self.people[1].full_name)
+        self.assertEqual(response.context["audience_counts"]["unsent"], 1)
+        rejected = self.invite_to_event(next_event, [self.people[0]])
+        self.assertEqual(rejected.status_code, 200)
+        self.assertContains(rejected, "มีผู้เข้าร่วมที่ไม่ตรงเงื่อนไข")
+
+    def test_ready_to_send_includes_unconfirmed_person_after_previous_event_closes(self):
+        self.schedule(people=[self.people[0].pk])
+        previous = Appointment.objects.get()
+        participant = previous.participants.get()
+        participant.notification_status = AppointmentParticipant.NotificationStatus.SENT
+        participant.notification_count = 1
+        participant.save(update_fields=["notification_status", "notification_count"])
+        previous.status = Appointment.Status.COMPLETED
+        previous.save(update_fields=["status"])
+        next_event = Appointment.objects.create(
+            appointment_type=Appointment.Type.INTERVIEW,
+            title="สัมภาษณ์รอบใหม่",
+            starts_at=self.at + timedelta(days=7),
+        )
+        AppointmentSlot.objects.create(
+            appointment=next_event,
+            starts_at=self.at + timedelta(days=7),
+            ends_at=self.at + timedelta(days=7, hours=1),
+            capacity=10,
+        )
+
+        response = self.client.get(self.url, {
+            "type": "interview", "event": next_event.pk, "audience": "unsent",
+        })
+
+        self.assertContains(response, self.people[0].full_name)
+        accepted = self.invite_to_event(next_event, [self.people[0]])
+        self.assertEqual(accepted.status_code, 302)
+        self.assertTrue(next_event.participants.filter(person=self.people[0]).exists())
+
     def test_people_can_be_filtered_into_metro_and_provincial_groups(self):
         self.people[0].extra_data = {"province": "กรุงเทพมหานคร"}
         self.people[0].save(update_fields=["extra_data"])

@@ -41,10 +41,6 @@
                 <span>บัญชีผู้สอน</span>
             </div>
         </div>
-        <form class="teacher-logout" method="post" action="{% url 'school:logout' %}">
-            {% csrf_token %}
-            <button type="submit">ออกจากระบบ</button>
-        </form>
     </aside>
 
     <main class="teacher-main">
@@ -52,10 +48,6 @@
             <a class="teacher-mobile-brand" href="{% url 'school:teacher_dashboard' %}" aria-label="BRI School of Fivefold">
                 {% include "school/includes/brand_logo.html" with variant="nav" %}
             </a>
-            <form method="post" action="{% url 'school:logout' %}">
-                {% csrf_token %}
-                <button type="submit">ออกจากระบบ</button>
-            </form>
         </header>
         <nav class="teacher-mobile-nav" aria-label="เมนูผู้สอนบนมือถือ">
             <a class="{% if active_teacher_page|default:'dashboard' == 'dashboard' %}is-active{% endif %}" href="{% url 'school:teacher_dashboard' %}#dashboard-top" data-dashboard-link="overview">ภาพรวม</a>

@@ -36,8 +36,6 @@
     font-size: .72rem;
 }
 
-.teacher-profile-logout { margin-top: 12px; text-align: center; }
-.teacher-profile-logout button { padding: 8px 12px; color: #526159; background: transparent; border: 0; border-bottom: 1px solid currentColor; cursor: pointer; }
 
 *,
 *::before,

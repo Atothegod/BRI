@@ -33,7 +33,6 @@
 
         <div class="pending-actions">
             <a class="button button--primary success-action" href="{% url 'school:teacher_dashboard' %}"><span>ตรวจสอบสิทธิ์อีกครั้ง</span></a>
-            <form method="post" action="{% url 'school:logout' %}">{% csrf_token %}<button class="button button--secondary success-action" type="submit"><span>ออกจากระบบ</span></button></form>
         </div>
     </section>
 </main>

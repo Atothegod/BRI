@@ -88,6 +88,23 @@ class LineDashboardRouterTests(TestCase):
         self.assertRedirects(response, reverse("school:teacher_dashboard"), fetch_redirect_response=False)
         self.assertEqual(int(self.client.session["_auth_user_id"]), self.teacher.pk)
 
+        dashboard = self.client.get(reverse("school:teacher_dashboard"))
+        self.assertNotContains(dashboard, "ออกจากระบบ")
+
+    def test_pending_line_teacher_page_has_no_logout_or_login_action(self):
+        self.teacher.line_user_id = "Upendingteacher"
+        self.teacher.is_teacher_approved = False
+        self.teacher.save(update_fields=["line_user_id", "is_teacher_approved"])
+        self.set_line_profile("Upendingteacher")
+
+        self.client.get(reverse("school:line_dashboard_router"))
+        response = self.client.get(reverse("school:teacher_dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "รอการตรวจสอบ")
+        self.assertNotContains(response, "ออกจากระบบ")
+        self.assertNotContains(response, "เข้าสู่ระบบผู้สอน")
+
     def test_dashboard_router_sends_student_to_student_dashboard(self):
         person = Person.objects.create(
             first_name="LINE", last_name="Student", line_user_id="Ustudentline", status=Person.Status.PASSED,

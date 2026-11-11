@@ -94,8 +94,8 @@
                     {% csrf_token %}
                     <label>
                         <span>กลุ่ม</span>
-                        <select name="group" data-calendar-group-select>
-                            <option value="">ทุกกลุ่มที่ดูแล</option>
+                        <select name="group" required data-calendar-group-select>
+                            <option value="">เลือกกลุ่มที่ต้องการนัด</option>
                             {% for group in groups %}
                             <option value="{{ group.pk }}"{% if selected_group.pk == group.pk %} selected{% endif %}>{{ group.group_name }}</option>
                             {% endfor %}
@@ -121,25 +121,13 @@
                         <span>รายละเอียด</span>
                         <textarea name="details" rows="3" placeholder="รายละเอียดสั้น ๆ ที่จะแสดงใน LINE"></textarea>
                     </label>
-                    <div class="teacher-calendar-picker">
-                        <div class="teacher-calendar-picker-head">
-                            <strong>เลือกนักเรียน</strong>
-                            <button type="button" data-select-visible-students>เลือกทั้งหมด</button>
-                        </div>
-                        <div class="teacher-calendar-student-list">
-                            {% for student in students %}
-                            <label>
-                                <input type="checkbox" name="students" value="{{ student.pk }}">
-                                <span>{{ student.person.full_name }}<small>{{ student.student_id }} · {{ student.group.group_name }}{% if not student.person.line_user_id %} · ยังไม่เชื่อม LINE{% endif %}</small></span>
-                            </label>
-                            {% empty %}
-                            <div class="teacher-calendar-student-empty">ยังไม่มีนักเรียนในขอบเขตนี้</div>
-                            {% endfor %}
-                        </div>
+                    <div class="teacher-calendar-audience-note">
+                        <svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#info"></use></svg>
+                        <div><strong>ส่งถึงทั้งกลุ่มโดยอัตโนมัติ</strong><span>นักศึกษาทุกคนในกลุ่มจะได้รับ LINE และกดยืนยันได้ อาจารย์ทุกคนในกลุ่มจะได้รับข้อความเพื่อทราบโดยไม่มีปุ่มยืนยัน</span></div>
                     </div>
-                    <button class="teacher-calendar-submit" type="submit" disabled>
+                    <button class="teacher-calendar-submit" type="submit"{% if not selected_group or not student_count %} disabled{% endif %}>
                         <svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#check-circle"></use></svg>
-                        <span>สร้างนัดและส่ง LINE</span>
+                        <span>{% if selected_group %}สร้างนัดและส่งทั้งกลุ่ม ({{ student_count }}){% else %}เลือกกลุ่มก่อนสร้างนัด{% endif %}</span>
                     </button>
                 </form>
             </section>
@@ -155,13 +143,22 @@
                 <div class="teacher-calendar-upcoming-list">
                     {% timezone "Asia/Bangkok" %}
                     {% for appointment in upcoming_appointments %}
-                    <article>
+                    <details class="teacher-calendar-appointment-card">
+                        <summary>
                         <time datetime="{{ appointment.starts_at|date:'c' }}">{{ appointment.starts_at|thai_date:"time" }}</time>
                         <div>
                             <strong>{{ appointment.title }}</strong>
-                            <small>{{ appointment.participant_count }} คน · ยืนยันแล้ว {{ appointment.confirmed_count }} คน</small>
+                            <small>{{ appointment.participant_count }} คน · ยืนยัน {{ appointment.confirmed_count }} · รอตอบ {{ appointment.waiting_count }}</small>
                         </div>
-                    </article>
+                        <span class="teacher-calendar-expand">ดูรายชื่อ</span>
+                        </summary>
+                        <div class="teacher-calendar-response-summary"><span class="is-confirmed">ยืนยันแล้ว {{ appointment.confirmed_count }}</span><span class="is-waiting">ยังไม่ตอบ {{ appointment.waiting_count }}</span>{% if appointment.declined_count %}<span class="is-declined">ไม่สะดวก {{ appointment.declined_count }}</span>{% endif %}</div>
+                        <div class="teacher-calendar-response-list">
+                            {% for participant in appointment.participants.all %}
+                            <div><span>{{ participant.person.full_name }}</span><small>{{ participant.person.student.group.group_name }}</small>{% if participant.response_status == 'confirmed' %}<strong class="is-confirmed">ยืนยันแล้ว</strong>{% elif participant.response_status == 'declined' %}<strong class="is-declined">ไม่สะดวก</strong>{% else %}<strong class="is-waiting">ยังไม่ตอบ</strong>{% endif %}</div>
+                            {% endfor %}
+                        </div>
+                    </details>
                     {% empty %}
                     <div class="teacher-calendar-student-empty">ยังไม่มีนัดที่กำลังจะมาถึง</div>
                     {% endfor %}
@@ -176,5 +173,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'school/js/teacher_calendar.js' %}?v=20260920-thai-date-1" defer></script>
+<script src="{% static 'school/js/teacher_calendar.js' %}?v=20261112-group-appointment-1" defer></script>
 {% endblock %}

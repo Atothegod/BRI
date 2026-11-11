@@ -49,9 +49,9 @@
         </article>
     </section>
 
-    <section class="teacher-workspace-tabs" data-dashboard-tabs data-default-tab="students" aria-label="ข้อมูลผู้สอน">
-        <input class="teacher-tab-input" type="radio" name="teacher-dashboard-tab" id="teacher-tab-overview" data-tab-input="overview">
-        <input class="teacher-tab-input" type="radio" name="teacher-dashboard-tab" id="teacher-tab-students" data-tab-input="students" checked>
+    <section class="teacher-workspace-tabs" data-dashboard-tabs data-default-tab="overview" aria-label="ข้อมูลผู้สอน">
+        <input class="teacher-tab-input" type="radio" name="teacher-dashboard-tab" id="teacher-tab-overview" data-tab-input="overview" checked>
+        <input class="teacher-tab-input" type="radio" name="teacher-dashboard-tab" id="teacher-tab-students" data-tab-input="students">
         <input class="teacher-tab-input" type="radio" name="teacher-dashboard-tab" id="teacher-tab-learning" data-tab-input="learning">
 
         <div class="teacher-workspace-tab-list" role="tablist" aria-label="เลือกหมวดข้อมูล">
@@ -95,11 +95,11 @@
                     <section class="teacher-section teacher-attention" aria-labelledby="attention-title">
                         <div class="teacher-section-heading">
                             <div><span class="teacher-eyebrow">FOLLOW UP</span><h2 id="attention-title">นักศึกษาที่ควรติดตาม</h2></div>
-                            <strong class="attention-count">{{ needs_attention_count }}</strong>
+                            <strong class="attention-count" data-attention-count>{{ needs_attention_count }}</strong>
                         </div>
-                        <div class="teacher-attention-list">
+                        <div class="teacher-attention-list" data-attention-list>
                             {% for student in attention_students %}
-                            <article>
+                            <article data-attention-student="{{ student.pk }}">
                                 <span class="attention-avatar">{{ student.person.first_name|slice:":1"|upper }}</span>
                                 <div><strong>{{ student.person.full_name }}</strong><small>{{ student.group.group_name }} · {{ student.attention_reasons|join:", " }}</small></div>
                                 <a href="#students" data-dashboard-jump="students" aria-label="ดูข้อมูล {{ student.person.full_name }}"><svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#chevron-right"></use></svg></a>
@@ -141,19 +141,45 @@
                         {% empty %}<div class="teacher-empty-state"><strong>ยังไม่มีกลุ่มที่รับผิดชอบ</strong><span>เมื่อผู้ดูแลกำหนดกลุ่ม ข้อมูลจะแสดงที่นี่</span></div>{% endfor %}
                     </div>
                 </section>
+
+                <section class="teacher-section teacher-dashboard-appointments" aria-labelledby="dashboard-appointments-title">
+                    <div class="teacher-section-heading">
+                        <div><span class="teacher-eyebrow">UPCOMING APPOINTMENTS</span><h2 id="dashboard-appointments-title">นัดหมายถัดไป</h2></div>
+                        <a href="{% url 'school:teacher_calendar' %}">เปิดปฏิทิน</a>
+                    </div>
+                    <div class="teacher-dashboard-appointment-list">
+                        {% for appointment in dashboard_appointments %}
+                        <article>
+                            <time datetime="{{ appointment.starts_at|date:'c' }}"><strong>{{ appointment.starts_at|date:"d M" }}</strong><span>{{ appointment.starts_at|date:"H:i" }}</span></time>
+                            <div><strong>{{ appointment.title }}</strong><small>{{ appointment.participant_count }} คนในนัดหมาย</small></div>
+                            <div class="teacher-dashboard-appointment-counts"><span class="is-confirmed">ยืนยัน {{ appointment.confirmed_count }}</span><span class="is-waiting">รอตอบ {{ appointment.waiting_count }}</span>{% if appointment.declined_count %}<span class="is-declined">ไม่สะดวก {{ appointment.declined_count }}</span>{% endif %}</div>
+                        </article>
+                        {% empty %}<div class="teacher-positive-empty"><strong>ยังไม่มีนัดที่กำลังจะมาถึง</strong><span>สร้างนัดใหม่ได้จากหน้าปฏิทินนัดเรียน</span></div>{% endfor %}
+                    </div>
+                </section>
             </div>
 
             <section class="teacher-section teacher-tab-panel teacher-tab-panel--students" id="students" data-tab-panel="students" aria-labelledby="student-list-title">
                 <div class="teacher-section-heading">
                     <div><span class="teacher-eyebrow">STUDENT ROSTER</span><h2 id="student-list-title">นักเรียนในกลุ่มของคุณ</h2></div><span>{{ student_count }} คน</span>
                 </div>
-                <div class="teacher-student-tools"><label><span class="sr-only">ค้นหานักเรียน</span><input type="search" placeholder="ค้นหาชื่อ รหัสนักเรียน หรือชื่อกลุ่ม" data-teacher-student-search></label></div>
+                <div class="teacher-student-tools">
+                    <label class="teacher-student-search">
+                        <svg aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#search"></use></svg>
+                        <span class="sr-only">ค้นหานักศึกษา</span>
+                        <input type="search" placeholder="ค้นหาชื่อจริง ชื่อเล่น รหัส หรือกลุ่ม" autocomplete="off" data-teacher-student-search>
+                    </label>
+                    <div class="teacher-student-filters" role="group" aria-label="กรองสถานะนักศึกษา">
+                        <button class="is-active" type="button" data-student-filter="all" aria-pressed="true">ทั้งหมด <span>{{ student_count }}</span></button>
+                        <button type="button" data-student-filter="attention" aria-pressed="false">ควรติดตาม <span data-attention-count>{{ needs_attention_count }}</span></button>
+                    </div>
+                </div>
                 <div class="teacher-table-shell">
                     <table class="teacher-student-table">
                         <thead><tr><th>นักศึกษา</th><th>กลุ่ม</th><th>การเข้าเรียน</th><th>การบ้าน</th><th>การดูแล</th><th>ผู้ดูแล</th><th>สถานะ</th><th></th></tr></thead>
                         <tbody>
                             {% for student in students %}
-                            <tr class="{% if student.needs_attention %}needs-attention{% endif %}" data-teacher-student-row data-search-text="{{ student.person.full_name }} {{ student.student_id }} {{ student.group.group_name }} {{ student.person.nickname }}">
+                            <tr class="{% if student.needs_attention %}needs-attention{% endif %}" data-teacher-student-row data-student-id="{{ student.pk }}" data-student-name="{{ student.person.full_name }}" data-student-group="{{ student.group.group_name }}" data-automatic-attention="{% if student.automatic_attention %}true{% else %}false{% endif %}" data-needs-attention="{% if student.needs_attention %}true{% else %}false{% endif %}" data-search-text="{{ student.person.full_name }} {{ student.person.first_name }} {{ student.person.last_name }} {{ student.person.nickname }} {{ student.student_id }} {{ student.group.group_name }}">
                                 <td data-label="นักศึกษา"><div class="student-identity">
                                     {% if student.person.photo %}<img src="{{ student.person.photo.url }}" alt="" width="40" height="40">{% else %}<span>{{ student.person.first_name|slice:":1"|upper }}</span>{% endif %}
                                     <div><strong>{{ student.person.full_name }}</strong><small>{{ student.student_id }}</small></div>
@@ -167,7 +193,7 @@
                                 </td>
                                 <td data-label="การดูแล"><div class="teacher-assessment-summary" data-assessment-summary="{{ student.pk }}"><strong>{% if student.teacher_assessment.grade %}{{ student.teacher_assessment.grade }}{% else %}-{% endif %}</strong><span{% if not student.teacher_assessment.needs_care %} hidden{% endif %} aria-label="ต้องดูแลเป็นพิเศษ">💔</span></div></td>
                                 <td data-label="ผู้ดูแล"><div class="student-contact"><span>{{ student.group.teacher_names }}</span><small>{{ student.person.phone|default:"ไม่มีเบอร์โทร" }}</small></div></td>
-                                <td data-label="สถานะ"><div class="student-statuses">
+                                <td data-label="สถานะ"><div class="student-statuses" data-student-status>
                                     {% if student.needs_attention %}<span class="status-label status-label--attention">ควรติดตาม</span>{% else %}<span class="status-label status-label--ok">ปกติ</span>{% endif %}
                                     {% if student.is_paid %}<small>ชำระแล้ว</small>{% else %}<small>รอตรวจชำระ</small>{% endif %}
                                 </div></td>
@@ -259,4 +285,4 @@
 </div>
 {% endblock %}
 
-{% block extra_js %}<script src="{% static 'school/js/dashboard_tabs.js' %}?v=20261110-student-workspace-3"></script><script src="{% static 'school/js/teacher_dashboard.js' %}?v=20261111-student-assessment-1" defer></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'school/js/dashboard_tabs.js' %}?v=20261111-overview-default-1"></script><script src="{% static 'school/js/teacher_dashboard.js' %}?v=20261111-live-dashboard-1" defer></script><script src="{% static 'school/js/dashboard_live.js' %}?v=20261111-live-dashboard-1" defer></script>{% endblock %}

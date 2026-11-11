@@ -18,10 +18,11 @@
                     <a href="{% url 'school:student_group_assignment' %}"{% if request.resolver_match.url_name == "student_group_assignment" %} class="is-active" aria-current="page"{% endif %}>จัดกลุ่มนักศึกษา</a>
                 </div>
             </details>
-            <details class="school-admin-navbar__dropdown{% if request.resolver_match.url_name == 'admin_attendance_qr' or request.resolver_match.url_name == 'attendance_session_detail' or request.resolver_match.url_name == 'admin_homework' %} has-active{% endif %}">
+            <details class="school-admin-navbar__dropdown{% if request.resolver_match.url_name == 'admin_learning_dashboard' or request.resolver_match.url_name == 'admin_attendance_qr' or request.resolver_match.url_name == 'attendance_session_detail' or request.resolver_match.url_name == 'admin_homework' %} has-active{% endif %}">
                 <summary><svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#landmark"></use></svg><span>การเรียน</span></summary>
                 <div class="school-admin-navbar__dropdown-menu">
                     <span class="school-admin-navbar__dropdown-label">LEARNING</span>
+                    <a href="{% url 'school:admin_learning_dashboard' %}"{% if request.resolver_match.url_name == "admin_learning_dashboard" %} class="is-active" aria-current="page"{% endif %}>ติดตามการเรียน</a>
                     <a href="{% url 'school:admin_attendance_qr' %}"{% if request.resolver_match.url_name == "admin_attendance_qr" or request.resolver_match.url_name == "attendance_session_detail" %} class="is-active" aria-current="page"{% endif %}>QR และเช็กชื่อ</a>
                     <a href="{% url 'school:admin_homework' %}"{% if request.resolver_match.url_name == "admin_homework" %} class="is-active" aria-current="page"{% endif %}>การบ้านและงานมอบหมาย</a>
                 </div>

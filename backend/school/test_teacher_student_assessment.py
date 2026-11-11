@@ -99,3 +99,16 @@ class TeacherStudentAssessmentTests(TestCase):
         self.assertContains(response, "💔")
         self.assertContains(response, "ขอคุยเพิ่มเติม")
         self.assertContains(response, "บันทึกเกรดและความคิดเห็น")
+
+    def test_dashboard_opens_on_overview_and_search_index_includes_nickname(self):
+        self.student.person.nickname = "แคร์จัง"
+        self.student.person.save(update_fields=["nickname"])
+        self.client.force_login(self.teacher)
+
+        response = self.client.get(reverse("school:teacher_dashboard"))
+
+        self.assertContains(response, 'data-default-tab="overview"')
+        self.assertContains(response, 'id="teacher-tab-overview" data-tab-input="overview" checked')
+        self.assertContains(response, "แคร์จัง")
+        self.assertContains(response, 'data-student-filter="attention"')
+        self.assertNotContains(response, 'class="teacher-mobile-nav"')

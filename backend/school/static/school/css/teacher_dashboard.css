@@ -561,6 +561,29 @@ button {
     font-size: 0.82rem;
 }
 
+.teacher-calendar-audience-note { display: flex; padding: 12px; color: var(--teacher-forest); background: #f5f1e3; border: 1px solid #e1d5ad; border-radius: 9px; align-items: flex-start; gap: 10px; }
+.teacher-calendar-audience-note svg { width: 20px; height: 20px; flex: 0 0 auto; fill: none; stroke: #9a7830; stroke-width: 1.8; }
+.teacher-calendar-audience-note div { display: grid; gap: 3px; }
+.teacher-calendar-audience-note strong { font-size: .72rem; }
+.teacher-calendar-audience-note span { color: var(--teacher-muted); font-size: .63rem; line-height: 1.5; }
+.teacher-calendar-appointment-card { border-bottom: 1px solid var(--teacher-border); }
+.teacher-calendar-appointment-card:last-child { border-bottom: 0; }
+.teacher-calendar-appointment-card summary { display: grid; padding: 13px 14px; cursor: pointer; list-style: none; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 10px; }
+.teacher-calendar-appointment-card summary::-webkit-details-marker { display: none; }
+.teacher-calendar-appointment-card summary > div { min-width: 0; }
+.teacher-calendar-appointment-card summary strong,.teacher-calendar-appointment-card summary small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.teacher-calendar-expand { color: var(--teacher-sage); font-size: .61rem; font-weight: 850; }
+.teacher-calendar-response-summary { display: flex; padding: 10px 14px; background: #f7f9f7; border-top: 1px solid var(--teacher-border); flex-wrap: wrap; gap: 6px; }
+.teacher-calendar-response-summary span { padding: 5px 8px; border-radius: 999px; font-size: .58rem; font-weight: 850; }
+.teacher-calendar-response-list { display: grid; max-height: 260px; padding: 8px 14px 14px; overflow-y: auto; gap: 4px; }
+.teacher-calendar-response-list > div { display: grid; padding: 8px 0; border-bottom: 1px solid #e4eae5; grid-template-columns: minmax(0,1fr) auto; gap: 2px 8px; }
+.teacher-calendar-response-list > div > span { color: var(--teacher-forest); font-size: .68rem; font-weight: 800; }
+.teacher-calendar-response-list > div > small { color: var(--teacher-muted); font-size: .57rem; grid-column: 1; }
+.teacher-calendar-response-list > div > strong { padding: 4px 7px; border-radius: 999px; font-size: .56rem; grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+.teacher-calendar-response-summary .is-confirmed,.teacher-calendar-response-list .is-confirmed { color: #237044; background: #e3f4e8; }
+.teacher-calendar-response-summary .is-waiting,.teacher-calendar-response-list .is-waiting { color: #826319; background: #fff2c9; }
+.teacher-calendar-response-summary .is-declined,.teacher-calendar-response-list .is-declined { color: #933d29; background: #fde9e4; }
+
 .teacher-calendar-composer textarea {
     resize: vertical;
 }
@@ -1992,12 +2015,35 @@ button {
 
 .teacher-summary { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .teacher-summary-card--confirmed { border-top-color: #7d9b72; }
-.teacher-student-tools { display: flex; justify-content: flex-end; padding: 12px 16px; border-bottom: 1px solid var(--teacher-border); }
-.teacher-student-tools label { width: min(360px, 100%); }
-.teacher-student-tools input { width: 100%; min-height: 40px; padding: 9px 13px; color: var(--teacher-ink); background: #fff; border: 1px solid var(--teacher-border); border-radius: 999px; font: inherit; }
+.teacher-student-tools { display: flex; padding: 14px 16px; border-bottom: 1px solid var(--teacher-border); align-items: center; justify-content: space-between; gap: 12px; }
+.teacher-student-search { position: relative; display: block; width: min(440px, 100%); }
+.teacher-student-search svg { position: absolute; top: 50%; left: 14px; width: 18px; height: 18px; fill: none; stroke: var(--teacher-muted); stroke-width: 1.8; pointer-events: none; transform: translateY(-50%); }
+.teacher-student-tools input { width: 100%; min-height: 44px; padding: 9px 14px 9px 42px; color: var(--teacher-ink); background: #fff; border: 1px solid var(--teacher-border); border-radius: 999px; font: inherit; }
+.teacher-student-tools input:focus { border-color: var(--teacher-sage); outline: 3px solid rgba(66, 91, 70, .14); }
+.teacher-student-filters { display: flex; padding: 3px; background: #e7ede8; border: 1px solid #d4ddd5; border-radius: 999px; gap: 3px; }
+.teacher-student-filters button { display: inline-flex; min-height: 36px; padding: 7px 12px; color: #405147; background: transparent; border: 0; border-radius: 999px; cursor: pointer; align-items: center; gap: 7px; font-size: .7rem; font-weight: 850; white-space: nowrap; }
+.teacher-student-filters button span { display: grid; min-width: 21px; height: 21px; padding: 0 5px; background: rgba(18, 39, 29, .1); border-radius: 999px; place-items: center; font-size: .62rem; }
+.teacher-student-filters button.is-active { color: #fff; background: var(--teacher-forest); }
+.teacher-student-filters button.is-active span { background: rgba(255, 255, 255, .18); }
 .teacher-grade { display: inline-grid; min-width: 48px; min-height: 30px; padding: 4px 10px; color: #26623d; background: #e5f4e8; border: 1px solid #b9ddc1; border-radius: 999px; place-items: center; }
 .teacher-detail-button { padding: 7px 9px; color: var(--teacher-forest); background: transparent; border: 0; border-bottom: 1px solid currentColor; cursor: pointer; font-weight: 800; }
 .teacher-search-empty { padding: 36px; color: var(--teacher-muted); text-align: center; }
+.teacher-dashboard-appointments { margin-top: 16px; }
+.teacher-dashboard-appointments .teacher-section-heading > a { color: var(--teacher-forest); border-bottom: 1px solid currentColor; font-weight: 850; }
+.teacher-dashboard-appointment-list { display: grid; padding: 8px 18px 18px; gap: 7px; }
+.teacher-dashboard-appointment-list article { display: grid; padding: 11px 0; border-bottom: 1px solid #e1e7e2; grid-template-columns: 58px minmax(0,1fr) auto; align-items: center; gap: 12px; }
+.teacher-dashboard-appointment-list time { display: grid; min-height: 50px; color: #fff; background: var(--teacher-forest); border-radius: 8px; place-items: center; align-content: center; }
+.teacher-dashboard-appointment-list time strong { font-size: .72rem; }
+.teacher-dashboard-appointment-list time span { color: #e6d28e; font-size: .58rem; }
+.teacher-dashboard-appointment-list article > div:nth-child(2) { min-width: 0; }
+.teacher-dashboard-appointment-list article > div:nth-child(2) strong,.teacher-dashboard-appointment-list article > div:nth-child(2) small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.teacher-dashboard-appointment-list article > div:nth-child(2) strong { color: var(--teacher-forest); font-size: .75rem; }
+.teacher-dashboard-appointment-list article > div:nth-child(2) small { margin-top: 3px; color: var(--teacher-muted); font-size: .61rem; }
+.teacher-dashboard-appointment-counts { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
+.teacher-dashboard-appointment-counts span { padding: 5px 8px; border-radius: 999px; font-size: .58rem; font-weight: 850; }
+.teacher-dashboard-appointment-counts .is-confirmed { color: #237044; background: #e3f4e8; }
+.teacher-dashboard-appointment-counts .is-waiting { color: #826319; background: #fff2c9; }
+.teacher-dashboard-appointment-counts .is-declined { color: #933d29; background: #fde9e4; }
 
 .teacher-student-dialog { width: min(720px, calc(100vw - 24px)); max-width: none; padding: 0; color: var(--teacher-ink); background: transparent; border: 0; }
 .teacher-student-dialog::backdrop { background: rgba(12, 35, 24, .66); backdrop-filter: blur(4px); }
@@ -2062,7 +2108,14 @@ button {
     .teacher-summary-card--confirmed { display: none; }
     .teacher-scope { display: block; }
     .teacher-scope > div:first-child { margin-bottom: 10px; }
-    .teacher-student-tools { padding-inline: 0; border: 0; }
+    .teacher-student-tools { padding: 0 0 14px; border: 0; align-items: stretch; flex-direction: column; }
+    .teacher-student-search { width: 100%; }
+    .teacher-student-tools input { min-height: 48px; font-size: .78rem; }
+    .teacher-student-filters { width: 100%; border-radius: 10px; }
+    .teacher-student-filters button { flex: 1; min-height: 42px; justify-content: center; border-radius: 7px; }
+    .teacher-dashboard-appointment-list { padding-inline: 13px; }
+    .teacher-dashboard-appointment-list article { grid-template-columns: 52px minmax(0,1fr); }
+    .teacher-dashboard-appointment-counts { grid-column: 1 / -1; justify-content: flex-start; }
     .teacher-section.teacher-tab-panel--students { background: transparent; border: 0; box-shadow: none; }
     .teacher-section.teacher-tab-panel--students > .teacher-section-heading { padding-inline: 0; }
     .teacher-table-shell { overflow: visible; }

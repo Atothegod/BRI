@@ -6,6 +6,7 @@ from . import views
 from . import interviews
 from . import homework
 from . import line_messages
+from . import learning_dashboard
 from . import student_groups
 from . import teacher_group_management
 
@@ -13,6 +14,7 @@ from . import teacher_group_management
 app_name = "school"
 
 urlpatterns = [
+    path("school-admin/learning/", learning_dashboard.admin_learning_dashboard, name="admin_learning_dashboard"),
     path("school-admin/homework/", homework.admin_homework, name="admin_homework"),
     path(
         "school-admin/teacher-groups/",

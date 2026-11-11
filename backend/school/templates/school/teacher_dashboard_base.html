@@ -4,11 +4,11 @@
 {% block title %}{% block dashboard_title %}Dashboard ผู้สอน{% endblock %} | BRI School of Fivefold{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'school/css/teacher_dashboard.css' %}?v=20261111-student-assessment-1">
+<link rel="stylesheet" href="{% static 'school/css/teacher_dashboard.css' %}?v=20261111-dashboard-ux-2">
 {% endblock %}
 
 {% block content %}
-<div class="teacher-layout">
+<div class="teacher-layout" data-live-dashboard="teacher">
     <aside class="teacher-sidebar">
         <a class="teacher-sidebar-brand" href="{% url 'school:teacher_dashboard' %}" aria-label="BRI School of Fivefold">
             {% include "school/includes/brand_logo.html" with variant="nav" %}
@@ -49,13 +49,6 @@
                 {% include "school/includes/brand_logo.html" with variant="nav" %}
             </a>
         </header>
-        <nav class="teacher-mobile-nav" aria-label="เมนูผู้สอนบนมือถือ">
-            <a class="{% if active_teacher_page|default:'dashboard' == 'dashboard' %}is-active{% endif %}" href="{% url 'school:teacher_dashboard' %}#dashboard-top" data-dashboard-link="overview">ภาพรวม</a>
-            <a href="{% url 'school:teacher_dashboard' %}#students" data-dashboard-link="students">นักศึกษา</a>
-            <a href="{% url 'school:teacher_dashboard' %}#learning" data-dashboard-link="learning">การเรียน</a>
-            <a class="{% if active_teacher_page == 'calendar' %}is-active{% endif %}" href="{% url 'school:teacher_calendar' %}">ปฏิทิน</a>
-        </nav>
-
         {% block dashboard_content %}{% endblock %}
     </main>
 </div>

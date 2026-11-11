@@ -2,9 +2,8 @@
     const form = document.querySelector('[data-teacher-calendar-form]');
     if (!form) return;
 
-    const boxes = [...form.querySelectorAll('input[name="students"]')];
     const submit = form.querySelector('.teacher-calendar-submit');
-    const selectVisible = form.querySelector('[data-select-visible-students]');
+    const groupSelect = form.querySelector('[data-calendar-group-select]');
     const dateInput = form.elements.date;
     const timeInput = form.elements.time;
     const csrfToken = form.elements.csrfmiddlewaretoken.value;
@@ -38,37 +37,27 @@
         }
     }
 
-    function selectedCount() {
-        return boxes.filter(box => box.checked).length;
-    }
-
     function sync() {
-        const count = selectedCount();
-        submit.disabled = busy || count === 0;
-        submit.querySelector('span').textContent = count > 0
-            ? `สร้างนัดและส่ง LINE (${count})`
-            : 'สร้างนัดและส่ง LINE';
+        submit.disabled = busy || !groupSelect?.value;
     }
 
-    boxes.forEach(box => box.addEventListener('change', sync));
-    selectVisible?.addEventListener('click', () => {
-        const shouldCheck = selectedCount() !== boxes.length;
-        boxes.forEach(box => {
-            box.checked = shouldCheck;
-        });
-        selectVisible.textContent = shouldCheck ? 'ล้างที่เลือก' : 'เลือกทั้งหมด';
-        sync();
+    groupSelect?.addEventListener('change', () => {
+        const url = new URL(window.location.href);
+        if (groupSelect.value) url.searchParams.set('group', groupSelect.value);
+        else url.searchParams.delete('group');
+        url.hash = 'new-appointment';
+        window.location.assign(url.toString());
     });
 
     form.addEventListener('submit', event => {
-        const count = selectedCount();
-        if (!count || busy) {
+        if (!groupSelect?.value || busy) {
             event.preventDefault();
             return;
         }
         const date = formatThaiDateInput(dateInput.value);
         const time = timeInput.value;
-        if (!window.confirm(`สร้างนัดเรียนวันที่ ${date} เวลา ${time} และส่ง LINE ให้ ${count} คน ใช่หรือไม่?`)) {
+        const groupLabel = groupSelect.options[groupSelect.selectedIndex]?.textContent || 'กลุ่มนี้';
+        if (!window.confirm(`สร้างนัดเรียนวันที่ ${date} เวลา ${time} และส่ง LINE ให้ทุกคนใน ${groupLabel} ใช่หรือไม่?`)) {
             event.preventDefault();
             return;
         }

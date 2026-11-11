@@ -3,17 +3,62 @@
     const search = document.querySelector("[data-teacher-student-search]");
     const rows = [...document.querySelectorAll("[data-teacher-student-row]")];
     const empty = document.querySelector("[data-teacher-search-empty]");
+    const filterButtons = [...document.querySelectorAll("[data-student-filter]")];
+    let activeFilter = "all";
     const syncSearch = () => {
         const query = (search?.value || "").trim().toLocaleLowerCase("th");
         let visible = 0;
         rows.forEach((row) => {
-            const matches = !query || (row.dataset.searchText || "").toLocaleLowerCase("th").includes(query);
+            const matchesQuery = !query || (row.dataset.searchText || "").toLocaleLowerCase("th").includes(query);
+            const matchesFilter = activeFilter === "all" || row.dataset.needsAttention === "true";
+            const matches = matchesQuery && matchesFilter;
             row.hidden = !matches;
             if (matches) visible += 1;
         });
         if (empty) empty.hidden = visible > 0 || rows.length === 0;
     };
     search?.addEventListener("input", syncSearch);
+
+    const updateAttentionUi = (row, needsCare) => {
+        if (!row) return;
+        const wasAttention = row.dataset.needsAttention === "true";
+        const isAttention = needsCare || row.dataset.automaticAttention === "true";
+        row.dataset.needsAttention = isAttention ? "true" : "false";
+        row.classList.toggle("needs-attention", isAttention);
+        const status = row.querySelector("[data-student-status] > span");
+        if (status) {
+            status.textContent = isAttention ? "ควรติดตาม" : "ปกติ";
+            status.className = `status-label status-label--${isAttention ? "attention" : "ok"}`;
+        }
+        if (wasAttention !== isAttention) {
+            document.querySelectorAll("[data-attention-count]").forEach((counter) => {
+                counter.textContent = String(Math.max(0, Number(counter.textContent) + (isAttention ? 1 : -1)));
+            });
+        }
+        const list = document.querySelector("[data-attention-list]");
+        const existing = list?.querySelector(`[data-attention-student="${row.dataset.studentId}"]`);
+        if (isAttention && !existing && list) {
+            list.querySelector(".teacher-positive-empty")?.remove();
+            const article = document.createElement("article");
+            article.dataset.attentionStudent = row.dataset.studentId;
+            article.innerHTML = `<span class="attention-avatar">${(row.dataset.studentName || "?").slice(0, 1)}</span><div><strong></strong><small></small></div>`;
+            article.querySelector("strong").textContent = row.dataset.studentName || "นักศึกษา";
+            article.querySelector("small").textContent = `${row.dataset.studentGroup || ""} · 💔 ต้องดูแล`;
+            list.prepend(article);
+        } else if (!isAttention) {
+            existing?.remove();
+        }
+        syncSearch();
+    };
+    filterButtons.forEach((button) => button.addEventListener("click", () => {
+        activeFilter = button.dataset.studentFilter || "all";
+        filterButtons.forEach((item) => {
+            const selected = item === button;
+            item.classList.toggle("is-active", selected);
+            item.setAttribute("aria-pressed", selected ? "true" : "false");
+        });
+        syncSearch();
+    }));
 
     document.querySelectorAll("[data-student-detail-open]").forEach((button) => {
         button.addEventListener("click", () => document.getElementById(button.dataset.studentDetailOpen)?.showModal());
@@ -48,9 +93,7 @@
                     const heart = summary.querySelector("span");
                     heart.hidden = !result.assessment.needs_care;
                 }
-                if (result.assessment.needs_care) {
-                    summary?.closest("[data-teacher-student-row]")?.classList.add("needs-attention");
-                }
+                updateAttentionUi(summary?.closest("[data-teacher-student-row]"), result.assessment.needs_care);
                 if (status) {
                     status.textContent = `${result.message} · ${result.assessment.updated_at}`;
                     status.dataset.state = "success";

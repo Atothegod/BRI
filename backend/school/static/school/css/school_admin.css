@@ -1116,6 +1116,7 @@
     border: 1px solid var(--school-admin-border);
     border-radius: 8px;
     box-shadow: 0 18px 42px rgba(9, 26, 18, 0.22);
+    color: var(--school-admin-forest);
 }
 
 .school-admin-navbar__dropdown-label {
@@ -1127,11 +1128,11 @@
     letter-spacing: 0.13em;
 }
 
-.school-admin-navbar__dropdown-menu a {
+.school-admin-navbar__links .school-admin-navbar__dropdown-menu a {
     display: block;
     min-height: 40px;
     padding: 10px 12px;
-    color: var(--school-admin-forest);
+    color: var(--school-admin-forest) !important;
     border: 0;
     border-radius: 6px;
     font-size: 0.9rem;
@@ -1139,10 +1140,10 @@
     text-decoration: none;
 }
 
-.school-admin-navbar__dropdown-menu a:hover,
-.school-admin-navbar__dropdown-menu a:focus-visible,
-.school-admin-navbar__dropdown-menu a.is-active {
-    color: var(--school-admin-forest);
+.school-admin-navbar__links .school-admin-navbar__dropdown-menu a:hover,
+.school-admin-navbar__links .school-admin-navbar__dropdown-menu a:focus-visible,
+.school-admin-navbar__links .school-admin-navbar__dropdown-menu a.is-active {
+    color: #10291e !important;
     background: #f5e8bf;
 }
 

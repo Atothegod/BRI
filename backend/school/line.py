@@ -570,6 +570,54 @@ def build_appointment_invitation_flex_message(participant):
     }
 
 
+def build_teacher_class_notice_flex_message(appointment, group):
+    """Inform teachers about a class appointment without a confirmation action."""
+    from zoneinfo import ZoneInfo
+    from django.utils import timezone
+
+    local_start = timezone.localtime(appointment.starts_at, ZoneInfo("Asia/Bangkok"))
+    contents = [
+        build_flex_row("กลุ่ม", group.group_name),
+        build_flex_row("วันที่", thai_date(local_start, include_weekday=True)),
+        build_flex_row("เวลา", f"{local_start:%H:%M} น."),
+    ]
+    if appointment.location:
+        contents.append(build_flex_row("สถานที่", appointment.location))
+    if appointment.details:
+        contents.append({"type": "text", "text": appointment.details, "size": "sm", "wrap": True, "color": "#425B46"})
+    buttons = []
+    if appointment.meeting_url:
+        buttons.append({
+            "type": "button",
+            "style": "primary",
+            "height": "sm",
+            "color": "#425B46",
+            "action": {"type": "uri", "label": "เปิดลิงก์เข้าร่วม", "uri": appointment.meeting_url},
+        })
+    bubble = {
+        "type": "bubble",
+        "size": "mega",
+        "header": {
+            "type": "box", "layout": "vertical", "backgroundColor": "#12271D", "paddingAll": "20px",
+            "contents": [
+                {"type": "text", "text": "BRI Teacher Notice", "color": "#C2A256", "size": "xs", "weight": "bold"},
+                {"type": "text", "text": "แจ้งนัดเรียนในกลุ่มของคุณ", "color": "#FFFFFF", "size": "lg", "weight": "bold", "margin": "sm", "wrap": True},
+            ],
+        },
+        "body": {
+            "type": "box", "layout": "vertical", "backgroundColor": "#F3F0E8", "spacing": "md",
+            "contents": [
+                {"type": "text", "text": appointment.title, "weight": "bold", "wrap": True, "color": "#12271D"},
+                *contents,
+                {"type": "text", "text": "ข้อความนี้แจ้งเพื่อทราบ อาจารย์ไม่ต้องกดยืนยัน", "size": "xs", "wrap": True, "color": "#7B6550"},
+            ],
+        },
+    }
+    if buttons:
+        bubble["footer"] = {"type": "box", "layout": "vertical", "backgroundColor": "#F3F0E8", "contents": buttons}
+    return {"type": "flex", "altText": f"แจ้งอาจารย์: {appointment.title} กลุ่ม {group.group_name}", "contents": bubble}
+
+
 def build_appointment_reschedule_flex_message(participant):
     from zoneinfo import ZoneInfo
     from django.utils import timezone

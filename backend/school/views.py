@@ -39,6 +39,7 @@ from .forms import (
 from .line import (
     LineProfileError,
     build_appointment_invitation_flex_message,
+    build_teacher_class_notice_flex_message,
     normalize_line_profile,
     send_line_push_message,
     verify_line_id_token,
@@ -766,6 +767,7 @@ def teacher_dashboard(request):
         student.attendance_percent = None
         student.homework_percent = None
         student.needs_attention = False
+        student.automatic_attention = False
         student.attention_reasons = []
         student.teacher_assessment = assessments_by_student.get(student.pk)
 
@@ -776,6 +778,7 @@ def teacher_dashboard(request):
             attendance_percentages.append(student.attendance_percent)
             if student.attendance_percent < 75:
                 student.needs_attention = True
+                student.automatic_attention = True
                 student.attention_reasons.append("การเข้าเรียน")
 
         if student.homework_total:
@@ -785,6 +788,7 @@ def teacher_dashboard(request):
             homework_percentages.append(student.homework_percent)
             if student.homework_percent < 70:
                 student.needs_attention = True
+                student.automatic_attention = True
                 student.attention_reasons.append("การส่งงาน")
 
         if student.teacher_assessment and student.teacher_assessment.needs_care:
@@ -839,7 +843,9 @@ def teacher_dashboard(request):
         )
         dashboard_groups.append(group)
 
-    attention_students = [student for student in students if student.needs_attention][:5]
+    # Do not truncate this list: a manually flagged student must always be visible
+    # in the follow-up panel, even when more than five students need attention.
+    attention_students = [student for student in students if student.needs_attention]
 
     homework_assignments = list(
         HomeworkAssignment.objects.select_related("group")
@@ -935,6 +941,22 @@ def teacher_dashboard(request):
         )
         .order_by("-date", "-starts_at")[:5]
     )
+    dashboard_appointments = list(
+        Appointment.objects.filter(
+            appointment_type=Appointment.Type.CLASS,
+            participants__person__student__group__in=scope_groups,
+            starts_at__gte=timezone.now(),
+            status=Appointment.Status.SCHEDULED,
+        )
+        .annotate(
+            participant_count=Count("participants", distinct=True),
+            confirmed_count=Count("participants", filter=Q(participants__response_status=AppointmentParticipant.ResponseStatus.CONFIRMED), distinct=True),
+            waiting_count=Count("participants", filter=Q(participants__response_status=AppointmentParticipant.ResponseStatus.WAITING), distinct=True),
+            declined_count=Count("participants", filter=Q(participants__response_status=AppointmentParticipant.ResponseStatus.DECLINED), distinct=True),
+        )
+        .order_by("starts_at", "title")
+        .distinct()[:5]
+    )
     context = {
         "groups": groups,
         "students": students,
@@ -952,6 +974,7 @@ def teacher_dashboard(request):
         "dashboard_groups": dashboard_groups,
         "upcoming_assignments": upcoming_assignments,
         "recent_attendance_sessions": recent_attendance_sessions,
+        "dashboard_appointments": dashboard_appointments,
     }
     return render(request, "school/teacher_dashboard.html", context)
 
@@ -1060,18 +1083,14 @@ def teacher_calendar(request):
         details = request.POST.get("details", "").strip()
         date_value = request.POST.get("date", "").strip()
         time_value = request.POST.get("time", "").strip()
-        selected_student_ids = request.POST.getlist("students")
         form_has_error = False
 
-        selected_students = student_queryset.filter(pk__in=selected_student_ids)
-        if not selected_student_ids:
-            messages.error(request, "กรุณาเลือกนักเรียนอย่างน้อย 1 คน")
+        if selected_group is None:
+            messages.error(request, "กรุณาเลือกกลุ่มที่ต้องการนัด")
             form_has_error = True
-        elif selected_students.count() != len(set(selected_student_ids)):
-            messages.error(request, "มีนักเรียนบางคนอยู่นอกกลุ่มที่คุณดูแล กรุณาเลือกใหม่")
-            form_has_error = True
-        elif selected_students.count() > 50:
-            messages.error(request, "เลือกนักเรียนได้ครั้งละไม่เกิน 50 คน")
+        selected_students = student_queryset if selected_group else student_queryset.none()
+        if selected_group and not selected_students.exists():
+            messages.error(request, "กลุ่มนี้ยังไม่มีนักเรียนที่พร้อมรับนัด")
             form_has_error = True
 
         try:
@@ -1092,7 +1111,6 @@ def teacher_calendar(request):
             with transaction.atomic():
                 locked_students = list(
                     student_queryset.select_for_update()
-                    .filter(pk__in=selected_student_ids)
                     .order_by("pk")
                 )
                 appointment = Appointment.objects.create(
@@ -1117,9 +1135,14 @@ def teacher_calendar(request):
                 {"id": participant.pk, "at": appointment.starts_at.isoformat()}
                 for participant in participants
             ]
+            teacher_notice = build_teacher_class_notice_flex_message(appointment, selected_group)
+            teacher_sent = 0
+            for teacher in selected_group.teacher_list:
+                if teacher.line_user_id and send_line_push_message(teacher.line_user_id, [teacher_notice]):
+                    teacher_sent += 1
             messages.success(
                 request,
-                f"สร้างนัดเรียนและเตรียมส่ง LINE ให้ {len(participants)} คนแล้ว",
+                f"สร้างนัดและเตรียมส่ง LINE ให้นักศึกษา {len(participants)} คนแล้ว · แจ้งอาจารย์สำเร็จ {teacher_sent} คน",
             )
             query = f"?group={selected_group.pk}" if selected_group else ""
             return redirect(f"{reverse('school:teacher_calendar')}{query}")
@@ -1147,7 +1170,10 @@ def teacher_calendar(request):
                 filter=Q(participants__response_status=AppointmentParticipant.ResponseStatus.CONFIRMED),
                 distinct=True,
             ),
+            waiting_count=Count("participants", filter=Q(participants__response_status=AppointmentParticipant.ResponseStatus.WAITING), distinct=True),
+            declined_count=Count("participants", filter=Q(participants__response_status=AppointmentParticipant.ResponseStatus.DECLINED), distinct=True),
         )
+        .prefetch_related("participants__person__student__group")
         .order_by("starts_at", "title")
         .distinct()
     )
@@ -1182,7 +1208,10 @@ def teacher_calendar(request):
                 filter=Q(participants__response_status=AppointmentParticipant.ResponseStatus.CONFIRMED),
                 distinct=True,
             ),
+            waiting_count=Count("participants", filter=Q(participants__response_status=AppointmentParticipant.ResponseStatus.WAITING), distinct=True),
+            declined_count=Count("participants", filter=Q(participants__response_status=AppointmentParticipant.ResponseStatus.DECLINED), distinct=True),
         )
+        .prefetch_related("participants__person__student__group")
         .order_by("starts_at", "title")
         .distinct()[:8]
     )

@@ -9,7 +9,7 @@
 {% endblock %}
 
 {% block content %}
-<main class="student-portal" data-student-portal>
+<main class="student-portal" data-student-portal data-live-dashboard="student">
     <header class="student-topbar">
         <a class="student-brand" href="{% url 'school:student_dashboard' %}" aria-label="BRI School of Fivefold">
             {% include "school/includes/brand_logo.html" with variant="nav" %}
@@ -148,4 +148,5 @@
 
 {% block extra_js %}
 {% include "school/includes/liff_bridge.html" %}
+<script src="{% static 'school/js/dashboard_live.js' %}?v=20261111-live-dashboard-1" defer></script>
 {% endblock %}

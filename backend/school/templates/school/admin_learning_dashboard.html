@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}ติดตามการเรียน | BRI School Admin{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261111-nav-contrast-1">
+<link rel="stylesheet" href="{% static 'school/css/admin_learning_dashboard.css' %}?v=20261111-learning-1">
+{% endblock %}
+
+{% block content %}
+{% include "school/includes/school_admin_nav.html" %}
+<main class="learning-admin-page">
+    <div class="learning-admin-shell">
+        <header class="learning-hero">
+            <div><span>BRI LEARNING CONTROL</span><h1>ติดตามการเรียนทั้งโรงเรียน</h1><p>เห็นการมาเรียน ขาด ลา มาสาย และความคืบหน้าการบ้านของนักศึกษาจากจุดเดียว</p></div>
+            <div class="learning-hero-badge"><strong>{{ student_count }}</strong><span>นักศึกษาในขอบเขตนี้</span></div>
+        </header>
+
+        <form class="learning-scope" method="get">
+            <label for="learning-group"><span>เลือกกลุ่มที่ต้องการติดตาม</span><select id="learning-group" name="group" onchange="this.form.submit()"><option value="">ทุกกลุ่มในโรงเรียน</option>{% for group in groups %}<option value="{{ group.pk }}"{% if selected_group.pk == group.pk %} selected{% endif %}>{{ group.group_name }} — {{ group.teacher_names }}</option>{% endfor %}</select></label>
+            {% if selected_group %}<a href="{% url 'school:admin_learning_dashboard' %}">ล้างตัวกรอง</a>{% endif %}
+        </form>
+
+        <section class="learning-kpis" aria-label="สรุปการเรียน">
+            <article class="is-student"><span>นักศึกษา</span><strong>{{ student_count }}</strong><small>{% if selected_group %}{{ selected_group.group_name }}{% else %}ทุกกลุ่ม{% endif %}</small></article>
+            <article class="is-present"><span>มาเรียน</span><strong>{{ totals.present }}</strong><small>จำนวนบันทึกรวม</small></article>
+            <article class="is-late"><span>มาสาย</span><strong>{{ totals.late }}</strong><small>จำนวนบันทึกรวม</small></article>
+            <article class="is-absent"><span>ขาด / ลา</span><strong>{{ totals.absent }}<i>/</i>{{ totals.leave }}</strong><small>จำนวนบันทึกรวม</small></article>
+            <article class="is-homework"><span>ส่งการบ้าน</span><strong>{{ totals.homework_submitted }}<i>/</i>{{ totals.homework_total }}</strong><small>งานของนักศึกษาทั้งหมด</small></article>
+            <article class="is-follow"><span>ควรติดตาม</span><strong>{{ follow_up_count }}</strong><small>ต่ำกว่าเกณฑ์หรือครูทำเครื่องหมาย</small></article>
+        </section>
+
+        <section class="learning-roster" aria-labelledby="learning-roster-title">
+            <div class="learning-roster-heading"><div><span>STUDENT LEARNING STATUS</span><h2 id="learning-roster-title">รายชื่อนักศึกษา</h2></div><strong>{{ student_count }} คน</strong></div>
+            <div class="learning-tools">
+                <label><svg class="icon"><use href="{% static 'school/images/icons.svg' %}#search"></use></svg><span class="sr-only">ค้นหานักศึกษา</span><input type="search" placeholder="ค้นหาชื่อ ชื่อเล่น รหัส หรือกลุ่ม" data-learning-search></label>
+                <div role="group" aria-label="กรองสถานะ"><button class="is-active" type="button" data-learning-filter="all">ทั้งหมด</button><button type="button" data-learning-filter="follow">ควรติดตาม {{ follow_up_count }}</button></div>
+            </div>
+            <div class="learning-table-shell">
+                <table class="learning-table">
+                    <thead><tr><th>นักศึกษา</th><th>กลุ่ม / ผู้ดูแล</th><th>มา</th><th>สาย</th><th>ขาด</th><th>ลา</th><th>เข้าเรียนรวม</th><th>การบ้าน</th><th>สถานะล่าสุด</th></tr></thead>
+                    <tbody>
+                    {% for student in students %}
+                        <tr class="{% if student.needs_follow_up %}needs-follow-up{% endif %}" data-learning-row data-follow="{% if student.needs_follow_up %}true{% else %}false{% endif %}" data-search="{{ student.person.full_name }} {{ student.person.nickname }} {{ student.student_id }} {{ student.group.group_name }}">
+                            <td data-label="นักศึกษา"><div class="learning-student">{% if student.person.photo %}<img src="{{ student.person.photo.url }}" alt="">{% else %}<span>{{ student.person.first_name|slice:':1' }}</span>{% endif %}<div><strong>{{ student.person.full_name }}</strong><small>{{ student.person.nickname|default:"ไม่มีชื่อเล่น" }} · {{ student.student_id }}</small></div></div></td>
+                            <td data-label="กลุ่ม / ผู้ดูแล"><strong>{{ student.group.group_name }}</strong><small>{{ student.group.teacher_names }}</small></td>
+                            <td data-label="มา"><b class="status-number is-present">{{ student.present_count }}</b></td>
+                            <td data-label="สาย"><b class="status-number is-late">{{ student.late_count }}</b></td>
+                            <td data-label="ขาด"><b class="status-number is-absent">{{ student.absent_count }}</b></td>
+                            <td data-label="ลา"><b class="status-number is-leave">{{ student.leave_count }}</b></td>
+                            <td data-label="เข้าเรียนรวม">{% if student.attendance_percent is not None %}<div class="learning-progress"><strong>{{ student.attendance_percent }}%</strong><span><i style="width:{{ student.attendance_percent }}%"></i></span><small>{{ student.attended_count }}/{{ student.attendance_total }} คาบ</small></div>{% else %}<em>ยังไม่มีคาบ</em>{% endif %}</td>
+                            <td data-label="การบ้าน">{% if student.homework_percent is not None %}<div class="learning-progress"><strong>{{ student.homework_percent }}%</strong><span><i style="width:{{ student.homework_percent }}%"></i></span><small>ส่ง {{ student.homework_submitted }} · ค้าง {{ student.homework_missing }}</small></div>{% else %}<em>ยังไม่มีงาน</em>{% endif %}</td>
+                            <td data-label="สถานะล่าสุด"><div class="learning-latest">{% if student.manual_care %}<span class="is-follow">💔 ครูระบุติดตาม</span>{% elif student.needs_follow_up %}<span class="is-follow">ควรติดตาม</span>{% else %}<span class="is-ok">ปกติ</span>{% endif %}{% if student.latest_attendance %}<small>{{ student.latest_attendance.attendance_session.date|date:"d M Y" }} · {{ student.latest_attendance.get_status_display }}</small>{% else %}<small>ยังไม่มีการเช็กชื่อ</small>{% endif %}</div></td>
+                        </tr>
+                    {% empty %}<tr><td class="learning-empty" colspan="9">ยังไม่มีนักศึกษาในขอบเขตที่เลือก</td></tr>{% endfor %}
+                    </tbody>
+                </table>
+                <div class="learning-empty" data-learning-empty hidden>ไม่พบนักศึกษาที่ตรงกับคำค้นหรือตัวกรอง</div>
+            </div>
+        </section>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'school/js/admin_learning_dashboard.js' %}?v=20261111-learning-1" defer></script>{% endblock %}

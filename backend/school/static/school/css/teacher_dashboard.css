@@ -1999,7 +1999,7 @@ button {
 .teacher-detail-button { padding: 7px 9px; color: var(--teacher-forest); background: transparent; border: 0; border-bottom: 1px solid currentColor; cursor: pointer; font-weight: 800; }
 .teacher-search-empty { padding: 36px; color: var(--teacher-muted); text-align: center; }
 
-.teacher-student-dialog { width: min(620px, calc(100vw - 24px)); max-width: none; padding: 0; color: var(--teacher-ink); background: transparent; border: 0; }
+.teacher-student-dialog { width: min(720px, calc(100vw - 24px)); max-width: none; padding: 0; color: var(--teacher-ink); background: transparent; border: 0; }
 .teacher-student-dialog::backdrop { background: rgba(12, 35, 24, .66); backdrop-filter: blur(4px); }
 .teacher-student-dialog article { overflow: hidden; padding: 22px; background: #fff; border: 1px solid #dce4dd; border-radius: 18px; box-shadow: 0 26px 70px rgba(10, 35, 23, .28); }
 .teacher-student-dialog header { display: flex; justify-content: space-between; gap: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--teacher-border); }
@@ -2017,6 +2017,33 @@ button {
 .teacher-student-dialog dt { color: var(--teacher-muted); font-size: .72rem; font-weight: 750; }
 .teacher-student-dialog dd { margin: 3px 0 0; overflow-wrap: anywhere; font-weight: 800; }
 .teacher-dialog-close { width: 100%; min-height: 48px; margin-top: 16px; color: #fff; background: var(--teacher-forest); border: 0; border-radius: 999px; cursor: pointer; font-weight: 850; }
+.teacher-assessment-summary { display: flex; min-width: 62px; align-items: center; gap: 7px; }
+.teacher-assessment-summary strong { display: grid; width: 30px; height: 30px; color: var(--teacher-forest); background: #edf2ee; border: 1px solid #d5e0d7; border-radius: 50%; place-items: center; }
+.teacher-assessment-summary span { font-size: 1.05rem; }
+.teacher-assessment-form { display: grid; margin-top: 18px; padding: 18px; background: #fbfaf5; border: 1px solid #e4dec8; border-radius: 14px; gap: 14px; }
+.teacher-assessment-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.teacher-assessment-heading > div { display: grid; gap: 2px; }
+.teacher-assessment-heading > div > span { color: #a48638; font-size: .62rem; font-weight: 900; letter-spacing: .12em; }
+.teacher-assessment-heading h3 { margin: 0; color: var(--teacher-forest); font-size: 1.05rem; }
+.teacher-assessment-heading > span { color: var(--teacher-muted); font-size: .63rem; }
+.teacher-assessment-controls { display: grid; grid-template-columns: minmax(150px, .65fr) minmax(0, 1.35fr); gap: 10px; }
+.teacher-assessment-controls > label:first-child { display: grid; color: var(--teacher-forest); font-size: .68rem; font-weight: 850; gap: 5px; }
+.teacher-assessment-controls select { min-height: 44px; padding: 8px 10px; color: var(--teacher-forest); background: #fff; border: 1px solid #d6ded7; border-radius: 9px; font: inherit; }
+.teacher-heart-toggle { position: relative; display: flex; min-height: 66px; padding: 10px 12px; background: #fff; border: 1px solid #ead4ce; border-radius: 10px; align-items: center; gap: 10px; cursor: pointer; }
+.teacher-heart-toggle input { position: absolute; opacity: 0; pointer-events: none; }
+.teacher-heart-icon { display: grid; width: 38px; height: 38px; filter: grayscale(1); opacity: .5; background: #f4f1ee; border-radius: 50%; place-items: center; transition: filter 160ms ease, opacity 160ms ease, transform 160ms ease; }
+.teacher-heart-toggle input:checked + .teacher-heart-icon { filter: none; opacity: 1; background: #fdebe7; transform: scale(1.06); }
+.teacher-heart-toggle > span:last-child { display: grid; gap: 2px; }
+.teacher-heart-toggle strong { color: #7d3426; font-size: .72rem; }
+.teacher-heart-toggle small { color: var(--teacher-muted); font-size: .6rem; }
+.teacher-assessment-comment { display: grid; color: var(--teacher-forest); font-size: .68rem; font-weight: 850; gap: 5px; }
+.teacher-assessment-comment textarea { width: 100%; min-height: 92px; padding: 10px 11px; color: var(--teacher-ink); background: #fff; border: 1px solid #d6ded7; border-radius: 9px; font: inherit; font-size: .75rem; line-height: 1.5; resize: vertical; }
+.teacher-assessment-actions { display: flex; min-height: 42px; align-items: center; justify-content: space-between; gap: 10px; }
+.teacher-assessment-actions > span { color: var(--teacher-muted); font-size: .62rem; }
+.teacher-assessment-actions > span[data-state="success"] { color: #277044; font-weight: 800; }
+.teacher-assessment-actions > span[data-state="error"] { color: #9a3e2c; font-weight: 800; }
+.teacher-assessment-actions button { min-height: 42px; padding: 0 15px; color: #fff; background: var(--teacher-forest); border: 0; border-radius: 9px; cursor: pointer; font-weight: 850; }
+.teacher-assessment-form.is-saving { opacity: .72; pointer-events: none; }
 
 @media (max-width: 1120px) {
     .teacher-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -2047,6 +2074,9 @@ button {
     .teacher-student-table td:first-child { grid-column: 1; }
     .teacher-student-dialog article { padding: 18px; }
     .teacher-student-dialog dl { grid-template-columns: 1fr; }
+    .teacher-assessment-heading, .teacher-assessment-actions { align-items: stretch; flex-direction: column; }
+    .teacher-assessment-controls { grid-template-columns: 1fr; }
+    .teacher-assessment-actions button { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {

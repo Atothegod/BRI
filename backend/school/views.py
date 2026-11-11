@@ -54,6 +54,7 @@ from .models import (
     PaymentSlip,
     Person,
     Student,
+    TeacherStudentAssessment,
     TeacherGroup,
 )
 
@@ -748,6 +749,13 @@ def teacher_dashboard(request):
         .annotate(total=Count("pk"))
         .values_list("student_id", "total")
     )
+    assessments_by_student = {
+        assessment.student_id: assessment
+        for assessment in TeacherStudentAssessment.objects.filter(
+            teacher=request.user,
+            student__in=students,
+        )
+    } if is_teacher(request.user) else {}
 
     attendance_percentages = []
     homework_percentages = []
@@ -759,6 +767,7 @@ def teacher_dashboard(request):
         student.homework_percent = None
         student.needs_attention = False
         student.attention_reasons = []
+        student.teacher_assessment = assessments_by_student.get(student.pk)
 
         if student.attendance_total:
             student.attendance_percent = round(
@@ -777,6 +786,10 @@ def teacher_dashboard(request):
             if student.homework_percent < 70:
                 student.needs_attention = True
                 student.attention_reasons.append("การส่งงาน")
+
+        if student.teacher_assessment and student.teacher_assessment.needs_care:
+            student.needs_attention = True
+            student.attention_reasons.append("💔 ต้องดูแล")
 
         if student.needs_attention:
             needs_attention_count += 1
@@ -941,6 +954,51 @@ def teacher_dashboard(request):
         "recent_attendance_sessions": recent_attendance_sessions,
     }
     return render(request, "school/teacher_dashboard.html", context)
+
+
+@login_required
+@require_POST
+def teacher_student_assessment(request, student_id):
+    if not is_teacher(request.user) or not request.user.can_access_teacher_dashboard():
+        raise PermissionDenied
+
+    student = (
+        Student.objects.select_related("person", "group")
+        .filter(
+            pk=student_id,
+            is_active=True,
+            group__is_active=True,
+        )
+        .filter(Q(group__teachers=request.user) | Q(group__teacher=request.user))
+        .distinct()
+        .first()
+    )
+    if student is None:
+        return JsonResponse({"ok": False, "message": "ไม่พบนักศึกษาในกลุ่มที่คุณดูแล"}, status=404)
+
+    grade = request.POST.get("grade", "").strip().upper()
+    comment = request.POST.get("comment", "").strip()
+    needs_care = request.POST.get("needs_care", "") in {"1", "true", "on", "yes"}
+    if grade and grade not in TeacherStudentAssessment.Grade.values:
+        return JsonResponse({"ok": False, "message": "เกรดต้องเป็น A, B, C, D หรือ F"}, status=400)
+    if len(comment) > 1000:
+        return JsonResponse({"ok": False, "message": "ความคิดเห็นต้องไม่เกิน 1,000 ตัวอักษร"}, status=400)
+
+    assessment, _ = TeacherStudentAssessment.objects.update_or_create(
+        teacher=request.user,
+        student=student,
+        defaults={"grade": grade, "comment": comment, "needs_care": needs_care},
+    )
+    return JsonResponse({
+        "ok": True,
+        "message": "บันทึกการดูแลนักศึกษาเรียบร้อยแล้ว",
+        "assessment": {
+            "grade": assessment.grade,
+            "comment": assessment.comment,
+            "needs_care": assessment.needs_care,
+            "updated_at": timezone.localtime(assessment.updated_at).strftime("%d/%m/%Y %H:%M"),
+        },
+    })
 
 
 def teacher_accessible_groups(user):

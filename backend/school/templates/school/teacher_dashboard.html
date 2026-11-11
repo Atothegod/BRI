@@ -150,7 +150,7 @@
                 <div class="teacher-student-tools"><label><span class="sr-only">ค้นหานักเรียน</span><input type="search" placeholder="ค้นหาชื่อ รหัสนักเรียน หรือชื่อกลุ่ม" data-teacher-student-search></label></div>
                 <div class="teacher-table-shell">
                     <table class="teacher-student-table">
-                        <thead><tr><th>นักศึกษา</th><th>กลุ่ม</th><th>การเข้าเรียน</th><th>การบ้าน</th><th>เกรดสัมภาษณ์</th><th>ผู้ดูแล</th><th>สถานะ</th><th></th></tr></thead>
+                        <thead><tr><th>นักศึกษา</th><th>กลุ่ม</th><th>การเข้าเรียน</th><th>การบ้าน</th><th>การดูแล</th><th>ผู้ดูแล</th><th>สถานะ</th><th></th></tr></thead>
                         <tbody>
                             {% for student in students %}
                             <tr class="{% if student.needs_attention %}needs-attention{% endif %}" data-teacher-student-row data-search-text="{{ student.person.full_name }} {{ student.student_id }} {{ student.group.group_name }} {{ student.person.nickname }}">
@@ -165,7 +165,7 @@
                                 <td data-label="การบ้าน">
                                     {% if student.homework_percent is not None %}<div class="metric-value"><strong>{{ student.homework_percent }}%</strong><small>{{ student.homework_submitted }}/{{ student.homework_total }} งาน</small></div><span class="metric-track{% if student.homework_percent < 70 %} is-low{% endif %}"><span style="width: {{ student.homework_percent }}%"></span></span>{% else %}<span class="metric-empty">ยังไม่มีข้อมูล</span>{% endif %}
                                 </td>
-                                <td data-label="เกรดสัมภาษณ์"><strong class="teacher-grade">{{ student.person.interview_grade|default:"-" }}</strong></td>
+                                <td data-label="การดูแล"><div class="teacher-assessment-summary" data-assessment-summary="{{ student.pk }}"><strong>{% if student.teacher_assessment.grade %}{{ student.teacher_assessment.grade }}{% else %}-{% endif %}</strong><span{% if not student.teacher_assessment.needs_care %} hidden{% endif %} aria-label="ต้องดูแลเป็นพิเศษ">💔</span></div></td>
                                 <td data-label="ผู้ดูแล"><div class="student-contact"><span>{{ student.group.teacher_names }}</span><small>{{ student.person.phone|default:"ไม่มีเบอร์โทร" }}</small></div></td>
                                 <td data-label="สถานะ"><div class="student-statuses">
                                     {% if student.needs_attention %}<span class="status-label status-label--attention">ควรติดตาม</span>{% else %}<span class="status-label status-label--ok">ปกติ</span>{% endif %}
@@ -193,6 +193,18 @@
                             <div><dt>ความคิดเห็นสัมภาษณ์</dt><dd>{{ student.person.interview_comment|default:"-" }}</dd></div>
                             <div><dt>สถานะ</dt><dd>{% if student.needs_attention %}ควรติดตาม{% else %}ปกติ{% endif %}</dd></div>
                         </dl>
+                        {% if request.user.role == "TEACHER" %}
+                        <form class="teacher-assessment-form" method="post" action="{% url 'school:teacher_student_assessment' student.pk %}" data-teacher-assessment-form data-student-id="{{ student.pk }}">
+                            {% csrf_token %}
+                            <div class="teacher-assessment-heading"><div><span>TEACHER CARE NOTE</span><h3>บันทึกการดูแลของคุณ</h3></div><span>ข้อมูลแยกตามอาจารย์ผู้บันทึก</span></div>
+                            <div class="teacher-assessment-controls">
+                                <label><span>เกรดการดูแล</span><select name="grade"><option value="">ยังไม่ให้เกรด</option>{% for value in "ABCDF" %}<option value="{{ value }}"{% if student.teacher_assessment.grade == value %} selected{% endif %}>{{ value }}</option>{% endfor %}</select></label>
+                                <label class="teacher-heart-toggle"><input type="checkbox" name="needs_care" value="1"{% if student.teacher_assessment.needs_care %} checked{% endif %}><span class="teacher-heart-icon">💔</span><span><strong>ต้องดูแลเป็นพิเศษ</strong><small>เพิ่มนักเรียนในรายการควรติดตาม</small></span></label>
+                            </div>
+                            <label class="teacher-assessment-comment"><span>ความคิดเห็นถึงนักเรียน / บันทึกการดูแล</span><textarea name="comment" maxlength="1000" rows="4" placeholder="เช่น ควรติดตามเรื่องการส่งงาน ให้กำลังใจ หรือจุดที่พัฒนาขึ้น">{{ student.teacher_assessment.comment }}</textarea></label>
+                            <div class="teacher-assessment-actions"><span data-assessment-status>{% if student.teacher_assessment %}บันทึกล่าสุด {{ student.teacher_assessment.updated_at|date:"d/m/Y H:i" }}{% endif %}</span><button type="submit">บันทึกเกรดและความคิดเห็น</button></div>
+                        </form>
+                        {% endif %}
                         <button class="teacher-dialog-close" type="button" data-student-detail-close>ปิด</button>
                     </article>
                 </dialog>
@@ -247,4 +259,4 @@
 </div>
 {% endblock %}
 
-{% block extra_js %}<script src="{% static 'school/js/dashboard_tabs.js' %}?v=20261110-student-workspace-3"></script><script src="{% static 'school/js/teacher_dashboard.js' %}?v=20261110-student-workspace-1" defer></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'school/js/dashboard_tabs.js' %}?v=20261110-student-workspace-3"></script><script src="{% static 'school/js/teacher_dashboard.js' %}?v=20261111-student-assessment-1" defer></script>{% endblock %}

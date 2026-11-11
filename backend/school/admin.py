@@ -26,6 +26,7 @@ from .models import (
     HomeworkSubmission,
     Person,
     Student,
+    TeacherStudentAssessment,
     TeacherGroup,
     line_notification_sent,
     mark_line_notification_sent,
@@ -669,4 +670,18 @@ class HomeworkSubmissionAdmin(UnfoldModelAdmin):
         "student__student_id",
         "student__person__first_name",
         "student__person__last_name",
+    )
+
+
+@admin.register(TeacherStudentAssessment)
+class TeacherStudentAssessmentAdmin(UnfoldModelAdmin):
+    list_display = ("teacher", "student", "grade", "needs_care", "updated_at")
+    list_filter = ("grade", "needs_care", "student__group")
+    search_fields = (
+        "teacher__nickname",
+        "teacher__username",
+        "student__student_id",
+        "student__person__first_name",
+        "student__person__last_name",
+        "comment",
     )

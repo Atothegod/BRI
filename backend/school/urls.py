@@ -97,6 +97,7 @@ urlpatterns = [
     path("teachers/profile/", views.teacher_profile, name="teacher_profile"),
     path("teachers/pending/", views.teacher_pending_approval, name="teacher_pending_approval"),
     path("teachers/dashboard/", views.teacher_dashboard, name="teacher_dashboard"),
+    path("teachers/students/<int:student_id>/assessment/", views.teacher_student_assessment, name="teacher_student_assessment"),
     path("teachers/calendar/", views.teacher_calendar, name="teacher_calendar"),
     path("teachers/calendar/participants/<int:pk>/notify/", views.teacher_calendar_notify, name="teacher_calendar_notify"),
     path("students/dashboard/", views.student_dashboard, name="student_dashboard"),

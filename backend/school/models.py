@@ -876,3 +876,37 @@ class HomeworkSubmission(TimeStampedModel):
 
     def __str__(self):
         return f"{self.homework_assignment} - {self.student}"
+
+
+class TeacherStudentAssessment(TimeStampedModel):
+    class Grade(models.TextChoices):
+        A = "A", "A"
+        B = "B", "B"
+        C = "C", "C"
+        D = "D", "D"
+        F = "F", "F"
+
+    teacher = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="student_assessments",
+    )
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name="teacher_assessments",
+    )
+    grade = models.CharField(max_length=2, choices=Grade.choices, blank=True)
+    comment = models.TextField(blank=True)
+    needs_care = models.BooleanField(default=False)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["teacher", "student"],
+                name="uniq_teacher_student_assessment",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.teacher} - {self.student}"

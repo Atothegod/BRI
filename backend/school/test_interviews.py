@@ -994,6 +994,71 @@ class AppointmentScheduleTests(TestCase):
         self.assertContains(response, "มีผู้เข้าร่วมที่ไม่ตรงเงื่อนไข")
         self.assertFalse(next_event.participants.exists())
 
+    def test_waiting_tab_excludes_person_confirmed_in_another_event(self):
+        self.schedule(people=[self.people[0].pk])
+        confirmed_event = Appointment.objects.get()
+        confirmed_participant = confirmed_event.participants.get()
+        confirmed_participant.response_status = AppointmentParticipant.ResponseStatus.CONFIRMED
+        confirmed_participant.selected_slot = confirmed_event.slots.get()
+        confirmed_participant.confirmed_at = timezone.now()
+        confirmed_participant.save(update_fields=["response_status", "selected_slot", "confirmed_at"])
+
+        duplicate_event = Appointment.objects.create(
+            appointment_type=Appointment.Type.INTERVIEW,
+            title="สัมภาษณ์รอบที่ 2 ซ้ำ",
+            starts_at=self.at + timedelta(days=7),
+        )
+        AppointmentSlot.objects.create(
+            appointment=duplicate_event,
+            starts_at=self.at + timedelta(days=7),
+            ends_at=self.at + timedelta(days=7, hours=1),
+            capacity=10,
+        )
+        AppointmentParticipant.objects.create(
+            appointment=duplicate_event,
+            person=self.people[0],
+            response_status=AppointmentParticipant.ResponseStatus.WAITING,
+            notification_status=AppointmentParticipant.NotificationStatus.SENT,
+        )
+
+        waiting = self.client.get(self.url, {
+            "type": "interview", "event": duplicate_event.pk, "audience": "waiting",
+        })
+        confirmed_other = self.client.get(self.url, {
+            "type": "interview", "event": duplicate_event.pk, "audience": "confirmed_other",
+        })
+
+        self.assertNotContains(waiting, self.people[0].full_name)
+        self.assertEqual(waiting.context["audience_counts"]["waiting"], 0)
+        self.assertContains(confirmed_other, self.people[0].full_name)
+        self.assertEqual(confirmed_other.context["audience_counts"]["confirmed_other"], 1)
+
+    def test_ready_candidates_exclude_confirmed_person_with_newer_waiting_history(self):
+        self.schedule(people=[self.people[0].pk])
+        confirmed_event = Appointment.objects.get()
+        confirmed_participant = confirmed_event.participants.get()
+        confirmed_participant.response_status = AppointmentParticipant.ResponseStatus.CONFIRMED
+        confirmed_participant.selected_slot = confirmed_event.slots.get()
+        confirmed_participant.confirmed_at = timezone.now()
+        confirmed_participant.save(update_fields=["response_status", "selected_slot", "confirmed_at"])
+
+        historical_event = Appointment.objects.create(
+            appointment_type=Appointment.Type.INTERVIEW,
+            title="ประวัติ Event ซ้ำที่ปิดแล้ว",
+            starts_at=timezone.now() - timedelta(days=1),
+            status=Appointment.Status.COMPLETED,
+        )
+        AppointmentParticipant.objects.create(
+            appointment=historical_event,
+            person=self.people[0],
+            response_status=AppointmentParticipant.ResponseStatus.WAITING,
+            notification_status=AppointmentParticipant.NotificationStatus.SENT,
+        )
+
+        ready = self.client.get(self.url, {"type": "interview", "event": "new"})
+
+        self.assertNotContains(ready, self.people[0].full_name)
+
     def test_full_event_cannot_invite_more_people(self):
         self.schedule(people=[self.people[0].pk], slot_capacity=["1"])
         appointment = Appointment.objects.get()

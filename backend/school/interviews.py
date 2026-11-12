@@ -149,7 +149,7 @@ def appointment_ready_candidates(appointment_type):
         | Q(latest_has_slots=True, latest_has_open_slots=False)
         | Q(latest_appointment_id__in=full_appointment_ids)
     )
-    return people.filter(
+    ready_people = people.filter(
         Q(latest_participation_id__isnull=True)
         | (
             Q(latest_response_status=AppointmentParticipant.ResponseStatus.WAITING)
@@ -157,6 +157,12 @@ def appointment_ready_candidates(appointment_type):
             & latest_event_closed
         )
     )
+    # An interview confirmation is global for the admission flow. A person who
+    # confirmed any interview event must not become ready for another invite,
+    # even if a newer duplicate/waiting participation exists in historical data.
+    if appointment_type == Appointment.Type.INTERVIEW:
+        ready_people = ready_people.exclude(pk__in=confirmed_interview_people())
+    return ready_people
 
 
 def invitation_message(data):
@@ -1239,6 +1245,10 @@ def interview_schedule(request):
         waiting_display_participations = waiting_participations.exclude(
             pk__in=next_round_participations.values("pk"),
         )
+        if appointment_type == Appointment.Type.INTERVIEW:
+            waiting_display_participations = waiting_display_participations.exclude(
+                person_id__in=confirmed_people,
+            )
         audience_counts = {
             "unsent": appointment_ready_candidates(appointment_type).exclude(pk__in=participant_people).count(),
             "waiting": waiting_display_participations.count(),

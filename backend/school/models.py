@@ -820,6 +820,8 @@ class HomeworkAssignment(TimeStampedModel):
         TeacherGroup,
         on_delete=models.CASCADE,
         related_name="homework_assignments",
+        null=True,
+        blank=True,
     )
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)

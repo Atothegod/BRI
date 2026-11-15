@@ -59,21 +59,24 @@ class HomeworkWorkspaceTests(TestCase):
         defaults.update(kwargs)
         return HomeworkAssignment.objects.create(**defaults)
 
-    def test_school_admin_creates_assignment_for_group(self):
+    def test_school_admin_creates_assignment_for_all_students(self):
         self.client.force_login(self.admin)
 
         response = self.client.post(reverse("school:admin_homework"), {
-            "group": self.group.pk,
             "title": "  การบ้านครั้งที่ 1   ",
-            "description": "รายละเอียดงานสำหรับกลุ่ม Moses",
+            "description": "รายละเอียดงานสำหรับนักเรียนทุกคน",
             "due_date": (timezone.localdate() + timedelta(days=5)).isoformat(),
         })
 
         self.assertRedirects(response, reverse("school:admin_homework"))
         assignment = HomeworkAssignment.objects.get()
         self.assertEqual(assignment.title, "การบ้านครั้งที่ 1")
-        self.assertEqual(assignment.group, self.group)
+        self.assertIsNone(assignment.group)
         self.assertEqual(assignment.created_by, self.admin)
+
+        page = self.client.get(reverse("school:admin_homework"))
+        self.assertNotContains(page, "มอบหมายให้กลุ่ม")
+        self.assertContains(page, "นักเรียนทุกคน")
 
     def test_non_admin_cannot_open_admin_homework(self):
         self.client.force_login(self.teacher)
@@ -97,6 +100,17 @@ class HomeworkWorkspaceTests(TestCase):
         self.set_line_student(self.student)
         response = self.client.get(reverse("school:student_homework_detail", args=[assignment.pk]))
         self.assertEqual(response.status_code, 404)
+
+    def test_global_assignment_is_visible_to_students_in_every_group(self):
+        assignment = self.make_assignment(group=None)
+
+        self.set_line_student(self.student)
+        first_response = self.client.get(reverse("school:student_homework_detail", args=[assignment.pk]))
+        self.assertEqual(first_response.status_code, 200)
+
+        self.set_line_student(self.other_student)
+        second_response = self.client.get(reverse("school:student_homework_upload"))
+        self.assertContains(second_response, assignment.title)
 
     def test_student_turns_in_file_and_teacher_dashboard_tracks_it(self):
         assignment = self.make_assignment()

@@ -12,22 +12,20 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from .forms import HomeworkUploadForm
-from .models import HomeworkAssignment, HomeworkSubmission, TeacherGroup
+from .models import HomeworkAssignment, HomeworkSubmission, Student, TeacherGroup
 from .views import get_liff_context, get_session_line_profile, get_student_for_line, is_school_admin
 
 
 class HomeworkAssignmentForm(forms.ModelForm):
     class Meta:
         model = HomeworkAssignment
-        fields = ("group", "title", "description", "due_date")
+        fields = ("title", "description", "due_date")
         labels = {
-            "group": "มอบหมายให้กลุ่ม",
             "title": "หัวข้อการบ้าน",
             "description": "รายละเอียดและคำสั่งงาน",
             "due_date": "วันกำหนดส่ง",
         }
         widgets = {
-            "group": forms.Select(attrs={"class": "homework-control"}),
             "title": forms.TextInput(attrs={
                 "class": "homework-control",
                 "placeholder": "เช่น การบ้านครั้งที่ 1 — ตัวตนที่แท้จริง",
@@ -40,11 +38,6 @@ class HomeworkAssignmentForm(forms.ModelForm):
             }),
             "due_date": forms.DateInput(attrs={"class": "homework-control", "type": "date"}),
         }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["group"].queryset = TeacherGroup.objects.filter(is_active=True).order_by("group_name")
-        self.fields["group"].empty_label = "เลือกกลุ่มนักศึกษา"
 
     def clean_title(self):
         return " ".join(self.cleaned_data["title"].split())
@@ -79,7 +72,7 @@ def admin_homework(request):
         assignment = form.save(commit=False)
         assignment.created_by = request.user
         assignment.save()
-        messages.success(request, f"เผยแพร่ {assignment.title} ให้กลุ่ม {assignment.group.group_name} แล้ว")
+        messages.success(request, f"เผยแพร่ {assignment.title} ให้นักเรียนทุกคนแล้ว")
         return redirect("school:admin_homework")
 
     assignments = list(
@@ -102,7 +95,13 @@ def admin_homework(request):
         .order_by("-created_at")
     )
     today = timezone.localdate()
+    all_student_count = Student.objects.filter(is_active=True, group__is_active=True).count()
     for assignment in assignments:
+        assignment.target_count = (
+            all_student_count
+            if assignment.group_id is None
+            else Student.objects.filter(group=assignment.group, is_active=True).count()
+        )
         assignment.missing_count = max(assignment.target_count - assignment.submitted_count, 0)
         assignment.is_overdue = assignment.due_date < today
         assignment.progress_percent = (
@@ -123,16 +122,19 @@ def admin_homework(request):
 def student_homework_list(request):
     student_state, person, student, context = student_context(request)
     assignment_rows = []
-    if student and student.group_id:
+    if student:
+        assignment_scope = Q(homework_assignment__group__isnull=True)
+        if student.group_id:
+            assignment_scope |= Q(homework_assignment__group=student.group)
         submissions = {
             item.homework_assignment_id: item
-            for item in HomeworkSubmission.objects.filter(
-                student=student,
-                homework_assignment__group=student.group,
-            )
+            for item in HomeworkSubmission.objects.filter(student=student).filter(assignment_scope)
         }
         today = timezone.localdate()
-        assignments = HomeworkAssignment.objects.filter(group=student.group).order_by("due_date", "created_at")
+        visible_assignments = Q(group__isnull=True)
+        if student.group_id:
+            visible_assignments |= Q(group=student.group)
+        assignments = HomeworkAssignment.objects.filter(visible_assignments).order_by("due_date", "created_at")
         for assignment in assignments:
             submission = submissions.get(assignment.pk)
             assignment_rows.append({
@@ -159,11 +161,14 @@ def student_homework_list(request):
 @require_http_methods(["GET", "POST"])
 def student_homework_detail(request, pk):
     student_state, person, student, context = student_context(request)
-    if not student or not student.group_id:
-        messages.error(request, "ยังไม่พบกลุ่มนักศึกษาสำหรับเปิดการบ้านนี้")
+    if not student:
+        messages.error(request, "ยังไม่พบข้อมูลนักศึกษาสำหรับเปิดการบ้านนี้")
         return redirect("school:student_homework_upload")
 
-    assignment = get_object_or_404(HomeworkAssignment, pk=pk, group=student.group)
+    assignment_scope = Q(group__isnull=True)
+    if student.group_id:
+        assignment_scope |= Q(group=student.group)
+    assignment = get_object_or_404(HomeworkAssignment.objects.filter(assignment_scope), pk=pk)
     submission = HomeworkSubmission.objects.filter(
         homework_assignment=assignment,
         student=student,

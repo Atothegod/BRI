@@ -35,7 +35,7 @@
                 <div class="homework-admin-cards">
                     {% for assignment in assignments %}
                     <article class="homework-admin-card{% if assignment.is_overdue %} is-overdue{% endif %}">
-                        <div class="homework-admin-card-top"><span class="homework-assignment-icon"><svg class="icon"><use href="{% static 'school/images/icons.svg' %}#upload-cloud"></use></svg></span><div><span>{{ assignment.group.group_name }}</span><h3>{{ assignment.title }}</h3></div><time datetime="{{ assignment.due_date|date:'Y-m-d' }}">กำหนด {{ assignment.due_date|date:"d M Y" }}</time></div>
+                        <div class="homework-admin-card-top"><span class="homework-assignment-icon"><svg class="icon"><use href="{% static 'school/images/icons.svg' %}#upload-cloud"></use></svg></span><div><span>{% if assignment.group %}{{ assignment.group.group_name }}{% else %}นักเรียนทุกคน{% endif %}</span><h3>{{ assignment.title }}</h3></div><time datetime="{{ assignment.due_date|date:'Y-m-d' }}">กำหนด {{ assignment.due_date|date:"d M Y" }}</time></div>
                         {% if assignment.description %}<p>{{ assignment.description|truncatechars:180 }}</p>{% else %}<p class="is-muted">ไม่มีรายละเอียดเพิ่มเติม</p>{% endif %}
                         <div class="homework-progress-label"><span>ส่งแล้ว {{ assignment.submitted_count }} จาก {{ assignment.target_count }}</span><strong>{{ assignment.progress_percent }}%</strong></div>
                         <div class="homework-progress"><span style="width: {{ assignment.progress_percent }}%"></span></div>

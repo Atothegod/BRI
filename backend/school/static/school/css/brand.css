@@ -12,3 +12,17 @@
     --bri-card-background: #f3f0e8;
     --bri-page-background: #ffffff;
 }
+
+/* Shared sprite icons are line icons. Keep their intrinsic paths from being
+   rendered as large, filled shapes on pages that do not load registration.css. */
+.icon {
+    display: block;
+    width: 20px;
+    height: 20px;
+    flex: 0 0 auto;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}

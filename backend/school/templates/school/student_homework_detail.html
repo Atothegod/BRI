@@ -21,7 +21,7 @@
     {% for message in messages %}<div class="homework-flash {{ message.tags }}" role="status">{{ message }}</div>{% endfor %}
     <div class="homework-detail-layout">
         <article class="homework-detail-card">
-            <header><span class="homework-detail-icon"><svg class="icon"><use href="{% static 'school/images/icons.svg' %}#upload-cloud"></use></svg></span><div><span>{{ assignment.group.group_name }} · ASSIGNMENT</span><h1>{{ assignment.title }}</h1></div></header>
+            <header><span class="homework-detail-icon"><svg class="icon"><use href="{% static 'school/images/icons.svg' %}#upload-cloud"></use></svg></span><div><span>{% if assignment.group %}{{ assignment.group.group_name }}{% else %}นักเรียนทุกคน{% endif %} · ASSIGNMENT</span><h1>{{ assignment.title }}</h1></div></header>
             <div class="homework-detail-meta"><section><span>กำหนดส่ง</span><strong>{{ assignment.due_date|date:"d M Y" }}</strong></section><section><span>สถานะ</span><strong>{% if submission %}{% if submission.status == 'late' %}ส่งล่าช้า{% else %}ส่งแล้ว{% endif %}{% elif is_overdue %}เลยกำหนด{% else %}ยังไม่ส่ง{% endif %}</strong></section></div>
             <section class="homework-instructions"><span>INSTRUCTIONS</span><h2>รายละเอียดงาน</h2><div>{{ assignment.description|default:"ไม่มีรายละเอียดเพิ่มเติม"|linebreaks }}</div></section>
         </article>

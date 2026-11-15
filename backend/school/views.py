@@ -355,11 +355,14 @@ def calculate_student_learning(student):
         | Q(attendance_session__group=student.group),
         status__in=(AttendanceRecord.Status.PRESENT, AttendanceRecord.Status.LATE),
     ).count()
-    homework_total = HomeworkAssignment.objects.filter(group=student.group).count()
+    homework_scope = Q(group__isnull=True) | Q(group=student.group)
+    homework_total = HomeworkAssignment.objects.filter(homework_scope).count()
     homework_submitted = HomeworkSubmission.objects.filter(
         student=student,
-        homework_assignment__group=student.group,
         status__in=(HomeworkSubmission.Status.SUBMITTED, HomeworkSubmission.Status.LATE),
+    ).filter(
+        Q(homework_assignment__group__isnull=True)
+        | Q(homework_assignment__group=student.group)
     ).count()
 
     return {
@@ -849,7 +852,7 @@ def teacher_dashboard(request):
 
     homework_assignments = list(
         HomeworkAssignment.objects.select_related("group")
-        .filter(group__in=scope_groups)
+        .filter(Q(group__isnull=True) | Q(group__in=scope_groups))
         .prefetch_related("homework_submissions")
         .order_by("-due_date", "group__group_name", "title")
     )
@@ -863,7 +866,11 @@ def teacher_dashboard(request):
             for submission in assignment.homework_submissions.all()
         }
         entries = []
-        for student in students_by_group.get(assignment.group_id, []):
+        assignment_students = (
+            students if assignment.group_id is None
+            else students_by_group.get(assignment.group_id, [])
+        )
+        for student in assignment_students:
             submission = submissions.get(student.pk)
             is_submitted = bool(
                 submission
@@ -884,13 +891,14 @@ def teacher_dashboard(request):
             "missing_count": sum(not entry["is_submitted"] for entry in entries),
         })
 
-    upcoming_assignments = (
+    upcoming_assignments = list(
         HomeworkAssignment.objects.select_related("group")
-        .filter(group__in=scope_groups, due_date__gte=timezone.localdate())
+        .filter(Q(group__isnull=True) | Q(group__in=scope_groups), due_date__gte=timezone.localdate())
         .annotate(
             submitted_count=Count(
                 "homework_submissions",
                 filter=Q(
+                    homework_submissions__student__in=students,
                     homework_submissions__status__in=(
                         HomeworkSubmission.Status.SUBMITTED,
                         HomeworkSubmission.Status.LATE,
@@ -898,14 +906,15 @@ def teacher_dashboard(request):
                 ),
                 distinct=True,
             ),
-            target_student_count=Count(
-                "group__students",
-                filter=Q(group__students__is_active=True),
-                distinct=True,
-            ),
         )
         .order_by("due_date", "title")[:5]
     )
+    for assignment in upcoming_assignments:
+        assignment.target_student_count = (
+            len(students)
+            if assignment.group_id is None
+            else len(students_by_group.get(assignment.group_id, []))
+        )
     recent_attendance_sessions = (
         AttendanceSession.objects.select_related("group")
         .filter(Q(group__isnull=True) | Q(group__in=scope_groups))
@@ -2623,16 +2632,20 @@ def student_dashboard(request):
     group_student_count = 0
     group_lesson_count = 0
 
-    if student and student.group_id:
+    if student:
+        submission_scope = Q(homework_assignment__group__isnull=True)
+        assignment_scope = Q(group__isnull=True)
+        if student.group_id:
+            submission_scope |= Q(homework_assignment__group=student.group)
+            assignment_scope |= Q(group=student.group)
         submissions = {
             submission.homework_assignment_id: submission
             for submission in HomeworkSubmission.objects.filter(
                 student=student,
-                homework_assignment__group=student.group,
-            ).select_related("homework_assignment")
+            ).filter(submission_scope).select_related("homework_assignment")
         }
         assignments = (
-            HomeworkAssignment.objects.filter(group=student.group)
+            HomeworkAssignment.objects.filter(assignment_scope)
             .order_by("due_date", "title")[:8]
         )
         for assignment in assignments:

@@ -57,6 +57,7 @@ def admin_learning_dashboard(request):
         attendance_by_student[record.student_id][record.status] += 1
         latest_attendance.setdefault(record.student_id, record)
 
+    global_assignment_count = HomeworkAssignment.objects.filter(group__isnull=True).count()
     assignment_counts = defaultdict(int)
     for assignment_group_id in HomeworkAssignment.objects.filter(group_id__in=group_ids).values_list("group_id", flat=True):
         assignment_counts[assignment_group_id] += 1
@@ -85,7 +86,7 @@ def admin_learning_dashboard(request):
         student.attended_count = student.present_count + student.late_count
         student.attendance_percent = round(student.attended_count * 100 / student.attendance_total) if student.attendance_total else None
         student.latest_attendance = latest_attendance.get(student.pk)
-        student.homework_total = assignment_counts[student.group_id]
+        student.homework_total = global_assignment_count + assignment_counts[student.group_id]
         student.homework_submitted = submitted_counts[student.pk]
         student.homework_missing = max(0, student.homework_total - student.homework_submitted)
         student.homework_percent = round(student.homework_submitted * 100 / student.homework_total) if student.homework_total else None

@@ -246,7 +246,7 @@
                     {% for row in homework_tracking_rows %}
                     <article class="teacher-homework-assignment">
                         <header>
-                            <div><strong>{{ row.assignment.title }}</strong><small>{{ row.assignment.group.group_name }} · กำหนดส่ง {{ row.assignment.due_date|date:"d M Y" }}</small>{% if row.assignment.description %}<p>{{ row.assignment.description|truncatechars:180 }}</p>{% endif %}</div>
+                            <div><strong>{{ row.assignment.title }}</strong><small>{% if row.assignment.group %}{{ row.assignment.group.group_name }}{% else %}นักเรียนทุกคน{% endif %} · กำหนดส่ง {{ row.assignment.due_date|date:"d M Y" }}</small>{% if row.assignment.description %}<p>{{ row.assignment.description|truncatechars:180 }}</p>{% endif %}</div>
                             <div><span class="homework-count homework-count--done">ส่งแล้ว {{ row.submitted_count }}</span><span class="homework-count homework-count--missing">ยังไม่ส่ง {{ row.missing_count }}</span></div>
                         </header>
                         <div class="teacher-homework-students">
@@ -270,7 +270,7 @@
                 <section class="teacher-section" aria-labelledby="homework-title">
                     <div class="teacher-section-heading"><div><span class="teacher-eyebrow">HOMEWORK</span><h2 id="homework-title">งานที่ใกล้ถึงกำหนด</h2></div><span>{{ upcoming_assignments|length }} งาน</span></div>
                     <div class="learning-list">
-                        {% for assignment in upcoming_assignments %}<article><span class="learning-date">{{ assignment.due_date|date:"d M" }}</span><div><strong>{{ assignment.title }}</strong><small>{{ assignment.group.group_name }} · ส่งแล้ว {{ assignment.submitted_count }}/{{ assignment.target_student_count }}</small></div></article>{% empty %}<div class="learning-empty">ยังไม่มีงานที่ใกล้ถึงกำหนด</div>{% endfor %}
+                        {% for assignment in upcoming_assignments %}<article><span class="learning-date">{{ assignment.due_date|date:"d M" }}</span><div><strong>{{ assignment.title }}</strong><small>{% if assignment.group %}{{ assignment.group.group_name }}{% else %}นักเรียนทุกคน{% endif %} · ส่งแล้ว {{ assignment.submitted_count }}/{{ assignment.target_student_count }}</small></div></article>{% empty %}<div class="learning-empty">ยังไม่มีงานที่ใกล้ถึงกำหนด</div>{% endfor %}
                     </div>
                 </section>
                 <section class="teacher-section" aria-labelledby="attendance-title">

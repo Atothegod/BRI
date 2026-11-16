@@ -112,7 +112,14 @@
             return;
         }
 
-        if (config.dataset.reloadOnSync === "true" && config.dataset.lineKnown !== "true") {
+        const pageMissedExistingApplication = Boolean(
+            data.has_person && document.querySelector("[data-missing-application]")
+        );
+        if (
+            data.identity_changed
+            || pageMissedExistingApplication
+            || (config.dataset.reloadOnSync === "true" && config.dataset.lineKnown !== "true")
+        ) {
             window.location.reload();
         }
     };

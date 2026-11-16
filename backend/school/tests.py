@@ -1714,6 +1714,28 @@ class LiffFlowTests(TestCase):
         self.assertEqual(session["line_profile"]["line_user_id"], "Uliffuser")
         self.assertEqual(session["line_profile"]["line_display_name"], "LIFF User")
 
+    def test_liff_profile_sync_reports_identity_change_for_stale_session(self):
+        session = self.client.session
+        session["line_profile"] = {
+            "line_user_id": "Ustale",
+            "line_display_name": "Stale User",
+            "line_picture_url": "",
+            "verified": True,
+        }
+        session.save()
+
+        response = self.sync_line_profile(user_id="Uactual", display_name="Actual User")
+
+        self.assertTrue(response.json()["identity_changed"])
+        self.assertEqual(self.client.session["line_profile"]["line_user_id"], "Uactual")
+
+    def test_liff_profile_sync_does_not_report_change_for_current_identity(self):
+        self.sync_line_profile(user_id="Ucurrent")
+
+        response = self.sync_line_profile(user_id="Ucurrent")
+
+        self.assertFalse(response.json()["identity_changed"])
+
     def test_rich_menu_launch_urls_redirect_through_liff(self):
         result_response = self.client.get(reverse("school:liff_results_launch"))
         payment_response = self.client.get(reverse("school:liff_payment_launch"))

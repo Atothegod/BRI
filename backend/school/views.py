@@ -387,6 +387,9 @@ def liff_profile_sync(request):
         return JsonResponse({"ok": False, "message": "Invalid JSON payload"}, status=400)
 
     id_token = payload.get("id_token", "")
+    previous_line_user_id = (
+        get_session_line_profile(request).get("line_user_id", "").strip()
+    )
     verified = False
 
     try:
@@ -423,6 +426,9 @@ def liff_profile_sync(request):
             "ok": True,
             "profile": line_profile,
             "has_person": bool(person),
+            # A browser session can outlive a LIFF launch or LINE account switch.
+            # Tell the page to re-evaluate access using the freshly verified user.
+            "identity_changed": previous_line_user_id != profile["line_user_id"],
         }
     )
 

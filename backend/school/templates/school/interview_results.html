@@ -3,95 +3,93 @@
 {% block title %}บันทึกผลสัมภาษณ์ | BRI{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261111-nav-contrast-1">
-<link rel="stylesheet" href="{% static 'school/css/interview_results.css' %}?v=20261003-nav-dropdown-1">
+<link rel="stylesheet" href="{% static 'school/css/interview_results.css' %}?v=20261124-operation-results">
 {% endblock %}
 {% block content %}
 {% include "school/includes/operation_nav.html" %}
-<main class="interview-results">
+<main class="interview-results operation-results">
     <header class="results-heading">
         <div>
-            <span>BRI INTERVIEW RESULTS</span>
             <h1>บันทึกผลสัมภาษณ์</h1>
-            <p>ดูผลสัมภาษณ์พร้อมรูปแบบ Online / Onsite, slot เวลา, จังหวัด และประเทศในหน้าเดียว</p>
+            <p>บันทึกผลร่างได้ที่นี่ ผู้สมัครจะเห็นผลเมื่อส่งประกาศผ่าน LINE สำเร็จ</p>
         </div>
         <form method="get" class="results-filter-panel">
             <input type="hidden" name="status" value="{{ status }}">
-            <div class="results-filter-panel__search">
-                <label for="result-search">ค้นหาผู้สมัคร</label>
-                <input id="result-search" name="q" value="{{ query }}" placeholder="ชื่อ เบอร์โทร หรือชื่อ LINE">
-            </div>
-            <div class="results-filter-grid">
-                <label>
-                    <span>Event สัมภาษณ์</span>
-                    <select name="event">
-                        <option value="">ทุก Event</option>
-                        {% for appointment in appointment_options %}
-                        <option value="{{ appointment.pk }}"{% if selected_event_id == appointment.pk %} selected{% endif %}>
-                            {{ appointment.title }} · {{ appointment.starts_at|thai_date }} · {{ appointment.confirmed_count }}/{{ appointment.participant_count }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </label>
-                <label>
-                    <span>Slot เวลา</span>
-                    <select name="slot">
-                        <option value="">ทุก Slot</option>
-                        {% for slot in slot_options %}
-                        <option value="{{ slot.pk }}"{% if selected_slot_id == slot.pk %} selected{% endif %}>{{ slot.filter_label }}</option>
-                        {% endfor %}
-                    </select>
-                </label>
-                <label>
-                    <span>รูปแบบ</span>
-                    <select name="mode">
-                        <option value="all"{% if mode == "all" %} selected{% endif %}>Online + Onsite</option>
-                        <option value="online"{% if mode == "online" %} selected{% endif %}>Online</option>
-                        <option value="onsite"{% if mode == "onsite" %} selected{% endif %}>Onsite</option>
-                    </select>
-                </label>
-                <label>
-                    <span>เกรด</span>
-                    <select name="grade">
-                        <option value="">ทุกเกรด</option>
-                        {% for value, label in grade_options %}
-                        <option value="{{ value }}"{% if grade_filter == value %} selected{% endif %}>เกรด {{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </label>
-                <label>
-                    <span>จังหวัด</span>
-                    <select name="province">
-                        <option value="">ทุกจังหวัด</option>
-                        {% for province in province_options %}
-                        <option value="{{ province }}"{% if province_filter == province %} selected{% endif %}>{{ province }}</option>
-                        {% endfor %}
-                    </select>
-                </label>
-                <label>
-                    <span>ประเทศ</span>
-                    <select name="country">
-                        <option value="">ทุกประเทศ</option>
-                        {% for country in country_options %}
-                        <option value="{{ country }}"{% if country_filter == country %} selected{% endif %}>{{ country }}</option>
-                        {% endfor %}
-                    </select>
-                </label>
-            </div>
-            <div class="results-filter-actions">
+            <div class="operation-search">
+                <div class="results-filter-panel__search">
+                    <label for="result-search">ค้นหาผู้สมัคร</label>
+                    <input id="result-search" name="q" value="{{ query }}" placeholder="ชื่อ เบอร์โทร หรือชื่อ LINE">
+                </div>
                 <button type="submit">ค้นหา</button>
-                <a href="{% url 'school:interview_results' %}?status={{ status }}">ล้าง filter</a>
             </div>
+            <details class="operation-filters"{% if interview_filters_active or grade_filter %} open{% endif %}>
+                <summary>ตัวกรองเพิ่มเติม</summary>
+                <div class="results-filter-grid">
+                    <label>
+                        <span>Event สัมภาษณ์</span>
+                        <select name="event">
+                            <option value="">ทุก Event</option>
+                            {% for appointment in appointment_options %}
+                            <option value="{{ appointment.pk }}"{% if selected_event_id == appointment.pk %} selected{% endif %}>
+                                {{ appointment.title }} · {{ appointment.starts_at|thai_date }} · {{ appointment.confirmed_count }}/{{ appointment.participant_count }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label>
+                        <span>Slot เวลา</span>
+                        <select name="slot">
+                            <option value="">ทุก Slot</option>
+                            {% for slot in slot_options %}
+                            <option value="{{ slot.pk }}"{% if selected_slot_id == slot.pk %} selected{% endif %}>{{ slot.filter_label }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label>
+                        <span>รูปแบบ</span>
+                        <select name="mode">
+                            <option value="all"{% if mode == "all" %} selected{% endif %}>Online + Onsite</option>
+                            <option value="online"{% if mode == "online" %} selected{% endif %}>Online</option>
+                            <option value="onsite"{% if mode == "onsite" %} selected{% endif %}>Onsite</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>เกรด</span>
+                        <select name="grade">
+                            <option value="">ทุกเกรด</option>
+                            {% for value, label in grade_options %}
+                            <option value="{{ value }}"{% if grade_filter == value %} selected{% endif %}>เกรด {{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label>
+                        <span>จังหวัด</span>
+                        <select name="province">
+                            <option value="">ทุกจังหวัด</option>
+                            {% for province in province_options %}
+                            <option value="{{ province }}"{% if province_filter == province %} selected{% endif %}>{{ province }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label>
+                        <span>ประเทศ</span>
+                        <select name="country">
+                            <option value="">ทุกประเทศ</option>
+                            {% for country in country_options %}
+                            <option value="{{ country }}"{% if country_filter == country %} selected{% endif %}>{{ country }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                </div>
+                <div class="results-filter-actions">
+                    <a href="{% url 'school:interview_results' %}?status={{ status }}">ล้างตัวกรอง</a>
+                    <button type="submit">ใช้ตัวกรอง</button>
+                </div>
+            </details>
         </form>
     </header>
 
     {% for message in messages %}<p class="result-notice {{ message.tags }}" role="status">{{ message }}</p>{% endfor %}
-
-    <section class="result-summary-strip" aria-label="สรุปข้อมูลสัมภาษณ์ในหน้านี้">
-        <div><span>ผลลัพธ์</span><strong>{{ page_obj.paginator.count }}</strong></div>
-        <div><span>มีนัดสัมภาษณ์ในหน้านี้</span><strong>{{ mode_counts.all }}</strong></div>
-        <div><span>Online</span><strong>{{ mode_counts.online }}</strong></div>
-        <div><span>Onsite</span><strong>{{ mode_counts.onsite }}</strong></div>
-    </section>
 
     <nav class="result-tabs" aria-label="สถานะผลสัมภาษณ์">
         {% for tab in status_tabs %}
@@ -106,46 +104,34 @@
         {% for person in page_obj %}
             {% with participant=person.latest_interview_participant %}
             <article class="result-card result-card--{{ person.result_status }}">
-                <div class="result-card-main">
+                <div class="operation-card-header">
                     <div class="result-person">
-                        <span class="result-avatar">{{ person.full_name|slice:":1" }}</span>
+                        <span class="result-avatar" aria-hidden="true">
+                            {{ person.first_name|first|upper }}
+                            {% if person.photo %}
+                            <img src="{{ person.photo.url }}" alt="" width="52" height="52" loading="lazy" data-result-avatar{% if person.line_picture_url %} data-fallback-src="{{ person.line_picture_url }}"{% endif %} referrerpolicy="no-referrer">
+                            {% elif person.line_picture_url %}
+                            <img src="{{ person.line_picture_url }}" alt="" width="52" height="52" loading="lazy" data-result-avatar referrerpolicy="no-referrer">
+                            {% endif %}
+                        </span>
                         <div>
                             <h2>{{ person.full_name }}</h2>
-                            <p>{{ person.nickname|default:"-" }} · {{ person.phone|default:"ไม่มีเบอร์" }}</p>
-                        </div>
-                    </div>
-                    <div class="result-interview-strip">
-                        <div>
-                            <span>Event</span>
-                            <strong>{% if participant %}{{ participant.appointment.title }}{% else %}-{% endif %}</strong>
-                        </div>
-                        <div>
-                            <span>Slot / เวลา</span>
-                            <strong>{% if participant %}{{ participant.slot_label }}{% else %}-{% endif %}</strong>
-                            <small>{% if participant %}{{ participant.time_label }}{% endif %}</small>
-                        </div>
-                        <div>
-                            <span>รูปแบบ</span>
+                            <p>{% if person.nickname %}{{ person.nickname }} · {% endif %}{{ person.phone|default:"ไม่มีเบอร์" }}</p>
                             {% if participant %}
-                            <strong><span class="result-mode-pill result-mode-pill--{{ participant.interview_mode }}">{{ participant.interview_mode_label }}</span></strong>
-                            {% else %}
-                            <strong>-</strong>
+                            <p class="operation-interview">{% if participant.interview_mode == "online" %}Online{% else %}Onsite{% endif %} · {{ participant.time_label }}</p>
                             {% endif %}
                         </div>
-                        <div>
-                            <span>จังหวัด / ประเทศ</span>
-                            <strong>{% if participant %}{{ participant.province_label }} · {{ participant.country_label }}{% else %}-{% endif %}</strong>
-                        </div>
                     </div>
-                    <dl class="result-meta">
-                        <div><dt>LINE</dt><dd>{{ person.line_display_name|default:"-" }}</dd></div>
-                        <div><dt>สถานที่</dt><dd>{% if participant %}{{ participant.invitation_location_label }}{% else %}-{% endif %}</dd></div>
-                        <div><dt>สถานะ</dt><dd>{% if person.interview_decision %}{{ person.get_interview_decision_display }}{% else %}{{ person.get_status_display }}{% endif %}{% if not person.interview_decision and person.result_status == 'passed' and person.admission_type_name %} · {{ person.admission_type_name }}{% endif %}</dd></div>
-                        <div><dt>LINE ประกาศผล</dt><dd>{% if person.has_result_line_notification %}ส่งแล้ว{% elif person.result_status == 'passed' or person.result_status == 'failed' %}ยังไม่ส่ง{% else %}-{% endif %}</dd></div>
-                    </dl>
-                    <div class="result-extra">
-                        <div><span>Goal</span><p>{{ person.extra_data.goal|default:"-" }}</p></div>
-                        <div><span>Vision calling</span><p>{{ person.extra_data.vision_calling|default:"-" }}</p></div>
+                    <div class="operation-card-status">
+                        <strong class="operation-outcome">
+                            {% if person.interview_decision %}{{ person.get_interview_decision_display }}
+                            {% elif person.result_status == 'passed' %}{{ person.admission_type_name }}
+                            {% elif person.result_status == 'failed' %}ไม่ผ่าน
+                            {% else %}รอตัดสิน{% endif %}
+                        </strong>
+                        {% if person.has_result_line_notification %}<small>ประกาศแล้ว</small>
+                        {% elif person.result_status == 'passed' or person.result_status == 'failed' %}<small>ยังไม่ส่งประกาศ</small>
+                        {% endif %}
                     </div>
                 </div>
                 <form method="post" class="result-actions" data-result-form data-person-name="{{ person.full_name }}">
@@ -156,24 +142,63 @@
                     <input type="hidden" name="interview_grade" value="">
                     <input type="hidden" name="next" value="{{ next_url }}">
                     <input type="hidden" name="confirmed_result" value="">
-                    <fieldset class="result-grade">
-                        <legend>เกรดสัมภาษณ์</legend>
-                        <div>
-                            {% for value, label in grade_options %}
-                            <button type="submit" name="action" value="grade" class="grade grade--{{ value|lower }}{% if person.interview_grade == value %} active{% endif %}" aria-pressed="{% if person.interview_grade == value %}true{% else %}false{% endif %}" onclick="this.form.elements.interview_grade.value='{{ value }}'">{{ label }}</button>
-                            {% endfor %}
+                    <div class="operation-decisions" role="group" aria-label="บันทึกผลของ {{ person.full_name }}">
+                        <button type="button" class="pass" data-result-button data-result-value="pass_onsite" data-result-label="ผ่าน onsite" data-confirm-message="ระบบจะบันทึกผลร่าง ผู้สมัครจะเห็นผลหลังจากส่งประกาศ LINE สำเร็จ">ผ่าน onsite</button>
+                        <button type="button" class="pass secondary" data-result-button data-result-value="pass_online" data-result-label="ผ่าน online" data-confirm-message="ระบบจะบันทึกผลร่าง ผู้สมัครจะเห็นผลหลังจากส่งประกาศ LINE สำเร็จ">ผ่าน online</button>
+                        <button type="button" class="fail" data-result-button data-result-value="fail" data-result-label="ไม่ผ่าน" data-confirm-message="ระบบจะบันทึกผลร่าง ผู้สมัครจะเห็นผลหลังจากส่งประกาศ LINE สำเร็จ">ไม่ผ่าน</button>
+                        <button type="button" class="pending" data-result-button data-result-value="pending" data-result-label="รอตัดสินอีกครั้ง" data-confirm-message="ระบบจะล้างผลร่าง ผลที่ประกาศไปแล้วจะยังแสดงให้ผู้สมัครเห็น">รอตัดสินอีกครั้ง</button>
+                    </div>
+                    <details class="operation-card-details">
+                        <summary>
+                            <span>ข้อมูลสัมภาษณ์ เกรด และคอมเมนต์</span>
+                            {% if person.interview_grade %}<span class="operation-grade-summary">เกรด {{ person.interview_grade }}</span>{% endif %}
+                        </summary>
+                        <div class="result-interview-strip">
+                            <div>
+                                <span>Event</span>
+                                <strong>{% if participant %}{{ participant.appointment.title }}{% else %}-{% endif %}</strong>
+                            </div>
+                            <div>
+                                <span>Slot / เวลา</span>
+                                <strong>{% if participant %}{{ participant.slot_label }}{% else %}-{% endif %}</strong>
+                                <small>{% if participant %}{{ participant.time_label }}{% endif %}</small>
+                            </div>
+                            <div>
+                                <span>รูปแบบ</span>
+                                {% if participant %}
+                                <strong><span class="result-mode-pill result-mode-pill--{{ participant.interview_mode }}">{{ participant.interview_mode_label }}</span></strong>
+                                {% else %}
+                                <strong>-</strong>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <span>จังหวัด / ประเทศ</span>
+                                <strong>{% if participant %}{{ participant.province_label }} · {{ participant.country_label }}{% else %}-{% endif %}</strong>
+                            </div>
                         </div>
-                        <small>{% if person.interview_grade %}เกรดปัจจุบัน {{ person.interview_grade }}{% else %}ยังไม่ได้ให้เกรด{% endif %}</small>
-                    </fieldset>
-                    <label class="result-comment">
-                        <span>comment</span>
-                        <textarea name="interview_comment" rows="3" placeholder="บันทึกข้อสังเกต จุดเด่น หรือสิ่งที่ต้องติดตาม">{{ person.interview_comment }}</textarea>
-                    </label>
-                    <button type="submit" class="comment-save" name="action" value="comment">บันทึกคอมเมนต์</button>
-                    <button type="button" class="pass" data-result-button data-result-value="pass_onsite" data-result-label="ผ่าน onsite" data-confirm-message="ระบบจะบันทึกผลร่าง ผู้สมัครจะเห็นผลหลังจากส่งประกาศ LINE สำเร็จ">ผ่าน onsite</button>
-                    <button type="button" class="pass secondary" data-result-button data-result-value="pass_online" data-result-label="ผ่าน online" data-confirm-message="ระบบจะบันทึกผลร่าง ผู้สมัครจะเห็นผลหลังจากส่งประกาศ LINE สำเร็จ">ผ่าน online</button>
-                    <button type="button" class="fail" data-result-button data-result-value="fail" data-result-label="ไม่ผ่าน" data-confirm-message="ระบบจะบันทึกผลร่าง ผู้สมัครจะเห็นผลหลังจากส่งประกาศ LINE สำเร็จ">ไม่ผ่าน</button>
-                    <button type="button" class="pending" data-result-button data-result-value="pending" data-result-label="รอตัดสินอีกครั้ง" data-confirm-message="ระบบจะล้างผลร่าง ผลที่ประกาศไปแล้วจะยังแสดงให้ผู้สมัครเห็น">รอตัดสินอีกครั้ง</button>
+                        <dl class="result-meta">
+                            <div><dt>LINE</dt><dd>{{ person.line_display_name|default:"-" }}</dd></div>
+                            <div><dt>สถานที่</dt><dd>{% if participant %}{{ participant.invitation_location_label }}{% else %}-{% endif %}</dd></div>
+                        </dl>
+                        <div class="result-extra">
+                            <div><span>Goal</span><p>{{ person.extra_data.goal|default:"-" }}</p></div>
+                            <div><span>Vision calling</span><p>{{ person.extra_data.vision_calling|default:"-" }}</p></div>
+                        </div>
+                        <fieldset class="result-grade">
+                            <legend>เกรดสัมภาษณ์</legend>
+                            <div>
+                                {% for value, label in grade_options %}
+                                <button type="submit" name="action" value="grade" class="grade grade--{{ value|lower }}{% if person.interview_grade == value %} active{% endif %}" aria-pressed="{% if person.interview_grade == value %}true{% else %}false{% endif %}" onclick="this.form.elements.interview_grade.value='{{ value }}'">{{ label }}</button>
+                                {% endfor %}
+                            </div>
+                            <small>{% if person.interview_grade %}เกรดปัจจุบัน {{ person.interview_grade }}{% else %}ยังไม่ได้ให้เกรด{% endif %}</small>
+                        </fieldset>
+                        <label class="result-comment">
+                            <span>comment</span>
+                            <textarea name="interview_comment" rows="3" placeholder="บันทึกข้อสังเกต จุดเด่น หรือสิ่งที่ต้องติดตาม">{{ person.interview_comment }}</textarea>
+                        </label>
+                        <button type="submit" class="comment-save" name="action" value="comment">บันทึกคอมเมนต์</button>
+                    </details>
                 </form>
             </article>
             {% endwith %}
@@ -191,13 +216,13 @@
         </nav>
     </footer>
 </main>
-<dialog class="result-confirm-dialog" data-result-dialog>
+<dialog class="result-confirm-dialog" aria-labelledby="result-confirm-title" data-result-dialog>
     <div class="result-confirm-box">
         <span>ยืนยันการบันทึกผล</span>
-        <h2 data-confirm-title>บันทึกผลสัมภาษณ์</h2>
+        <h2 id="result-confirm-title" data-confirm-title>บันทึกผลสัมภาษณ์</h2>
         <p data-confirm-message>ระบบจะบันทึกผลเท่านั้น</p>
         <div class="result-confirm-actions">
-            <button type="button" class="result-confirm-cancel" data-confirm-cancel>ยกเลิก</button>
+            <button type="button" class="result-confirm-cancel" data-confirm-cancel autofocus>ยกเลิก</button>
             <button type="button" class="result-confirm-submit" data-confirm-submit>ยืนยันบันทึกผล</button>
         </div>
     </div>
@@ -212,6 +237,20 @@ const confirmSubmit = resultDialog?.querySelector("[data-confirm-submit]");
 const confirmCancel = resultDialog?.querySelector("[data-confirm-cancel]");
 let pendingResultForm = null;
 let pendingResultButton = null;
+
+document.querySelectorAll("[data-result-avatar]").forEach((image) => {
+    function showFallback() {
+        if (image.dataset.fallbackSrc) {
+            image.src = image.dataset.fallbackSrc;
+            delete image.dataset.fallbackSrc;
+        } else {
+            image.remove();
+        }
+    }
+
+    image.addEventListener("error", showFallback);
+    if (image.complete && !image.naturalWidth) showFallback();
+});
 
 document.querySelectorAll("[data-result-button]").forEach((button) => {
     button.addEventListener("click", () => {

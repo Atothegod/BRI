@@ -142,3 +142,137 @@ button { min-height: 48px; padding: 11px 16px; color: #fff; background: #425b46;
     .announcement-composer, .announcement-filter-panel { padding: 16px; }
     .announcement-filter-fields .results-filter-grid { grid-template-columns: 1fr; }
 }
+
+.operation-results {
+    max-width: 1060px;
+}
+
+.operation-results .results-heading {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 18px;
+    padding-top: 4px;
+}
+
+.operation-results .results-heading h1 { font-size: clamp(1.75rem, 4vw, 2.5rem); }
+.operation-results .results-heading p { max-width: none; font-size: .92rem; font-weight: 600; }
+.operation-results .results-filter-panel { border-top-width: 1px; border-radius: 14px; }
+
+.operation-search {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 10px;
+}
+
+.operation-search input,
+.operation-search button { min-height: 46px; }
+.operation-search label { margin-bottom: 5px; }
+
+.operation-filters summary,
+.operation-card-details summary {
+    padding: 8px 0;
+    color: #425b46;
+    cursor: pointer;
+    font-size: .9rem;
+    font-weight: 750;
+}
+
+.operation-filters .results-filter-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin: 8px 0 14px;
+}
+
+.operation-results .result-tabs {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.operation-results .result-tabs a { min-height: 48px; padding: 8px 12px; font-size: .9rem; }
+.operation-results .result-tabs b { min-width: 26px; height: 26px; padding-inline: 4px; font-size: .82rem; }
+.operation-results .result-grid { grid-template-columns: 1fr; gap: 12px; }
+
+.operation-results .result-card {
+    gap: 13px;
+    padding: 15px clamp(12px, 3vw, 20px);
+    border-left-width: 3px;
+    border-radius: 12px;
+    box-shadow: 0 3px 12px #12271d08;
+}
+
+.operation-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px 16px;
+}
+
+.operation-results .result-person { min-width: 0; gap: 10px; }
+.operation-results .result-person h2 { font-size: clamp(1.05rem, 2.5vw, 1.3rem); }
+.operation-results .result-person p { margin-top: 3px; font-size: .86rem; overflow-wrap: anywhere; }
+.operation-results .result-person .operation-interview { color: #526157; font-size: .82rem; }
+
+.operation-results .result-avatar {
+    position: relative;
+    flex-basis: 52px;
+    width: 52px;
+    height: 52px;
+    overflow: hidden;
+}
+
+.operation-results .result-avatar img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.operation-card-status { display: grid; justify-items: end; gap: 3px; text-align: right; }
+.operation-card-status small { color: #526157; font-size: .8rem; }
+
+.operation-outcome {
+    padding: 4px 10px;
+    color: #69501b;
+    background: #f8f0db;
+    border-radius: 999px;
+    font-size: .84rem;
+}
+
+.result-card--passed .operation-outcome { color: #255136; background: #e6f3e8; }
+.result-card--failed .operation-outcome { color: #8a2e24; background: #fbece8; }
+
+.operation-results .result-actions { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.operation-decisions { display: flex; flex-wrap: wrap; gap: 7px; }
+.operation-decisions button { min-height: 44px; padding: 7px 13px; font-size: .9rem; }
+.operation-decisions .pass.secondary { color: #255136; background: #e6f3e8; border-color: #c2d9c6; }
+
+.operation-card-details {
+    padding-top: 2px;
+    border-top: 1px solid #e5ebe4;
+}
+
+.operation-card-details summary { min-height: 44px; padding: 10px 0; }
+.operation-grade-summary { margin-inline-start: 8px; color: #69501b; }
+.operation-card-details .result-interview-strip { margin-top: 5px; }
+.operation-card-details .result-grade,
+.operation-card-details .result-comment,
+.operation-card-details .comment-save { margin-top: 12px; }
+.operation-card-details .result-comment textarea { min-height: 84px; }
+
+.operation-results button:focus-visible,
+.operation-results a:focus-visible,
+.operation-results summary:focus-visible {
+    outline: 2px solid #246348;
+    outline-offset: 2px;
+}
+
+@media (max-width: 560px) {
+    .operation-results .result-tabs,
+    .operation-filters .results-filter-grid,
+    .operation-card-details .result-interview-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .operation-card-header { flex-wrap: wrap; }
+    .operation-card-status { grid-auto-flow: column; align-items: center; justify-items: start; gap: 8px; text-align: left; }
+    .operation-decisions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

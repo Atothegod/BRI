@@ -1420,6 +1420,7 @@ class AppointmentScheduleTests(TestCase):
             phone="0890000000",
             line_user_id="Uresult",
             line_display_name="Result LINE",
+            line_picture_url="https://example.com/result-profile.png",
             extra_data={
                 "goal": "อยากรับใช้ให้ชัดขึ้น",
                 "vision_calling": "สร้างผู้นำรุ่นใหม่",
@@ -1435,6 +1436,8 @@ class AppointmentScheduleTests(TestCase):
 
         response = self.client.get(url, {"q": "Result"})
         self.assertContains(response, "Result Applicant")
+        self.assertContains(response, 'src="https://example.com/result-profile.png"')
+        self.assertContains(response, "ข้อมูลสัมภาษณ์ เกรด และคอมเมนต์")
         self.assertNotContains(response, "school-admin-navbar")
         self.assertContains(response, "อยากรับใช้ให้ชัดขึ้น")
         self.assertContains(response, "สร้างผู้นำรุ่นใหม่")

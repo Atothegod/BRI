@@ -2732,8 +2732,23 @@ select.form-control {
 .payment-submitted-slips a { overflow: hidden; color: inherit; background: #fff; border: 1px solid #d5dfd7; border-radius: 8px; text-decoration: none; }
 .payment-submitted-slips img { width: 100%; height: 100px; object-fit: cover; }
 .payment-submitted-slips span { display: block; padding: 6px; font-size: .75rem; font-weight: 800; }
-.payment-slip-upload-row { display: grid; gap: 10px; padding: 14px; border: 1px solid #d5dfd7; border-radius: 10px; }
-.payment-slip-upload-row--optional { background: #fafcfb; }
+.payment-slip-picker {
+    display: grid;
+    min-width: 0;
+    gap: 10px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+}
+
+.payment-slip-picker legend { padding: 0; font-weight: 800; }
+.payment-slip-picker p, .payment-slip-limit { margin: 0; color: var(--color-brand-700); }
+.payment-slip-upload-row { display: grid; gap: 6px; }
+.payment-slip-upload-row .upload-control > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.payment-slip-upload-row.has-error .upload-control { border-color: #b54437; }
+.payment-slip-preview { width: 48px; height: 56px; flex: none; object-fit: contain; border-radius: 6px; background: #fff; }
+.payment-slip-remove { justify-self: end; }
+.payment-slip-picker [hidden] { display: none; }
 
 .payment-action {
     margin-top: 24px;

@@ -10,7 +10,7 @@ from django.core import signing
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import BooleanField, CharField, Count, Exists, OuterRef, Q, Subquery, Value
+from django.db.models import BooleanField, Case, CharField, Count, Exists, F, OuterRef, Q, Subquery, Value, When
 from django.db.models.fields.json import KeyTextTransform, KeyTransform
 from django.db.models.functions import Coalesce
 from django.http import JsonResponse
@@ -599,40 +599,43 @@ def interview_participant_filter_options():
     return provinces, countries
 
 
+INTERVIEW_OUTCOMES = {
+    Person.InterviewDecision.PASS_ONLINE: (Person.Status.PASSED, Person.AdmissionType.ONLINE),
+    Person.InterviewDecision.PASS_ONSITE: (Person.Status.PASSED, Person.AdmissionType.INTERVIEW),
+    Person.InterviewDecision.FAIL: (Person.Status.FAILED, ""),
+}
+
+
+def interview_result_people():
+    return Person.objects.annotate(
+        result_status=Case(
+            *[
+                When(interview_decision=decision, then=Value(status))
+                for decision, (status, _admission) in INTERVIEW_OUTCOMES.items()
+            ],
+            default=F("status"),
+        )
+    )
+
+
 def update_interview_result(person, result):
-    if result == "pass_online":
-        person.status = Person.Status.PASSED
-        person.admission_type = Person.AdmissionType.ONLINE
-        person.save(update_fields=["status", "admission_type"])
-        return "ผ่านแบบ online"
-    if result == "pass_onsite":
-        person.status = Person.Status.PASSED
-        person.admission_type = Person.AdmissionType.INTERVIEW
-        person.save(update_fields=["status", "admission_type"])
-        return "ผ่านแบบ onsite"
-    if result == "fail":
-        person.status = Person.Status.FAILED
-        person.admission_type = ""
-        person.save(update_fields=["status", "admission_type"])
-        return "ไม่ผ่าน"
     if result == "pending":
-        person.status = Person.Status.IN_PROGRESS
-        person.admission_type = ""
-        person.save(update_fields=["status", "admission_type"])
-        return "รอตัดสินอีกครั้ง"
-    return ""
-
-
-def interview_result_notification_key(person):
-    if person.status == Person.Status.PASSED:
-        return "interview_passed"
-    if person.status == Person.Status.FAILED:
-        return "interview_failed"
-    return ""
+        decision, label = "", "รอตัดสินอีกครั้ง"
+    elif result in INTERVIEW_OUTCOMES:
+        decision = result
+        label = Person.InterviewDecision(result).label
+    else:
+        return ""
+    Person.objects.filter(pk=person.pk).update(interview_decision=decision, updated_at=timezone.now())
+    return label
 
 
 def interview_result_notification_sent(person):
-    key = interview_result_notification_key(person)
+    published = (person.status, person.admission_type)
+    if INTERVIEW_OUTCOMES.get(person.interview_decision, published) != published:
+        return False
+    keys = {Person.Status.PASSED: "interview_passed", Person.Status.FAILED: "interview_failed"}
+    key = keys.get(person.status)
     return bool(key and line_notification_sent(person, key))
 
 
@@ -649,19 +652,36 @@ def interview_announcement_country(person):
     ).strip()
 
 
+@transaction.atomic
 def send_interview_result_notification(person, additional_message=""):
-    if person.status == Person.Status.PASSED:
-        student, _ = Student.objects.get_or_create(person=person)
-        sent = notify_interview_passed(person, student, additional_message)
+    selected_status = person.result_status
+    selected_decision = person.interview_decision
+    person = Person.objects.select_for_update().get(pk=person.pk)
+    if interview_result_notification_sent(person):
+        return "already_sent"
+    status, admission_type = INTERVIEW_OUTCOMES.get(
+        person.interview_decision, (person.status, person.admission_type)
+    )
+    if status != selected_status or person.interview_decision != selected_decision:
+        return "failed"
+    if reason := line_push_unavailable_reason(person):
+        return reason
+
+    person.status = status
+    person.admission_type = admission_type
+    person.interview_decision = ""
+    person.save(update_fields=["status", "admission_type", "interview_decision", "updated_at"])
+    if status == Person.Status.PASSED:
+        sent = notify_interview_passed(person, person.student, additional_message)
         key = "interview_passed"
-    elif person.status == Person.Status.FAILED:
+    else:
         sent = notify_interview_failed(person)
         key = "interview_failed"
-    else:
-        return False
-    if sent:
-        mark_line_notification_sent(person, key)
-    return sent
+    if not sent:
+        transaction.set_rollback(True)
+        return "failed"
+    mark_line_notification_sent(person, key)
+    return "sent"
 
 
 @login_required(login_url="school:operation_login")
@@ -727,16 +747,16 @@ def interview_results(request):
     if selected_slot_id and not any(slot.pk == selected_slot_id for slot in slot_options):
         selected_slot_id = None
 
-    people = Person.objects.all().order_by("first_name", "last_name", "pk")
+    people = interview_result_people().order_by("first_name", "last_name", "pk")
     if status == "passed":
-        people = people.filter(status=Person.Status.PASSED)
+        people = people.filter(result_status=Person.Status.PASSED)
     elif status == "failed":
-        people = people.filter(status=Person.Status.FAILED)
+        people = people.filter(result_status=Person.Status.FAILED)
     elif status == "all":
         pass
     else:
         status = "pending"
-        people = people.filter(status=Person.Status.IN_PROGRESS)
+        people = people.filter(result_status=Person.Status.IN_PROGRESS)
     if query:
         people = people.filter(
             Q(first_name__icontains=query)
@@ -748,7 +768,7 @@ def interview_results(request):
     if grade_filter:
         people = people.filter(interview_grade=grade_filter)
 
-    filtered_people_base = Person.objects.all().order_by("first_name", "last_name", "pk")
+    filtered_people_base = interview_result_people().order_by("first_name", "last_name", "pk")
     if query:
         filtered_people_base = filtered_people_base.filter(
             Q(first_name__icontains=query)
@@ -799,9 +819,9 @@ def interview_results(request):
         filtered_people_base = filtered_people_base.filter(pk__in=filtered_participants_by_person)
 
     counts = {
-        "pending": filtered_people_base.filter(status=Person.Status.IN_PROGRESS).count(),
-        "passed": filtered_people_base.filter(status=Person.Status.PASSED).count(),
-        "failed": filtered_people_base.filter(status=Person.Status.FAILED).count(),
+        "pending": filtered_people_base.filter(result_status=Person.Status.IN_PROGRESS).count(),
+        "passed": filtered_people_base.filter(result_status=Person.Status.PASSED).count(),
+        "failed": filtered_people_base.filter(result_status=Person.Status.FAILED).count(),
         "all": filtered_people_base.count(),
     }
     page = Paginator(people, 60).get_page(request.GET.get("page"))
@@ -886,18 +906,12 @@ def interview_announcements(request):
             messages.error(request, "กรุณาเลือกรายชื่อที่ต้องการส่งประกาศ")
         else:
             stats = {"sent": 0, "already_sent": 0, "missing_line_user_id": 0, "missing_channel_access_token": 0, "failed": 0}
-            people = Person.objects.filter(
+            people = interview_result_people().filter(
                 pk__in=selected_ids,
-                status__in=[Person.Status.PASSED, Person.Status.FAILED],
+                result_status__in=[Person.Status.PASSED, Person.Status.FAILED],
             ).order_by("pk")
             for person in people:
-                if interview_result_notification_sent(person):
-                    stats["already_sent"] += 1
-                    continue
-                if send_interview_result_notification(person, additional_message):
-                    stats["sent"] += 1
-                    continue
-                stats[line_push_unavailable_reason(person) or "failed"] += 1
+                stats[send_interview_result_notification(person, additional_message)] += 1
             summary = [f"ส่งสำเร็จ {stats['sent']} คน"]
             if stats["already_sent"]:
                 summary.append(f"เคยส่งแล้ว {stats['already_sent']} คน")
@@ -919,9 +933,9 @@ def interview_announcements(request):
     audience = request.GET.get("audience") or "ready"
     if audience not in {"ready", "sent", "blocked", "all"}:
         audience = "ready"
-    people = Person.objects.filter(status__in=[Person.Status.PASSED, Person.Status.FAILED]).order_by("-updated_at", "-pk")
+    people = interview_result_people().filter(result_status__in=[Person.Status.PASSED, Person.Status.FAILED]).order_by("-updated_at", "-pk")
     if result_filter:
-        people = people.filter(status=result_filter)
+        people = people.filter(result_status=result_filter)
     if query:
         people = people.filter(
             Q(first_name__icontains=query)

@@ -326,11 +326,11 @@ def get_student_for_line(line_user_id):
         return None, None
     person = (
         Person.objects.select_related("student", "student__group")
-        .filter(line_user_id=line_user_id, status=Person.Status.PASSED)
+        .filter(line_user_id=line_user_id)
         .first()
     )
     student = getattr(person, "student", None) if person else None
-    if not student or not student.is_active:
+    if not student or person.status != Person.Status.PASSED or not student.is_active:
         return person, None
     return person, student
 
@@ -479,7 +479,7 @@ def registration(request):
     if request.method == "GET" and existing_person:
         context = {
             "person": existing_person,
-            "student": getattr(existing_person, "student", None),
+            "student": getattr(existing_person, "student", None) if existing_person.status == Person.Status.PASSED else None,
             "line_return_url": settings.LINE_RETURN_URL,
         }
         context.update(get_liff_context(request))
@@ -541,7 +541,7 @@ def registration_success(request):
         .filter(pk=receipt["person_id"])
         .first()
     )
-    student = getattr(person, "student", None) if person else None
+    student = getattr(person, "student", None) if person and person.status == Person.Status.PASSED else None
     context = {
         "receipt": receipt,
         "person": person,
@@ -581,7 +581,7 @@ def announcement_result(request):
 
     if person:
         student = getattr(person, "student", None)
-        if person.status == Person.Status.PASSED or student:
+        if person.status == Person.Status.PASSED:
             result_state = "paid" if student and student.is_paid else "passed"
         elif person.status == Person.Status.FAILED:
             result_state = "failed"
@@ -1542,13 +1542,14 @@ def admin_student_photo_import(request):
 @login_required(login_url="school:operation_login")
 @never_cache
 @require_http_methods(["GET", "POST"])
+@transaction.atomic
 def admin_payment_slip_review(request):
     if not can_view_operation_tools(request.user):
         raise PermissionDenied
 
     if request.method == "POST":
         student = (
-            Student.objects.select_related("person").prefetch_related("payment_slips")
+            Student.objects.select_related("person").select_for_update(of=("self",))
             .filter(pk=request.POST.get("student"), payment_slips__isnull=False)
             .first()
         )
@@ -2800,6 +2801,7 @@ def student_homework_upload(request):
 
 
 @never_cache
+@transaction.atomic
 def student_payment_upload(request):
     line_profile = get_session_line_profile(request)
     line_user_id = line_profile.get("line_user_id", "").strip()
@@ -2814,33 +2816,31 @@ def student_payment_upload(request):
         initial={"line_user_id": line_user_id} if request.method == "GET" else None,
         line_profile=line_profile,
     )
-    uploaded_student = None
-
-    active_slips = []
-    if student:
-        active_slips = list(
-            student.payment_slips.exclude(status=PaymentSlip.Status.NEEDS_FIX)
-        )
-
     if should_bind_form and form.is_valid():
-        uploaded_student = form.save()
+        form.save()
         messages.success(
             request,
             "อัปโหลดสลิปเรียบร้อยแล้ว ทีมงานจะตรวจสอบการชำระเงิน",
         )
         return redirect("school:student_payment_upload")
 
+    if should_bind_form:
+        payment_state, person, student = get_payment_access_state(line_user_id)
+    active_slips = student.active_payment_slips if student else []
+    available_slip_slots = max(Student.MAX_PAYMENT_SLIPS - len(active_slips), 0)
+
     return render(
         request,
         "school/student_payment_upload.html",
         {
             "form": form,
-            "uploaded_student": uploaded_student,
             "payment_state": payment_state,
             "person": person,
             "student": student,
             "active_slips": active_slips,
-            "available_slip_slots": max(Student.MAX_PAYMENT_SLIPS - len(active_slips), 0),
+            "available_slip_slots": available_slip_slots,
+            "slip_fields": form.slip_fields[:available_slip_slots],
+            "max_payment_slips": Student.MAX_PAYMENT_SLIPS,
             "is_preview": is_preview,
             "line_return_url": settings.LINE_RETURN_URL,
             **get_liff_context(request, reload_on_sync=not bool(line_user_id)),

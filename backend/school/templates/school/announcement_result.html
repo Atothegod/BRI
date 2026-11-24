@@ -62,6 +62,9 @@
 
         <div class="result-actions">
             {% if result_state == "paid" %}
+            <a class="button button--secondary success-action" href="{% url 'school:liff_student_dashboard_launch' %}">
+                <span>เข้า Dashboard นักเรียน</span>
+            </a>
             <a class="button button--primary success-action" href="{{ line_return_url }}" data-liff-close>
                 <span>กลับไปยัง LINE</span>
                 <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
@@ -70,6 +73,9 @@
             <a class="button button--primary success-action" href="{% url 'school:student_payment_upload' %}">
                 <span>ไปหน้าแจ้งชำระเงิน</span>
                 <svg class="icon" aria-hidden="true"><use href="{% static 'school/images/icons.svg' %}#arrow-right"></use></svg>
+            </a>
+            <a class="button button--secondary success-action" href="{% url 'school:liff_student_dashboard_launch' %}">
+                <span>เข้า Dashboard นักเรียน</span>
             </a>
             <a class="button button--secondary success-action" href="{{ line_return_url }}" data-liff-close>
                 <span>กลับไปยัง LINE</span>

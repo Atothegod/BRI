@@ -20,8 +20,6 @@
     const sidebar = app.querySelector("[data-app-sidebar]");
     const menuBackdrop = app.querySelector("[data-menu-backdrop]");
     const menuOpenButton = app.querySelector("[data-menu-open]");
-    const uploadInput = form.querySelector("[data-upload-input]");
-    const fileLabel = form.querySelector("[data-file-label]");
     const copyAccountButtons = Array.from(app.querySelectorAll("[data-copy-account]"));
     const copyStatus = app.querySelector("[data-copy-status]");
     const provinceInput = form.querySelector("[data-address-province]");
@@ -1183,13 +1181,6 @@
     if (menuBackdrop) menuBackdrop.addEventListener("click", () => setMenu(false));
     const menuCloseButton = app.querySelector("[data-menu-close]");
     if (menuCloseButton) menuCloseButton.addEventListener("click", () => setMenu(false));
-
-    if (uploadInput && fileLabel) {
-        uploadInput.addEventListener("change", () => {
-            const file = uploadInput.files && uploadInput.files[0];
-            fileLabel.textContent = file ? file.name : "เลือกรูปสลิป";
-        });
-    }
 
     copyAccountButtons.forEach((button) => {
         button.addEventListener("click", async () => {

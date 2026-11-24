@@ -747,22 +747,20 @@ class PaymentSlipUploadForm(forms.Form):
         required=False,
         widget=forms.HiddenInput(),
     )
-    payment_slip = forms.ImageField(
-        widget=forms.ClearableFileInput(
-            attrs={
-                "class": "file-input",
-                "accept": "image/jpeg,image/png,image/webp",
-                "data-upload-input": "",
-            }
-        )
-    )
-    payment_slip_2 = forms.ImageField(required=False, widget=forms.ClearableFileInput(attrs={"class": "file-input", "accept": "image/jpeg,image/png,image/webp"}))
-    payment_slip_3 = forms.ImageField(required=False, widget=forms.ClearableFileInput(attrs={"class": "file-input", "accept": "image/jpeg,image/png,image/webp"}))
-    payment_slip_4 = forms.ImageField(required=False, widget=forms.ClearableFileInput(attrs={"class": "file-input", "accept": "image/jpeg,image/png,image/webp"}))
 
     def __init__(self, *args, line_profile=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.line_profile = line_profile or {}
+        self.slip_fields = []
+        for index in range(1, Student.MAX_PAYMENT_SLIPS + 1):
+            name = "payment_slip" if index == 1 else f"payment_slip_{index}"
+            self.fields[name] = forms.ImageField(
+                required=False,
+                widget=forms.ClearableFileInput(
+                    attrs={"class": "file-input", "accept": "image/jpeg,image/png,image/webp"}
+                ),
+            )
+            self.slip_fields.append(self[name])
 
     def clean(self):
         cleaned_data = super().clean()
@@ -772,7 +770,7 @@ class PaymentSlipUploadForm(forms.Form):
             raise forms.ValidationError("กรุณาเปิดหน้านี้ผ่าน LINE เพื่อให้ระบบรู้บัญชีของคุณ")
 
         try:
-            self.student = Student.objects.select_related("person", "group").get(
+            self.student = Student.objects.select_for_update().get(
                 person__line_user_id=line_user_id,
                 person__status=Person.Status.PASSED,
             )
@@ -786,17 +784,15 @@ class PaymentSlipUploadForm(forms.Form):
                 "ระบบยืนยันการชำระเงินของคุณเรียบร้อยแล้ว ไม่ต้องส่งสลิปซ้ำ"
             )
 
-        self.existing_slips = list(
-            self.student.payment_slips.exclude(status=PaymentSlip.Status.NEEDS_FIX)
-        )
-        available_slots = Student.MAX_PAYMENT_SLIPS - len(self.existing_slips)
+        existing_count = self.student.payment_slips.exclude(status=PaymentSlip.Status.NEEDS_FIX).count()
         submitted = []
-        for index in range(1, Student.MAX_PAYMENT_SLIPS + 1):
-            suffix = "" if index == 1 else f"_{index}"
-            image = cleaned_data.get(f"payment_slip{suffix}")
+        for field in self.slip_fields:
+            image = cleaned_data.get(field.name)
             if image:
                 submitted.append(image)
-        if len(submitted) > available_slots:
+        if not submitted and not self.errors:
+            raise forms.ValidationError("กรุณาแนบสลิปอย่างน้อย 1 ใบ")
+        if len(submitted) > Student.MAX_PAYMENT_SLIPS - existing_count:
             raise forms.ValidationError(f"แนบสลิปได้สูงสุด {Student.MAX_PAYMENT_SLIPS} ใบ")
         cleaned_data["submitted_slips"] = submitted
 
@@ -805,11 +801,11 @@ class PaymentSlipUploadForm(forms.Form):
 
     def save(self):
         submitted = self.cleaned_data["submitted_slips"]
-        PaymentSlip.objects.bulk_create([
+        slips = PaymentSlip.objects.bulk_create([
             PaymentSlip(student=self.student, image=image)
             for image in submitted
         ])
-        self.student.payment_slip = submitted[-1]
+        self.student.payment_slip = slips[-1].image.name
         self.student.is_paid = False
         self.student.admin_validation_status = Student.AdminValidationStatus.PENDING
         self.student.save(update_fields=["payment_slip", "is_paid", "admin_validation_status"])

@@ -1461,16 +1461,35 @@ class AppointmentScheduleTests(TestCase):
 
         self.assertRedirects(result, f"{url}?q=Result", fetch_redirect_response=False)
         person.refresh_from_db()
-        self.assertEqual(person.status, Person.Status.PASSED)
-        self.assertEqual(person.admission_type, Person.AdmissionType.ONLINE)
-        self.assertTrue(Student.objects.filter(person=person).exists())
+        self.assertEqual(person.status, Person.Status.IN_PROGRESS)
+        self.assertEqual(person.admission_type, "")
+        self.assertEqual(person.interview_decision, Person.InterviewDecision.PASS_ONLINE)
+        self.assertFalse(Student.objects.filter(person=person).exists())
         self.assertFalse(mock_urlopen.called)
         self.assertNotIn("line_notifications", person.extra_data)
+
+        applicant = Client()
+        session = applicant.session
+        session["line_profile"] = {"line_user_id": person.line_user_id, "verified": True}
+        session.save()
+        result_url = reverse("school:announcement_result")
+        dashboard_url = reverse("school:student_dashboard")
+        payment_url = reverse("school:student_payment_upload")
+        self.assertEqual(applicant.get(result_url).context["result_state"], "pending")
+        self.assertEqual(applicant.get(dashboard_url).context["student_state"], "not_ready")
+        self.assertEqual(applicant.get(payment_url).context["payment_state"], "not_student")
 
         announcement_url = reverse("school:interview_announcements")
         announcement_page = self.client.get(announcement_url, {"q": "Result"})
         self.assertContains(announcement_page, "Result Applicant")
         self.assertContains(announcement_page, "พร้อมยิง")
+
+        with patch("school.interviews.notify_interview_passed", return_value=False):
+            self.client.post(announcement_url, {"people": [person.pk], "confirmed_send": "yes"})
+        person.refresh_from_db()
+        self.assertEqual(person.status, Person.Status.IN_PROGRESS)
+        self.assertEqual(person.interview_decision, Person.InterviewDecision.PASS_ONLINE)
+        self.assertFalse(Student.objects.filter(person=person).exists())
 
         announcement = self.client.post(announcement_url, {
             "people": [person.pk],
@@ -1486,6 +1505,12 @@ class AppointmentScheduleTests(TestCase):
         self.assertIn("กรุณาชำระเงินภายในวันจันทร์ที่ 19 ตุลาคม 2569", json.dumps(payload, ensure_ascii=False))
         person.refresh_from_db()
         self.assertIn("interview_passed", person.extra_data["line_notifications"])
+        self.assertEqual(person.status, Person.Status.PASSED)
+        self.assertEqual(person.admission_type, Person.AdmissionType.ONLINE)
+        self.assertEqual(person.interview_decision, "")
+        self.assertEqual(applicant.get(result_url).context["result_state"], "passed")
+        self.assertEqual(applicant.get(dashboard_url).context["student_state"], "ready")
+        self.assertEqual(applicant.get(payment_url).context["payment_state"], "ready")
 
         search_again = self.client.get(url, {"q": "Result"})
         self.assertContains(search_again, "Result Applicant")
@@ -1625,7 +1650,8 @@ class AppointmentScheduleTests(TestCase):
 
         self.assertRedirects(response, url, fetch_redirect_response=False)
         person.refresh_from_db()
-        self.assertEqual(person.status, Person.Status.FAILED)
+        self.assertEqual(person.status, Person.Status.IN_PROGRESS)
+        self.assertEqual(person.interview_decision, Person.InterviewDecision.FAIL)
         self.assertEqual(person.admission_type, "")
 
         self.assertFalse(mock_urlopen.called)
@@ -1653,7 +1679,8 @@ class AppointmentScheduleTests(TestCase):
 
         self.assertRedirects(reset, url, fetch_redirect_response=False)
         person.refresh_from_db()
-        self.assertEqual(person.status, Person.Status.IN_PROGRESS)
+        self.assertEqual(person.status, Person.Status.FAILED)
+        self.assertEqual(person.interview_decision, "")
         self.assertEqual(person.admission_type, "")
 
     @override_settings(LINE_MESSAGING_CHANNEL_ACCESS_TOKEN="line-token")

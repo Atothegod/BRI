@@ -24,6 +24,11 @@ class Person(TimeStampedModel):
         INTERVIEW = "interview", "ผ่านสัมภาษณ์"
         ONLINE = "online", "ผ่านแบบออนไลน์"
 
+    class InterviewDecision(models.TextChoices):
+        PASS_ONLINE = "pass_online", "ผ่านแบบ online"
+        PASS_ONSITE = "pass_onsite", "ผ่านแบบ onsite"
+        FAIL = "fail", "ไม่ผ่าน"
+
     class InterviewGrade(models.TextChoices):
         A = "A", "A"
         B = "B", "B"
@@ -70,6 +75,7 @@ class Person(TimeStampedModel):
         choices=[("pending", "รอส่ง"), ("sent", "LINE รับข้อความแล้ว"), ("failed", "ส่งไม่สำเร็จ")],
     )
     interview_comment = models.TextField(blank=True)
+    interview_decision = models.CharField(max_length=20, choices=InterviewDecision.choices, blank=True)
     interview_grade = models.CharField(
         max_length=1,
         choices=InterviewGrade.choices,

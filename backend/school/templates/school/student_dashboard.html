@@ -134,7 +134,8 @@
         {% elif student_state == "not_ready" %}
         <span>STUDENT ACCESS</span>
         <h1 id="student-state-title">ยังไม่เปิด dashboard นักเรียน</h1>
-        <p>บัญชี {{ person.full_name }} ยังไม่ได้อยู่ในสถานะนักเรียนที่พร้อมใช้งาน</p>
+        <p>ระบบเปิด Dashboard ให้ผู้ผ่านสัมภาษณ์หลังจากทีมงานส่งประกาศแล้ว</p>
+        <a href="{% url 'school:announcement_result' %}">ตรวจสอบประกาศผล</a>
         {% else %}
         <span>NOT FOUND</span>
         <h1 id="student-state-title">ไม่พบข้อมูลนักเรียน</h1>

@@ -105,7 +105,7 @@
         {% timezone "Asia/Bangkok" %}
         {% for person in page_obj %}
             {% with participant=person.latest_interview_participant %}
-            <article class="result-card result-card--{{ person.status }}">
+            <article class="result-card result-card--{{ person.result_status }}">
                 <div class="result-card-main">
                     <div class="result-person">
                         <span class="result-avatar">{{ person.full_name|slice:":1" }}</span>
@@ -140,8 +140,8 @@
                     <dl class="result-meta">
                         <div><dt>LINE</dt><dd>{{ person.line_display_name|default:"-" }}</dd></div>
                         <div><dt>สถานที่</dt><dd>{% if participant %}{{ participant.invitation_location_label }}{% else %}-{% endif %}</dd></div>
-                        <div><dt>สถานะ</dt><dd>{{ person.get_status_display }}{% if person.status == 'passed' and person.admission_type_name %} · {{ person.admission_type_name }}{% endif %}</dd></div>
-                        <div><dt>LINE ประกาศผล</dt><dd>{% if person.has_result_line_notification %}ส่งแล้ว{% elif person.status == 'passed' or person.status == 'failed' %}ยังไม่ส่ง{% else %}-{% endif %}</dd></div>
+                        <div><dt>สถานะ</dt><dd>{% if person.interview_decision %}{{ person.get_interview_decision_display }}{% else %}{{ person.get_status_display }}{% endif %}{% if not person.interview_decision and person.result_status == 'passed' and person.admission_type_name %} · {{ person.admission_type_name }}{% endif %}</dd></div>
+                        <div><dt>LINE ประกาศผล</dt><dd>{% if person.has_result_line_notification %}ส่งแล้ว{% elif person.result_status == 'passed' or person.result_status == 'failed' %}ยังไม่ส่ง{% else %}-{% endif %}</dd></div>
                     </dl>
                     <div class="result-extra">
                         <div><span>Goal</span><p>{{ person.extra_data.goal|default:"-" }}</p></div>
@@ -170,10 +170,10 @@
                         <textarea name="interview_comment" rows="3" placeholder="บันทึกข้อสังเกต จุดเด่น หรือสิ่งที่ต้องติดตาม">{{ person.interview_comment }}</textarea>
                     </label>
                     <button type="submit" class="comment-save" name="action" value="comment">บันทึกคอมเมนต์</button>
-                    <button type="button" class="pass" data-result-button data-result-value="pass_onsite" data-result-label="ผ่าน onsite" data-confirm-message="ระบบจะบันทึกผลเท่านั้น ยังไม่ส่ง LINE ประกาศผล">ผ่าน onsite</button>
-                    <button type="button" class="pass secondary" data-result-button data-result-value="pass_online" data-result-label="ผ่าน online" data-confirm-message="ระบบจะบันทึกผลเท่านั้น ยังไม่ส่ง LINE ประกาศผล">ผ่าน online</button>
-                    <button type="button" class="fail" data-result-button data-result-value="fail" data-result-label="ไม่ผ่าน" data-confirm-message="ระบบจะบันทึกผลไม่ผ่านเท่านั้น ยังไม่ส่ง LINE ประกาศผล">ไม่ผ่าน</button>
-                    <button type="button" class="pending" data-result-button data-result-value="pending" data-result-label="รอตัดสินอีกครั้ง" data-confirm-message="ระบบจะย้อนสถานะกลับไปรอตัดสิน และยังไม่ส่ง LINE ประกาศผล">รอตัดสินอีกครั้ง</button>
+                    <button type="button" class="pass" data-result-button data-result-value="pass_onsite" data-result-label="ผ่าน onsite" data-confirm-message="ระบบจะบันทึกผลร่าง ผู้สมัครจะเห็นผลหลังจากส่งประกาศ LINE สำเร็จ">ผ่าน onsite</button>
+                    <button type="button" class="pass secondary" data-result-button data-result-value="pass_online" data-result-label="ผ่าน online" data-confirm-message="ระบบจะบันทึกผลร่าง ผู้สมัครจะเห็นผลหลังจากส่งประกาศ LINE สำเร็จ">ผ่าน online</button>
+                    <button type="button" class="fail" data-result-button data-result-value="fail" data-result-label="ไม่ผ่าน" data-confirm-message="ระบบจะบันทึกผลร่าง ผู้สมัครจะเห็นผลหลังจากส่งประกาศ LINE สำเร็จ">ไม่ผ่าน</button>
+                    <button type="button" class="pending" data-result-button data-result-value="pending" data-result-label="รอตัดสินอีกครั้ง" data-confirm-message="ระบบจะล้างผลร่าง ผลที่ประกาศไปแล้วจะยังแสดงให้ผู้สมัครเห็น">รอตัดสินอีกครั้ง</button>
                 </form>
             </article>
             {% endwith %}

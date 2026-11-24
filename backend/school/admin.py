@@ -10,10 +10,10 @@ from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin as UnfoldModelAdmin
 
 from .forms import load_country_data
+from .interviews import interview_result_people, send_interview_result_notification, update_interview_result
 from .line import (
     build_appointment_reschedule_flex_message,
     line_push_unavailable_reason,
-    notify_interview_passed,
     send_line_push_message,
 )
 from .models import (
@@ -28,8 +28,6 @@ from .models import (
     Student,
     TeacherStudentAssessment,
     TeacherGroup,
-    line_notification_sent,
-    mark_line_notification_sent,
 )
 
 
@@ -450,12 +448,15 @@ class PersonAdmin(UnfoldModelAdmin):
         (
             "ผลสัมภาษณ์",
             {
-                "description": "เลือกผลผ่าน/ไม่ผ่านก่อน แล้วเลือกประเภทผู้เรียนเฉพาะกรณีที่ผ่าน",
-                "fields": (("status", "admission_type"),),
+                "description": "บันทึกผลร่างผ่านเมนู Actions แล้วส่งประกาศเพื่ออัปเดตสถานะผู้สมัคร",
+                "fields": ("interview_decision", ("status", "admission_type")),
             },
         ),
     )
     readonly_fields = (
+        "interview_decision",
+        "status",
+        "admission_type",
         "line_connected_at",
         "goal_display",
         "vision_calling_display",
@@ -527,9 +528,7 @@ class PersonAdmin(UnfoldModelAdmin):
     def mark_as_passed_interview(self, request, queryset):
         updated = 0
         for person in queryset:
-            person.status = Person.Status.PASSED
-            person.admission_type = Person.AdmissionType.INTERVIEW
-            person.save(update_fields=["status", "admission_type"])
+            update_interview_result(person, Person.InterviewDecision.PASS_ONSITE)
             updated += 1
         self.message_user(request, f"บันทึกผ่าน onsite {updated} คนแล้ว ยังไม่ได้ส่ง LINE", messages.SUCCESS)
 
@@ -537,39 +536,31 @@ class PersonAdmin(UnfoldModelAdmin):
     def mark_as_passed_online(self, request, queryset):
         updated = 0
         for person in queryset:
-            person.status = Person.Status.PASSED
-            person.admission_type = Person.AdmissionType.ONLINE
-            person.save(update_fields=["status", "admission_type"])
+            update_interview_result(person, Person.InterviewDecision.PASS_ONLINE)
             updated += 1
         self.message_user(request, f"บันทึกผ่าน online {updated} คนแล้ว ยังไม่ได้ส่ง LINE", messages.SUCCESS)
 
     @admin.action(description="Mark selected people as failed")
     def mark_as_failed(self, request, queryset):
         for person in queryset:
-            person.status = Person.Status.FAILED
-            person.save(update_fields=["status"])
+            update_interview_result(person, Person.InterviewDecision.FAIL)
 
     @admin.action(description="Send LINE interview-passed notification")
     def send_interview_passed_line_notification(self, request, queryset):
-        stats = {"sent": 0, "missing_line_user_id": 0, "missing_channel_access_token": 0, "failed": 0}
-        for person in queryset.filter(status=Person.Status.PASSED):
-            student, _ = Student.objects.get_or_create(person=person)
-            if notify_interview_passed(person, student):
-                mark_line_notification_sent(person, "interview_passed")
-            person.refresh_from_db()
-            stats[self._line_notification_status(person)] += 1
+        stats = {"sent": 0, "already_sent": 0, "missing_line_user_id": 0, "missing_channel_access_token": 0, "failed": 0}
+        people = interview_result_people().filter(
+            pk__in=queryset.values("pk"), result_status=Person.Status.PASSED
+        )
+        for person in people:
+            stats[send_interview_result_notification(person)] += 1
         self._message_line_notification_summary(request, stats)
-
-    def _line_notification_status(self, person):
-        if line_notification_sent(person, "interview_passed"):
-            return "sent"
-        reason = line_push_unavailable_reason(person)
-        return reason or "failed"
 
     def _message_line_notification_summary(self, request, stats):
         parts = []
         if stats["sent"]:
             parts.append(f"ส่งสำเร็จ {stats['sent']} คน")
+        if stats["already_sent"]:
+            parts.append(f"เคยส่งแล้ว {stats['already_sent']} คน")
         if stats["missing_line_user_id"]:
             parts.append(f"ไม่มี LINE user id {stats['missing_line_user_id']} คน")
         if stats["missing_channel_access_token"]:

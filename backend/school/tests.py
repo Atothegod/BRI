@@ -1339,7 +1339,7 @@ class TeacherFlowTests(TestCase):
         response = self.client.get(reverse("school:student_payment_upload"))
 
         self.assertContains(response, "school/images/payment.jpg")
-        self.assertContains(response, "สลิปใบใหม่")
+        self.assertContains(response, "เพิ่มสลิปอีกใบ")
         self.assertContains(response, "คัดลอกเลขบัญชี 111-8-33249-7")
         self.assertContains(response, 'data-copy-value="1118332497"')
         self.assertContains(response, "ส่งสลิปให้ตรวจสอบ")
@@ -1467,9 +1467,18 @@ class TeacherFlowTests(TestCase):
                 content_type="image/gif",
             )
 
+        extra_slip = SimpleUploadedFile("extra.gif", data["payment_slip"].file.getvalue(), content_type="image/gif")
         response = self.client.post(reverse("school:student_payment_upload"), data)
 
         self.assertRedirects(response, reverse("school:student_payment_upload"))
+        self.assertEqual(student.payment_slips.count(), 4)
+        student.refresh_from_db()
+        self.assertEqual(student.payment_slip.name, student.payment_slips.latest("pk").image.name)
+
+        url = reverse("school:student_payment_upload")
+        self.assertContains(self.client.get(url), "ส่งสลิปครบแล้ว")
+        response = self.client.post(url, {"payment_slip": extra_slip})
+        self.assertContains(response, "แนบสลิปได้สูงสุด 4 ใบ")
         self.assertEqual(student.payment_slips.count(), 4)
 
     def test_student_payment_upload_requires_student_status(self):
@@ -1591,7 +1600,7 @@ class AnnouncementResultTests(TestCase):
         self.assertContains(response, student.student_id)
         self.assertNotContains(response, "ไปหน้าแจ้งชำระเงิน")
 
-    def test_existing_student_is_treated_as_passed_result(self):
+    def test_existing_student_record_does_not_publish_result(self):
         person = Person.objects.create(
             first_name="Student",
             last_name="Only",
@@ -1604,7 +1613,8 @@ class AnnouncementResultTests(TestCase):
             {"line_user_id": "Ustudent"},
         )
 
-        self.assertContains(response, "ผ่านสัมภาษณ์")
+        self.assertContains(response, "ยังไม่พบผลประกาศ")
+        self.assertEqual(response.context["result_state"], "pending")
         self.assertNotContains(response, student.student_id)
 
     def test_failed_line_account_sees_failed_result(self):

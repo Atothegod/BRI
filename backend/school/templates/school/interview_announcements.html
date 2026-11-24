@@ -87,7 +87,7 @@
         </div>
         <section class="result-grid" aria-label="รายชื่อสำหรับยิงประกาศ">
             {% for person in page_obj %}
-                <article class="result-card result-card--{{ person.status }}">
+                <article class="result-card result-card--{{ person.result_status }}">
                     <div class="result-card-main">
                         <div class="result-person">
                             <span class="result-avatar">{{ person.full_name|slice:":1" }}</span>
@@ -97,7 +97,7 @@
                             </div>
                         </div>
                         <dl class="result-meta">
-                            <div><dt>ผลสัมภาษณ์</dt><dd>{{ person.get_status_display }}{% if person.status == 'passed' and person.admission_type_name %} · {{ person.admission_type_name }}{% endif %}</dd></div>
+                            <div><dt>ผลสัมภาษณ์</dt><dd>{% if person.interview_decision %}{{ person.get_interview_decision_display }}{% else %}{{ person.get_status_display }}{% endif %}{% if not person.interview_decision and person.result_status == 'passed' and person.admission_type_name %} · {{ person.admission_type_name }}{% endif %}</dd></div>
                             <div><dt>LINE</dt><dd>{{ person.line_display_name|default:"-" }}</dd></div>
                             <div><dt>ประเทศ</dt><dd>{{ person.announcement_country|default:"-" }}</dd></div>
                             <div><dt>สถานะประกาศ</dt><dd>{% if person.has_result_line_notification %}<span class="announcement-status sent">ส่งแล้ว</span>{% elif person.line_issue %}<span class="announcement-status blocked">{% if person.line_issue == "missing_line_user_id" %}ยังไม่เชื่อม LINE{% elif person.line_issue == "missing_channel_access_token" %}ยังไม่ได้ตั้ง LINE token{% else %}ส่งไม่ได้{% endif %}</span>{% else %}<span class="announcement-status ready">พร้อมยิง</span>{% endif %}</dd></div>

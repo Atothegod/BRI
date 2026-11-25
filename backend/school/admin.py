@@ -2,8 +2,12 @@ from urllib.parse import urlencode
 
 from django import forms
 from django.contrib import admin, messages
+from django.core.exceptions import PermissionDenied
+from django.db import transaction
 from django.db.models import Exists, OuterRef, Q
-from django.urls import reverse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import path, reverse
+from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 from django.utils.html import format_html, format_html_join
 from django.utils.translation import gettext_lazy as _
@@ -643,6 +647,54 @@ class StudentAdmin(UnfoldModelAdmin):
         "existing_payment_slips", "new_payment_slips",
     )
 
+    def get_urls(self):
+        return [
+            path(
+                "<int:student_id>/payment-slips/<int:slip_id>/delete/",
+                self.admin_site.admin_view(require_http_methods(["GET", "POST"])(self.delete_payment_slip)),
+                name="school_student_delete_payment_slip",
+            ),
+        ] + super().get_urls()
+
+    @transaction.atomic
+    def delete_payment_slip(self, request, student_id, slip_id):
+        students = self.get_queryset(request)
+        if request.method == "POST":
+            students = students.select_for_update()
+        student = get_object_or_404(students, pk=student_id)
+        if not self.has_change_permission(request, student):
+            raise PermissionDenied
+        slip = get_object_or_404(student.payment_slips, pk=slip_id)
+        change_url = reverse("admin:school_student_change", args=[student.pk])
+
+        if request.method == "POST":
+            image_name = slip.image.name
+            slip.delete()
+            if student.payment_slip.name == image_name:
+                remaining = student.payment_slips.exclude(status=PaymentSlip.Status.NEEDS_FIX).last()
+                student.payment_slip = remaining.image.name if remaining else None
+                student.save(update_fields=["payment_slip", "updated_at"])
+            self.log_change(request, student, f"ลบสลิป #{slip_id}")
+            self.message_user(request, "ลบสลิปแล้ว", messages.SUCCESS)
+            return redirect(change_url)
+
+        return render(request, "school/admin_delete_payment_slip.html", {
+            **self.admin_site.each_context(request),
+            "title": "ยืนยันการลบสลิป",
+            "student": student,
+            "slip": slip,
+            "change_url": change_url,
+        })
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj and self.has_change_permission(request, obj):
+            return ("existing_payment_slips_with_delete",)
+        return super().get_readonly_fields(request, obj)
+
+    def get_fields(self, request, obj=None):
+        readonly_field = self.get_readonly_fields(request, obj)[0]
+        return [readonly_field if field == "existing_payment_slips" else field for field in self.fields]
+
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
         if images := form.cleaned_data.get("new_payment_slips"):
@@ -650,10 +702,24 @@ class StudentAdmin(UnfoldModelAdmin):
 
     @admin.display(description="สลิปที่แนบแล้ว")
     def existing_payment_slips(self, obj):
+        return self.render_payment_slips(obj)
+
+    @admin.display(description="สลิปที่แนบแล้ว")
+    def existing_payment_slips_with_delete(self, obj):
+        return self.render_payment_slips(obj, allow_delete=True)
+
+    def render_payment_slips(self, obj, allow_delete=False):
         if not obj or not obj.pk:
             return "-"
         slips = [
-            (slip.image.url, slip.image.url, index, index, slip.get_status_display())
+            (
+                slip.image.url, slip.image.url, index, index, slip.get_status_display(),
+                format_html(
+                    '<a href="{}">ลบสลิปใบที่ {}</a>',
+                    reverse("admin:school_student_delete_payment_slip", args=[obj.pk, slip.pk]),
+                    index,
+                ) if allow_delete else "",
+            )
             for index, slip in enumerate(obj.payment_slips.all(), start=1)
             if slip.image
         ]
@@ -663,10 +729,10 @@ class StudentAdmin(UnfoldModelAdmin):
             '<div style="display:flex;flex-wrap:wrap;gap:12px;">{}</div>',
             format_html_join(
                 "",
-                '<a href="{}" target="_blank" rel="noopener" style="display:grid;gap:4px;">'
+                '<div><a href="{}" target="_blank" rel="noopener" style="display:grid;gap:4px;">'
                 '<img src="{}" loading="lazy" alt="สลิปใบที่ {}" '
                 'style="width:100px;height:100px;object-fit:contain;border:1px solid #d0d5dd;border-radius:8px;">'
-                '<span>ใบที่ {} · {}</span></a>',
+                '<span>ใบที่ {} · {}</span></a>{}</div>',
                 slips,
             ),
         )

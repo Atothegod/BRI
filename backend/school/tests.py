@@ -1538,6 +1538,21 @@ class TeacherFlowTests(TestCase):
             self.assertContains(review, f'data-slip-url="{slip.image.url}"')
         self.assertContains(review, "4 ใบ")
 
+        self.client.force_login(admin_user)
+        deleted = student.payment_slips.latest("pk")
+        delete_url = reverse("admin:school_student_delete_payment_slip", args=[student.pk, deleted.pk])
+        response = self.client.get(url)
+        self.assertContains(response, deleted.image.url)
+        self.assertContains(response, delete_url)
+        self.assertContains(self.client.get(delete_url), "ยืนยันการลบ")
+        self.assertEqual(student.payment_slips.count(), 4)
+
+        self.assertRedirects(self.client.post(delete_url), url)
+        self.assertEqual(student.payment_slips.count(), 3)
+        student.refresh_from_db()
+        self.assertEqual(student.payment_slip.name, student.payment_slips.latest("pk").image.name)
+        self.assertNotContains(self.client.get(url), deleted.image.url)
+
     def test_student_payment_upload_requires_student_status(self):
         person = Person.objects.create(
             first_name="Pending",

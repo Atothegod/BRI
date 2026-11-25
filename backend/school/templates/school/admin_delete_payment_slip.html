@@ -1,0 +1,18 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<div class="space-y-4">
+    <p>ต้องการลบสลิปใบนี้ของ {{ student }} ออกจากรายการหรือไม่?</p>
+    {% if slip.image %}
+    <a href="{{ slip.image.url }}" target="_blank" rel="noopener">
+        <img src="{{ slip.image.url }}" alt="สลิปที่จะลบ" width="220">
+    </a>
+    {% endif %}
+    <p>สถานะยืนยันยอดชำระจะคงเดิม</p>
+    <form method="post" class="flex items-center gap-4">
+        {% csrf_token %}
+        <button type="submit" class="bg-red-600 text-white rounded px-4 py-2">ยืนยันการลบ</button>
+        <a href="{{ change_url }}">ยกเลิก</a>
+    </form>
+</div>
+{% endblock %}

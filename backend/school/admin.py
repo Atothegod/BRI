@@ -581,6 +581,13 @@ class PersonAdmin(UnfoldModelAdmin):
 class MultipleSlipInput(forms.FileInput):
     allow_multiple_selected = True
 
+    def __init__(self, attrs=None):
+        super().__init__({
+            "accept": "image/*",
+            "data-admin-slip-picker": "",
+            **(attrs or {}),
+        })
+
 
 class MultipleSlipField(forms.ImageField):
     widget = MultipleSlipInput
@@ -622,6 +629,10 @@ class StudentAdminForm(forms.ModelForm):
 @admin.register(Student)
 class StudentAdmin(UnfoldModelAdmin):
     form = StudentAdminForm
+
+    class Media:
+        js = ("school/js/admin_payment_slip_picker.js",)
+
     list_display = (
         "student_id",
         "person",

@@ -1,4 +1,4 @@
-(() => {
+document.addEventListener("DOMContentLoaded", () => {
     "use strict";
 
     document.querySelectorAll("[data-admin-slip-picker]").forEach((input) => {
@@ -72,4 +72,4 @@
         });
         render();
     });
-})();
+});

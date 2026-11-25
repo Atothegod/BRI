@@ -5,7 +5,7 @@ from django.contrib import admin, messages
 from django.db.models import Exists, OuterRef, Q
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin as UnfoldModelAdmin
 
@@ -24,6 +24,7 @@ from .models import (
     AppointmentSlot,
     HomeworkAssignment,
     HomeworkSubmission,
+    PaymentSlip,
     Person,
     Student,
     TeacherStudentAssessment,
@@ -573,8 +574,50 @@ class PersonAdmin(UnfoldModelAdmin):
             self.message_user(request, "LINE notification: ไม่มีผู้สมัครที่ผ่านให้ส่งข้อความ", messages.WARNING)
 
 
+class MultipleSlipInput(forms.FileInput):
+    allow_multiple_selected = True
+
+
+class MultipleSlipField(forms.ImageField):
+    widget = MultipleSlipInput
+
+    def clean(self, data, initial=None):
+        clean_image = super().clean
+        return [clean_image(image) for image in data or []]
+
+
+class StudentAdminForm(forms.ModelForm):
+    new_payment_slips = MultipleSlipField(
+        label="แนบสลิปเพิ่ม",
+        required=False,
+        help_text=(
+            f"เลือกได้หลายรูป รวมสลิปที่ใช้งานได้สูงสุด {Student.MAX_PAYMENT_SLIPS} ใบ "
+            "เมื่อบันทึก นักศึกษาจะกลับเข้าคิวรอตรวจใน Operations แม้เคยยืนยันยอดแล้ว"
+        ),
+    )
+
+    class Meta:
+        model = Student
+        exclude = ("payment_slip",)
+
+    def clean_new_payment_slips(self):
+        images = self.cleaned_data["new_payment_slips"]
+        if not images:
+            return images
+
+        existing_count = 0
+        if self.instance.pk:
+            # The admin saves the form in a transaction. Lock the same student as the LINE upload.
+            student = Student.objects.select_for_update().get(pk=self.instance.pk)
+            existing_count = student.payment_slips.exclude(status=PaymentSlip.Status.NEEDS_FIX).count()
+        if existing_count + len(images) > Student.MAX_PAYMENT_SLIPS:
+            raise forms.ValidationError(f"แนบสลิปได้สูงสุด {Student.MAX_PAYMENT_SLIPS} ใบ")
+        return images
+
+
 @admin.register(Student)
 class StudentAdmin(UnfoldModelAdmin):
+    form = StudentAdminForm
     list_display = (
         "student_id",
         "person",
@@ -593,7 +636,40 @@ class StudentAdmin(UnfoldModelAdmin):
         "person__phone",
         "person__email",
     )
-    readonly_fields = ("payment_slip_preview",)
+    readonly_fields = ("existing_payment_slips",)
+    fields = (
+        "student_id", "person", "group", "grade", "is_active",
+        "admin_validation_status", "is_paid", "payment_review_note",
+        "existing_payment_slips", "new_payment_slips",
+    )
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if images := form.cleaned_data.get("new_payment_slips"):
+            obj.add_payment_slips(images)
+
+    @admin.display(description="สลิปที่แนบแล้ว")
+    def existing_payment_slips(self, obj):
+        if not obj or not obj.pk:
+            return "-"
+        slips = [
+            (slip.image.url, slip.image.url, index, index, slip.get_status_display())
+            for index, slip in enumerate(obj.payment_slips.all(), start=1)
+            if slip.image
+        ]
+        if not slips:
+            return "-"
+        return format_html(
+            '<div style="display:flex;flex-wrap:wrap;gap:12px;">{}</div>',
+            format_html_join(
+                "",
+                '<a href="{}" target="_blank" rel="noopener" style="display:grid;gap:4px;">'
+                '<img src="{}" loading="lazy" alt="สลิปใบที่ {}" '
+                'style="width:100px;height:100px;object-fit:contain;border:1px solid #d0d5dd;border-radius:8px;">'
+                '<span>ใบที่ {} · {}</span></a>',
+                slips,
+            ),
+        )
 
     @admin.display(description="สลิป")
     def payment_slip_preview(self, obj):

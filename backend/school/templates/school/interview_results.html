@@ -3,7 +3,7 @@
 {% block title %}บันทึกผลสัมภาษณ์ | BRI{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'school/css/school_admin.css' %}?v=20261111-nav-contrast-1">
-<link rel="stylesheet" href="{% static 'school/css/interview_results.css' %}?v=20261124-operation-results">
+<link rel="stylesheet" href="{% static 'school/css/interview_results.css' %}?v=20261125-operation-autosave">
 {% endblock %}
 {% block content %}
 {% include "school/includes/operation_nav.html" %}
@@ -143,15 +143,14 @@
                     <input type="hidden" name="next" value="{{ next_url }}">
                     <input type="hidden" name="confirmed_result" value="">
                     <div class="operation-decisions" role="group" aria-label="บันทึกผลของ {{ person.full_name }}">
-                        <button type="button" class="pass" data-result-button data-result-value="pass_onsite" data-result-label="ผ่าน onsite" data-confirm-message="ระบบจะบันทึกผลร่าง ผู้สมัครจะเห็นผลหลังจากส่งประกาศ LINE สำเร็จ">ผ่าน onsite</button>
-                        <button type="button" class="pass secondary" data-result-button data-result-value="pass_online" data-result-label="ผ่าน online" data-confirm-message="ระบบจะบันทึกผลร่าง ผู้สมัครจะเห็นผลหลังจากส่งประกาศ LINE สำเร็จ">ผ่าน online</button>
+                        <button type="button" class="pass" data-result-button data-result-value="pass_onsite" data-result-label="ให้ผ่าน Onsite" data-confirm-message="ระบบจะบันทึกผลร่าง ผู้สมัครจะเห็นผลหลังจากส่งประกาศ LINE สำเร็จ">ให้ผ่าน Onsite</button>
+                        <button type="button" class="pass" data-result-button data-result-value="pass_online" data-result-label="ให้ผ่าน Online" data-confirm-message="ระบบจะบันทึกผลร่าง ผู้สมัครจะเห็นผลหลังจากส่งประกาศ LINE สำเร็จ">ให้ผ่าน Online</button>
                         <button type="button" class="fail" data-result-button data-result-value="fail" data-result-label="ไม่ผ่าน" data-confirm-message="ระบบจะบันทึกผลร่าง ผู้สมัครจะเห็นผลหลังจากส่งประกาศ LINE สำเร็จ">ไม่ผ่าน</button>
                         <button type="button" class="pending" data-result-button data-result-value="pending" data-result-label="รอตัดสินอีกครั้ง" data-confirm-message="ระบบจะล้างผลร่าง ผลที่ประกาศไปแล้วจะยังแสดงให้ผู้สมัครเห็น">รอตัดสินอีกครั้ง</button>
                     </div>
                     <details class="operation-card-details">
                         <summary>
-                            <span>ข้อมูลสัมภาษณ์ เกรด และคอมเมนต์</span>
-                            {% if person.interview_grade %}<span class="operation-grade-summary">เกรด {{ person.interview_grade }}</span>{% endif %}
+                            <span>ข้อมูลสัมภาษณ์</span>
                         </summary>
                         <div class="result-interview-strip">
                             <div>
@@ -184,21 +183,22 @@
                             <div><span>Goal</span><p>{{ person.extra_data.goal|default:"-" }}</p></div>
                             <div><span>Vision calling</span><p>{{ person.extra_data.vision_calling|default:"-" }}</p></div>
                         </div>
-                        <fieldset class="result-grade">
-                            <legend>เกรดสัมภาษณ์</legend>
-                            <div>
-                                {% for value, label in grade_options %}
-                                <button type="submit" name="action" value="grade" class="grade grade--{{ value|lower }}{% if person.interview_grade == value %} active{% endif %}" aria-pressed="{% if person.interview_grade == value %}true{% else %}false{% endif %}" onclick="this.form.elements.interview_grade.value='{{ value }}'">{{ label }}</button>
-                                {% endfor %}
-                            </div>
-                            <small>{% if person.interview_grade %}เกรดปัจจุบัน {{ person.interview_grade }}{% else %}ยังไม่ได้ให้เกรด{% endif %}</small>
-                        </fieldset>
-                        <label class="result-comment">
-                            <span>comment</span>
-                            <textarea name="interview_comment" rows="3" placeholder="บันทึกข้อสังเกต จุดเด่น หรือสิ่งที่ต้องติดตาม">{{ person.interview_comment }}</textarea>
-                        </label>
-                        <button type="submit" class="comment-save" name="action" value="comment">บันทึกคอมเมนต์</button>
                     </details>
+                    <fieldset class="result-grade">
+                        <legend>เกรดสัมภาษณ์</legend>
+                        <div>
+                            {% for value, label in grade_options %}
+                            <button type="submit" name="action" value="grade" class="grade grade--{{ value|lower }}{% if person.interview_grade == value %} active{% endif %}" aria-pressed="{% if person.interview_grade == value %}true{% else %}false{% endif %}" data-grade-value="{{ value }}" onclick="this.form.elements.interview_grade.value='{{ value }}'">{{ label }}</button>
+                            {% endfor %}
+                        </div>
+                        <small data-grade-status role="status">{% if person.interview_grade %}เกรดปัจจุบัน {{ person.interview_grade }}{% else %}ยังไม่ได้ให้เกรด{% endif %}</small>
+                    </fieldset>
+                    <label class="result-comment">
+                        <span>คอมเมนต์สัมภาษณ์</span>
+                        <textarea name="interview_comment" rows="2" placeholder="บันทึกข้อสังเกต จุดเด่น หรือสิ่งที่ต้องติดตาม">{{ person.interview_comment }}</textarea>
+                    </label>
+                    <small class="comment-status" data-comment-status role="status"></small>
+                    <button type="submit" class="comment-save" name="action" value="comment">บันทึกคอมเมนต์</button>
                 </form>
             </article>
             {% endwith %}
@@ -237,6 +237,7 @@ const confirmSubmit = resultDialog?.querySelector("[data-confirm-submit]");
 const confirmCancel = resultDialog?.querySelector("[data-confirm-cancel]");
 let pendingResultForm = null;
 let pendingResultButton = null;
+const saveComments = new WeakMap();
 
 document.querySelectorAll("[data-result-avatar]").forEach((image) => {
     function showFallback() {
@@ -254,6 +255,7 @@ document.querySelectorAll("[data-result-avatar]").forEach((image) => {
 
 document.querySelectorAll("[data-result-button]").forEach((button) => {
     button.addEventListener("click", () => {
+        if (confirmSubmit.disabled) return;
         pendingResultForm = button.closest("[data-result-form]");
         pendingResultButton = button;
         const personName = pendingResultForm?.dataset.personName || "ผู้สมัคร";
@@ -267,11 +269,26 @@ document.querySelectorAll("[data-result-button]").forEach((button) => {
     });
 });
 confirmCancel?.addEventListener("click", () => resultDialog.close());
-confirmSubmit?.addEventListener("click", () => {
+confirmSubmit?.addEventListener("click", async () => {
     if (!pendingResultForm || !pendingResultButton) return;
-    pendingResultForm.elements.result.value = pendingResultButton.dataset.resultValue;
-    pendingResultForm.elements.confirmed_result.value = pendingResultButton.dataset.resultValue;
-    pendingResultForm.submit();
+    confirmSubmit.disabled = true;
+    const form = pendingResultForm;
+    const result = pendingResultButton.dataset.resultValue;
+    const wasOpen = resultDialog.open;
+    const saveComment = saveComments.get(form);
+    const saved = saveComment ? await saveComment() : true;
+    confirmSubmit.disabled = false;
+    if (wasOpen && !resultDialog.open) return;
+    if (!saved) {
+        if (resultDialog.open) resultDialog.close();
+        form.elements.interview_comment.focus();
+        return;
+    }
+    if (saveComment) form.elements.interview_comment.disabled = true;
+    form.elements.result.value = result;
+    form.elements.confirmed_result.value = result;
+    form.submit();
 });
 </script>
+<script src="{% static 'school/js/interview_results.js' %}?v=1"></script>
 {% endblock %}

@@ -246,7 +246,17 @@ button { min-height: 48px; padding: 11px 16px; color: #fff; background: #425b46;
 .operation-results .result-actions { display: grid; grid-template-columns: 1fr; gap: 10px; }
 .operation-decisions { display: flex; flex-wrap: wrap; gap: 7px; }
 .operation-decisions button { min-height: 44px; padding: 7px 13px; font-size: .9rem; }
-.operation-decisions .pass.secondary { color: #255136; background: #e6f3e8; border-color: #c2d9c6; }
+
+.operation-decisions .pass {
+    min-height: 48px;
+    padding-inline: 18px;
+    color: #fff;
+    background: #196443;
+    border-color: #196443;
+    font-size: 1rem;
+    font-weight: 900;
+}
+.operation-decisions .pass:hover { background: #124d33; border-color: #124d33; }
 
 .operation-card-details {
     padding-top: 2px;
@@ -254,12 +264,10 @@ button { min-height: 48px; padding: 11px 16px; color: #fff; background: #425b46;
 }
 
 .operation-card-details summary { min-height: 44px; padding: 10px 0; }
-.operation-grade-summary { margin-inline-start: 8px; color: #69501b; }
 .operation-card-details .result-interview-strip { margin-top: 5px; }
-.operation-card-details .result-grade,
-.operation-card-details .result-comment,
-.operation-card-details .comment-save { margin-top: 12px; }
-.operation-card-details .result-comment textarea { min-height: 84px; }
+.operation-results .result-comment textarea { min-height: 76px; }
+.operation-results .comment-status { min-height: 1.2em; color: #526157; }
+.operation-results .comment-save[hidden] { display: none; }
 
 .operation-results button:focus-visible,
 .operation-results a:focus-visible,

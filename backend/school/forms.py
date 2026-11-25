@@ -800,15 +800,7 @@ class PaymentSlipUploadForm(forms.Form):
         return cleaned_data
 
     def save(self):
-        submitted = self.cleaned_data["submitted_slips"]
-        slips = PaymentSlip.objects.bulk_create([
-            PaymentSlip(student=self.student, image=image)
-            for image in submitted
-        ])
-        self.student.payment_slip = slips[-1].image.name
-        self.student.is_paid = False
-        self.student.admin_validation_status = Student.AdminValidationStatus.PENDING
-        self.student.save(update_fields=["payment_slip", "is_paid", "admin_validation_status"])
+        self.student.add_payment_slips(self.cleaned_data["submitted_slips"])
         return self.student
 
 

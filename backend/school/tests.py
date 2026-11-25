@@ -1481,6 +1481,63 @@ class TeacherFlowTests(TestCase):
         self.assertContains(response, "แนบสลิปได้สูงสุด 4 ใบ")
         self.assertEqual(student.payment_slips.count(), 4)
 
+    def test_student_admin_can_view_and_append_slips_for_operations_review(self):
+        person = Person.objects.create(first_name="Admin", last_name="Installments", status=Person.Status.PASSED)
+        student = person.student
+        student.is_paid = True
+        student.admin_validation_status = Student.AdminValidationStatus.APPROVED
+        student.save()
+        original = PaymentSlip.objects.create(
+            student=student, image="payment_slips/original.gif", status=PaymentSlip.Status.APPROVED,
+        )
+        rejected = PaymentSlip.objects.create(
+            student=student, image="payment_slips/rejected.gif", status=PaymentSlip.Status.NEEDS_FIX,
+        )
+        admin_user = get_user_model().objects.create_superuser(username="installment-admin", password="test-password")
+        self.client.force_login(admin_user)
+        url = reverse("admin:school_student_change", args=[student.pk])
+        response = self.client.get(url)
+        self.assertContains(response, original.image.url)
+        self.assertContains(response, rejected.image.url)
+        self.assertContains(response, 'name="new_payment_slips"')
+
+        def uploads(*names):
+            return [
+                SimpleUploadedFile(
+                    name,
+                    b"GIF87a\x01\x00\x01\x00\x80\x01\x00\x00\x00\x00ccc,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;",
+                    content_type="image/gif",
+                )
+                for name in names
+            ]
+
+        data = {
+            "student_id": student.student_id,
+            "person": person.pk,
+            "is_active": "on",
+            "is_paid": "on",
+            "admin_validation_status": Student.AdminValidationStatus.APPROVED,
+        }
+        response = self.client.post(url, {**data, "new_payment_slips": uploads("a.gif", "b.gif", "c.gif", "d.gif")})
+        self.assertContains(response, "แนบสลิปได้สูงสุด 4 ใบ")
+        self.assertEqual(student.payment_slips.count(), 2)
+
+        response = self.client.post(url, {**data, "new_payment_slips": uploads("second.gif", "third.gif")})
+        self.assertRedirects(response, reverse("admin:school_student_changelist"))
+        student.refresh_from_db()
+        self.assertFalse(student.is_paid)
+        self.assertEqual(student.admin_validation_status, Student.AdminValidationStatus.PENDING)
+        self.assertEqual(student.payment_slips.filter(status=PaymentSlip.Status.PENDING).count(), 2)
+        self.assertEqual(student.payment_slip.name, student.payment_slips.latest("pk").image.name)
+
+        User = get_user_model()
+        operator = User.objects.create_user(username="installment-operator", role=User.Role.OPERATION)
+        self.client.force_login(operator)
+        review = self.client.get(reverse("school:admin_payment_slip_review"))
+        for slip in student.payment_slips.all():
+            self.assertContains(review, f'data-slip-url="{slip.image.url}"')
+        self.assertContains(review, "4 ใบ")
+
     def test_student_payment_upload_requires_student_status(self):
         person = Person.objects.create(
             first_name="Pending",

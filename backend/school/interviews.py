@@ -694,24 +694,30 @@ def interview_results(request):
         person = Person.objects.filter(pk=request.POST.get("person")).first()
         action = request.POST.get("action", "result")
         comment = request.POST.get("interview_comment", "").strip()
-        if person and action == "grade":
+        if action in {"grade", "comment"}:
             grade = request.POST.get("interview_grade", "").upper()
-            valid_grades = {value for value, _label in Person.InterviewGrade.choices}
-            if grade not in valid_grades:
-                messages.error(request, "เกรดสัมภาษณ์ไม่ถูกต้อง")
+            error = ""
+            if person is None:
+                error = "ไม่พบผู้สมัคร"
+            elif action == "grade" and grade not in Person.InterviewGrade.values:
+                error = "เกรดสัมภาษณ์ไม่ถูกต้อง"
             else:
-                person.interview_grade = grade
-                person.interview_comment = comment
-                person.save(update_fields=["interview_grade", "interview_comment"])
+                updates = {}
+                if action == "grade":
+                    updates["interview_grade"] = grade
+                if action == "comment" or "interview_comment" in request.POST:
+                    updates["interview_comment"] = comment
+                Person.objects.filter(pk=person.pk).update(**updates)
+
+            if request.headers.get("Accept") == "application/json":
+                return JsonResponse({"error": error}, status=400) if error else JsonResponse({"saved": True})
+            if error:
+                messages.error(request, error)
+            elif action == "grade":
                 messages.success(request, f"บันทึกเกรด {grade} ของ {person.full_name} แล้ว")
-            redirect_to = request.POST.get("next") or reverse("school:interview_results")
-            return redirect(redirect_to)
-        if person and action == "comment":
-            person.interview_comment = comment
-            person.save(update_fields=["interview_comment"])
-            messages.success(request, f"บันทึกคอมเมนต์ของ {person.full_name} แล้ว")
-            redirect_to = request.POST.get("next") or reverse("school:interview_results")
-            return redirect(redirect_to)
+            else:
+                messages.success(request, f"บันทึกคอมเมนต์ของ {person.full_name} แล้ว")
+            return redirect(request.POST.get("next") or reverse("school:interview_results"))
         requested_result = request.POST.get("result")
         result_confirmed = request.POST.get("confirmed_result") == requested_result
         result_label = update_interview_result(person, requested_result) if person and result_confirmed else ""
@@ -720,7 +726,7 @@ def interview_results(request):
         elif not person or not result_label:
             messages.error(request, "ไม่พบผู้สมัครหรือสถานะผลสัมภาษณ์ไม่ถูกต้อง")
         else:
-            if comment != person.interview_comment:
+            if "interview_comment" in request.POST and comment != person.interview_comment:
                 person.interview_comment = comment
                 person.save(update_fields=["interview_comment"])
             messages.success(request, f"บันทึกผล {person.full_name}: {result_label} แล้ว")

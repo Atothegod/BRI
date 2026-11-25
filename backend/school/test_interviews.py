@@ -1437,12 +1437,13 @@ class AppointmentScheduleTests(TestCase):
         response = self.client.get(url, {"q": "Result"})
         self.assertContains(response, "Result Applicant")
         self.assertContains(response, 'src="https://example.com/result-profile.png"')
-        self.assertContains(response, "ข้อมูลสัมภาษณ์ เกรด และคอมเมนต์")
+        self.assertContains(response, "ข้อมูลสัมภาษณ์")
+        self.assertContains(response, "คอมเมนต์สัมภาษณ์")
         self.assertNotContains(response, "school-admin-navbar")
         self.assertContains(response, "อยากรับใช้ให้ชัดขึ้น")
         self.assertContains(response, "สร้างผู้นำรุ่นใหม่")
-        self.assertContains(response, "ผ่าน onsite")
-        self.assertContains(response, "ผ่าน online")
+        self.assertContains(response, "ให้ผ่าน Onsite")
+        self.assertContains(response, "ให้ผ่าน Online")
         self.assertContains(response, "รอตัดสินอีกครั้ง")
 
         unconfirmed = self.client.post(url, {
@@ -1618,6 +1619,37 @@ class AppointmentScheduleTests(TestCase):
         self.assertNotContains(filtered, other_person.full_name)
         self.assertContains(filtered, "เกรดปัจจุบัน A")
         self.assertContains(filtered, 'aria-pressed="true"')
+
+    def test_interview_autosave_keeps_grade_and_comment_independent(self):
+        person = self.people[0]
+        url = reverse("school:interview_results")
+        headers = {"Accept": "application/json"}
+
+        response = self.client.post(url, {
+            "person": person.pk, "action": "comment", "interview_comment": "ติดตามเรื่องเวลา",
+        }, headers=headers)
+        self.assertEqual(response.json(), {"saved": True})
+
+        response = self.client.post(url, {
+            "person": person.pk, "action": "grade", "interview_grade": "A",
+        }, headers=headers)
+        self.assertEqual(response.json(), {"saved": True})
+        person.refresh_from_db()
+        self.assertEqual(person.interview_comment, "ติดตามเรื่องเวลา")
+
+        response = self.client.post(url, {
+            "person": person.pk, "action": "comment", "interview_comment": "",
+        }, headers=headers)
+        self.assertEqual(response.json(), {"saved": True})
+
+        response = self.client.post(url, {
+            "person": person.pk, "action": "grade", "interview_grade": "S",
+        }, headers=headers)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json())
+        person.refresh_from_db()
+        self.assertEqual(person.interview_comment, "")
+        self.assertEqual(person.interview_grade, Person.InterviewGrade.A)
 
     def test_interview_results_page_rejects_invalid_grade(self):
         person = self.people[0]

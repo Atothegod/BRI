@@ -604,6 +604,16 @@ class Student(TimeStampedModel):
             return list(self.payment_slips.exclude(status=PaymentSlip.Status.NEEDS_FIX))
         return [slip for slip in slips if slip.status != PaymentSlip.Status.NEEDS_FIX]
 
+    def add_payment_slips(self, images):
+        slips = PaymentSlip.objects.bulk_create([
+            PaymentSlip(student=self, image=image) for image in images
+        ])
+        self.payment_slip = slips[-1].image.name
+        self.is_paid = False
+        self.admin_validation_status = self.AdminValidationStatus.PENDING
+        self.save(update_fields=["payment_slip", "is_paid", "admin_validation_status", "updated_at"])
+
+
 class PaymentSlip(TimeStampedModel):
     class Status(models.TextChoices):
         PENDING = "pending", "รอตรวจ"

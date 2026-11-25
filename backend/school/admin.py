@@ -631,7 +631,7 @@ class StudentAdmin(UnfoldModelAdmin):
     form = StudentAdminForm
 
     class Media:
-        js = ("school/js/admin_payment_slip_picker.js",)
+        js = ("school/js/student_admin_slip_picker.js",)
 
     list_display = (
         "student_id",

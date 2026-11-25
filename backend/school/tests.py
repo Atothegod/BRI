@@ -1500,6 +1500,7 @@ class TeacherFlowTests(TestCase):
         self.assertContains(response, original.image.url)
         self.assertContains(response, rejected.image.url)
         self.assertContains(response, 'name="new_payment_slips"')
+        self.assertContains(response, "school/js/student_admin_slip_picker.js")
 
         def uploads(*names):
             return [
